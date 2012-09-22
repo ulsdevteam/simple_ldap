@@ -103,6 +103,9 @@ function simple_ldap_user_menu_alter(&$items) {
   unset($items['user/password']);
 }
 
+/**
+ * Validate a user login form against the LDAP directory.
+ */
 function simple_ldap_user_login_authenticate_validate($form, &$form_state) {
   // Check if the user has already been validated as user 1.
   if (isset($form_state['uid']) && $form_state['uid'] == 1) {
@@ -113,14 +116,44 @@ function simple_ldap_user_login_authenticate_validate($form, &$form_state) {
   $password = trim($form_state['values']['pass']);
   if (!empty($form_state['values']['name']) && !empty($password)) {
 
-    $dn = SimpleLdapUser::dn($form_state['values']['name']);
-    dpm($dn);
+    // Authenticate the credentials against the LDAP directory.
+    $ldap_user = SimpleLdapUser::load($form_state['values']['name']);
+    if ($ldap_user !== FALSE && SimpleLdapServer::authenticate($ldap_user->dn, $password)) {
 
-    // TODO
-    // - Attempt to bind with the dn and password, set $form_state['uid'] if
-    //   successful.
-    // - If the drupal user does not exist, create it.
-    // - Sync the email and password fields in the drupal user.
+      // Attempt to load the drupal user, if it exists.
+      $drupal_user = user_load_by_name($form_state['values']['name']);
+
+      // Create a new user object if one did not exist.
+      if (empty($drupal_user)) {
+        $account = array(
+          'name' => $ldap_user->attributes[variable_get('simple_ldap_user_attribute_name')][0],
+          'status' => 1,
+        );
+        $drupal_user = user_save(NULL, $account);
+      }
+
+      // Synchronize LDAP attrubtes to Drupal user.
+      $edit = array(
+        'mail' => $ldap_user->attributes[variable_get('simple_ldap_user_attribute_mail')][0],
+        'pass' => $password,
+      );
+      $drupal_user = user_save($drupal_user, $edit);
+
+      // Set the form uid to indicate that the user is authenticated.
+      $form_state['uid'] = $drupal_user->uid;
+    }
 
   }
+}
+
+/**
+ * Implements hook_user_load().
+ */
+function simple_ldap_user_load($users) {
+}
+
+/**
+ * Implements hook_user_update().
+ */
+function simple_ldap_user_update(&$edit, $account, $category) {
 }

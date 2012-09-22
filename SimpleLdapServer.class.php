@@ -32,9 +32,6 @@ class SimpleLdapServer {
    * from the Drupal variable system.
    */
   public function __construct() {
-    // Assume LDAPv3.
-    ldap_set_option($this->resource, LDAP_OPT_PROTOCOL_VERSION, 3);
-
     $this->hostname = variable_get('simple_ldap_hostname');
     $this->port = variable_get('simple_ldap_port', '389');
     $this->encryption = variable_get('simple_ldap_encryption', 'none');
@@ -93,6 +90,9 @@ class SimpleLdapServer {
         return FALSE;
       }
     }
+
+    // Assume LDAPv3.
+    ldap_set_option($this->resource, LDAP_OPT_PROTOCOL_VERSION, 3);
 
     return TRUE;
   }
@@ -160,6 +160,10 @@ class SimpleLdapServer {
 
     // Perform the search based on the scope provided.
     switch ($scope) {
+      case 'base':
+        $result = ldap_read($this->resource, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
+        break;
+
       case 'one':
         $result = ldap_list($this->resource, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
         break;
@@ -182,16 +186,17 @@ class SimpleLdapServer {
   /**
    * Authenticate an arbitrary DN and password.
    *
-   * This does a simple bind/unbind, simply to test whether the credentials are
-   * valid.
+   * This does a simple bind/unbind to test whether the credentials are valid.
    */
-  public function authenticate($binddn, $bindpw) {
-    $url = $this->encryption == 'ssl' ? 'ldaps://' . $this->hostname : $this->hostname;
-    $resource = ldap_connect($url, $this->port);
+  public static function authenticate($binddn, $bindpw) {
+    $prefix = variable_get('simple_ldap_encryption') == 'ssl' ? 'ldaps://' : '';
+    $url = $prefix . variable_get('simple_ldap_hostname');
+    $resource = @ldap_connect($url, variable_get('simple_ldap_port'));
     if ($resource !== FALSE) {
-      $bind = ldap_bind($resource, $binddn, $bindpw);
+      @ldap_set_option($resource, LDAP_OPT_PROTOCOL_VERSION, 3);
+      $bind = @ldap_bind($resource, $binddn, $bindpw);
       if ($bind !== FALSE) {
-        ldap_unbind($resource);
+        @ldap_unbind($resource);
         return TRUE;
       }
     }

@@ -50,15 +50,15 @@ function simple_ldap_user_admin() {
     '#description' => t("Which LDAP attribute should be mapped to a Drupal user's email address.") . ' ' . t('This is commonly "mail".'),
   );
 
-  $form['user']['simple_ldap_user_attribute_password'] = array(
+  $form['user']['simple_ldap_user_attribute_pass'] = array(
     '#type' => 'textfield',
     '#title' => t('Password attribute'),
-    '#default_value' => variable_get('simple_ldap_user_attribute_password', 'userPassword'),
+    '#default_value' => variable_get('simple_ldap_user_attribute_pass', 'userPassword'),
     '#required' => TRUE,
     '#description' => t("Which LDAP attribute should be mapped to a Drupal user's password.") . ' ' . t('This is commonly "userPassword".'),
   );
 
-/*
+  /*
   $form['map'] = array(
     '#prefix' => '<div id="map">',
     '#suffix' => '</div>',
@@ -91,7 +91,7 @@ function simple_ldap_user_admin() {
     unset($d);
     unset($l);
   }
-*/
+  */
 
   return system_settings_form($form);
 }

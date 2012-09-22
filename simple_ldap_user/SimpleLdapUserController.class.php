@@ -8,6 +8,10 @@
  * Controller class for LDAP users.
  */
 class SimpleLdapUserController extends UserController {
+
+  /**
+   * Verifies that the user exists in the LDAP directory.
+   */
   public function load($ids = array(), $conditions = array()) {
     $users = parent::load($ids, $conditions);
 

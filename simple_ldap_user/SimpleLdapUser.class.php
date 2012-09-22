@@ -14,14 +14,35 @@ class SimpleLdapUser {
   /**
    * Constructor.
    */
-  function __construct($dn) {
+  public function __construct($dn) {
     $this->dn = $dn;
+    $this->attributes = array();
+
+    // List of attributes to fetch.
+    $attributes = array(
+      variable_get('simple_ldap_user_attribute_name'),
+      variable_get('simple_ldap_user_attribute_mail'),
+    );
+
+    // Load attributes from directory.
+    $server = SimpleLdapServer::singleton();
+    $entry = $server->search($this->dn, 'objectClass=*', 'base', $attributes);
+
+    // Parse entry and extract attributes.
+    if ($entry !== FALSE && $entry['count'] > 0) {
+      for ($i = 0; $i < $entry[0]['count']; $i++) {
+        for ($j = 0; $j < $entry[0][$entry[0][$i]]['count']; $j++) {
+          $this->attributes[$entry[0][$i]][] = $entry[0][$entry[0][$i]][$j];
+        }
+      }
+    }
   }
 
   /**
    * Sets the object properties to read-only.
    */
-  public function __set($name, $value) { }
+  public function __set($name, $value) {
+  }
 
   /**
    * Searches for an LDAP entry, and returns a SimpleLdapUser object if found.
@@ -49,7 +70,7 @@ class SimpleLdapUser {
    * Checks for the existance of an LDAP user entry matching the given name.
    */
   public static function exists($name) {
-    $ldap_user = self::_search($name);
+    $ldap_user = self::doSearch($name);
     return (boolean) $ldap_user;
   }
 
@@ -57,7 +78,7 @@ class SimpleLdapUser {
    * Fetches the DN for the given user name.
    */
   public static function dn($name) {
-    $ldap_user = self::_search($name);
+    $ldap_user = self::doSearch($name);
     if ($ldap_user === FALSE || $ldap_user['count'] == 0) {
       return FALSE;
     }
@@ -67,7 +88,7 @@ class SimpleLdapUser {
   /**
    * Internal search helper function.
    */
-  protected static function _search($name) {
+  protected static function doSearch($name) {
     // Load the LDAP server object.
     $server = SimpleLdapServer::singleton();
 
