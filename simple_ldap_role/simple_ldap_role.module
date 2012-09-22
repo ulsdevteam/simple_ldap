@@ -1,0 +1,24 @@
+<?php
+/**
+ * @file
+ * Main simple_ldap_role module file.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function simple_ldap_role_menu() {
+  $items = array();
+
+  $items['admin/config/people/simple_ldap/role'] = array(
+    'title' => 'Roles',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('simple_ldap_role_admin'),
+    'access arguments' => array('adminster site configuration'),
+    'file' => 'simple_ldap_role.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 2,
+  );
+
+  return $items;
+}

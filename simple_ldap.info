@@ -1,0 +1,4 @@
+name = Simple LDAP
+description = Simple LDAP server configuration
+package = LDAP
+core = 7.x

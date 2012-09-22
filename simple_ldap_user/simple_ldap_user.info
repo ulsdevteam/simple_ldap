@@ -1,0 +1,5 @@
+name = Simple LDAP User
+description = Simple LDAP user authentication
+package = LDAP
+dependencies[] = simple_ldap
+core = 7.x

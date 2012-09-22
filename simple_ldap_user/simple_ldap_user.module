@@ -1,0 +1,126 @@
+<?php
+/**
+ * @file
+ * Main simple_ldap_user module file.
+ */
+
+// Load the SimpleLdapUserController class file.
+module_load_include('php', 'simple_ldap_user', 'SimpleLdapUser.class');
+module_load_include('php', 'simple_ldap_user', 'SimpleLdapUserController.class');
+
+/**
+ * Implements hook_menu().
+ */
+function simple_ldap_user_menu() {
+  $items = array();
+
+  $items['admin/config/people/simple_ldap/user'] = array(
+    'title' => 'Users',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('simple_ldap_user_admin'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'simple_ldap_user.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 1,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Overrides the built-in user module's list of users, removing any accounts
+ * from the list that do not have a matching LDAP account.
+ */
+function simple_ldap_user_form_user_admin_account_alter(&$form, &$form_state, $form_id) {
+  // Update the user array.
+  foreach ($form['accounts']['#options'] as $uid => $user) {
+
+    // Don't mess with user/1.
+    if ($uid == 1) {
+      continue;
+    }
+
+    // Verify active users. Blocked users may be provisioned to LDAP when they
+    // are set to active, so they are left alone here.
+    if ($user['status'] == 'active') {
+      // Load the Drupal user object.
+      $drupal_user = user_load($uid);
+      if ($drupal_user === FALSE) {
+        unset($form['accounts']['#options'][$uid]);
+        continue;
+      }
+
+      // Check whether the user exists in LDAP.
+      if (!SimpleLdapUser::exists($drupal_user->name)) {
+        unset($form['accounts']['#options'][$uid]);
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_entity_info_alter().
+ */
+function simple_ldap_user_entity_info_alter(&$entity_info) {
+  if (isset($entity_info['user'])) {
+    // Use the SimpleLdapUserController class to manage users.
+    $entity_info['user']['controller class'] = 'SimpleLdapUserController';
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
+  switch ($form_id) {
+    case 'user_login_block':
+      // Remove the register and password reminder links.
+      unset($form['links']);
+    case 'user_login':
+      $validate = array();
+      foreach ($form['#validate'] as $callback) {
+        if ($callback == 'user_login_final_validate') {
+          $validate[] = 'simple_ldap_user_login_authenticate_validate';
+        }
+        $validate[] = $callback;
+      }
+      $form['#validate'] = $validate;
+      break;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_menu_alter().
+ *
+ * Disables the user register and password reminder pages.
+ */
+function simple_ldap_user_menu_alter(&$items) {
+  unset($items['user/register']);
+  unset($items['user/password']);
+}
+
+function simple_ldap_user_login_authenticate_validate($form, &$form_state) {
+  // Check if the user has already been validated as user 1.
+  if (isset($form_state['uid']) && $form_state['uid'] == 1) {
+    return;
+  }
+
+  // Only attempt validation if both a username and password are present.
+  $password = trim($form_state['values']['pass']);
+  if (!empty($form_state['values']['name']) && !empty($password)) {
+
+    $dn = SimpleLdapUser::dn($form_state['values']['name']);
+    dpm($dn);
+
+    // TODO
+    // - Attempt to bind with the dn and password, set $form_state['uid'] if
+    //   successful.
+    // - If the drupal user does not exist, create it.
+    // - Sync the email and password fields in the drupal user.
+
+  }
+}

@@ -1,0 +1,5 @@
+name = Simple LDAP Role
+description = Simple LDAP role authorization
+package = LDAP
+dependencies[] = simple_ldap
+core = 7.x
