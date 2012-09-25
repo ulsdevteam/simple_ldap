@@ -47,14 +47,10 @@ function simple_ldap_user_form_user_admin_account_alter(&$form, &$form_state, $f
     if ($user['status'] == 'active') {
       // Load the Drupal user object.
       $drupal_user = user_load($uid);
-      if ($drupal_user === FALSE) {
-        unset($form['accounts']['#options'][$uid]);
-        continue;
-      }
 
       // Check whether the user exists in LDAP.
       if (!SimpleLdapUser::exists($drupal_user->name)) {
-        unset($form['accounts']['#options'][$uid]);
+        $form['accounts']['#options'][$uid]['status'] = 'blocked';
       }
     }
   }

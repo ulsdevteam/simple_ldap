@@ -34,7 +34,7 @@ class SimpleLdapUserController extends UserController {
 
       // Remove user from the list if there is no LDAP match.
       if ($ldap_user === FALSE || $ldap_user['count'] == 0) {
-        unset($users[$uid]);
+        $users[$uid]->status = 0;
       }
 
     }

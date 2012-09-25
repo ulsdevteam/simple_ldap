@@ -71,7 +71,10 @@ class SimpleLdapUser {
    */
   public static function exists($name) {
     $ldap_user = self::doSearch($name);
-    return (boolean) $ldap_user;
+    if ($ldap_user === FALSE || $ldap_user['count'] == 0) {
+      return FALSE;
+    }
+    return TRUE;
   }
 
   /**

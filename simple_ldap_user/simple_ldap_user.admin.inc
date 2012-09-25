@@ -58,7 +58,6 @@ function simple_ldap_user_admin() {
     '#description' => t("Which LDAP attribute should be mapped to a Drupal user's password.") . ' ' . t('This is commonly "userPassword".'),
   );
 
-  /*
   $form['map'] = array(
     '#prefix' => '<div id="map">',
     '#suffix' => '</div>',
@@ -91,7 +90,6 @@ function simple_ldap_user_admin() {
     unset($d);
     unset($l);
   }
-  */
 
   return system_settings_form($form);
 }
