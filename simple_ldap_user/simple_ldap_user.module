@@ -4,7 +4,7 @@
  * Main simple_ldap_user module file.
  */
 
-// Load the SimpleLdapUserController class file.
+// Load the external class files.
 module_load_include('php', 'simple_ldap_user', 'SimpleLdapUser.class');
 module_load_include('php', 'simple_ldap_user', 'SimpleLdapUserController.class');
 
@@ -149,7 +149,7 @@ function simple_ldap_user_login_authenticate_validate($form, &$form_state) {
 /**
  * Implements hook_user_load().
  */
-function simple_ldap_user_load($users) {
+function simple_ldap_user_user_load($users) {
 }
 
 /**
