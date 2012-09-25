@@ -22,3 +22,12 @@ function simple_ldap_role_menu() {
 
   return $items;
 }
+
+/**
+ * Implements hook_user_load().
+ *
+ * Override the roles based on what is in the LDAP directory.
+ */
+function simple_ldap_role_user_load($users) {
+  // check for DRUPAL_AUTHENTICATED_RID and DRUPAL_ANONYMOUS_RID.
+}
