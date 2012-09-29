@@ -26,16 +26,8 @@ class SimpleLdapUser {
 
     // Load attributes from directory.
     $server = SimpleLdapServer::singleton();
-    $entry = $server->search($this->dn, 'objectClass=*', 'base', $attributes);
+    $this->attributes = $server->search($this->dn, 'objectClass=*', 'base', $attributes);
 
-    // Parse entry and extract attributes.
-    if ($entry !== FALSE && $entry['count'] > 0) {
-      for ($i = 0; $i < $entry[0]['count']; $i++) {
-        for ($j = 0; $j < $entry[0][$entry[0][$i]]['count']; $j++) {
-          $this->attributes[$entry[0][$i]][] = $entry[0][$entry[0][$i]][$j];
-        }
-      }
-    }
   }
 
   /**
@@ -71,7 +63,7 @@ class SimpleLdapUser {
    */
   public static function exists($name) {
     $ldap_user = self::doSearch($name);
-    if ($ldap_user === FALSE || $ldap_user['count'] == 0) {
+    if ($ldap_user === FALSE || count($ldap_user) == 0) {
       return FALSE;
     }
     return TRUE;
@@ -82,7 +74,7 @@ class SimpleLdapUser {
    */
   public static function dn($name) {
     $ldap_user = self::doSearch($name);
-    if ($ldap_user === FALSE || $ldap_user['count'] == 0) {
+    if ($ldap_user === FALSE || count($ldap_user) == 0) {
       return FALSE;
     }
     return $ldap_user[0]['dn'];

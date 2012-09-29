@@ -16,11 +16,12 @@ function simple_ldap_admin() {
     '#collapsible' => FALSE,
   );
 
-  $form['server']['simple_ldap_hostname'] = array(
+  $form['server']['simple_ldap_host'] = array(
     '#type' => 'textfield',
     '#title' => t('Host'),
     '#required' => TRUE,
-    '#default_value' => variable_get('simple_ldap_hostname', ''),
+    '#default_value' => variable_get('simple_ldap_host', ''),
+    '#description' => t('To use SSL, prepend the host with "ldaps://".'),
   );
 
   $form['server']['simple_ldap_port'] = array(
@@ -30,16 +31,10 @@ function simple_ldap_admin() {
     '#required' => TRUE,
   );
 
-  $form['server']['simple_ldap_encryption'] = array(
-    '#type' => 'radios',
-    '#title' => t('Encryption'),
-    '#options' => array(
-      'none' => t('None'),
-      'ssl' => t('SSL'),
-      'tls' => t('Start TLS'),
-    ),
-    '#required' => TRUE,
-    '#default_value' => variable_get('simple_ldap_encryption', 'none'),
+  $form['server']['simple_ldap_starttls'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use startTLS'),
+    '#default_value' => variable_get('simple_ldap_starttls', FALSE),
   );
 
   $form['directory'] = array(

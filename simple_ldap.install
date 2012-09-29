@@ -8,9 +8,9 @@
  * Implements hook_uninstall().
  */
 function simple_ldap_uninstall() {
-  variable_del('simple_ldap_hostname');
+  variable_del('simple_ldap_host');
   variable_del('simple_ldap_port');
-  variable_del('simple_ldap_encryption');
+  variable_del('simple_ldap_starttls');
   variable_del('simple_ldap_binddn');
   variable_del('simple_ldap_bindpw');
 }

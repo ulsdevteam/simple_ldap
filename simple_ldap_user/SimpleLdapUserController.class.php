@@ -32,8 +32,8 @@ class SimpleLdapUserController extends UserController {
       $filter = '(' . $search . '=' . $drupal_user->name . ')';
       $ldap_user = $server->search($base_dn, $filter, $scope, array('dn'), 1);
 
-      // Remove user from the list if there is no LDAP match.
-      if ($ldap_user === FALSE || $ldap_user['count'] == 0) {
+      // Block the user if there is no LDAP match.
+      if ($ldap_user === FALSE || count($ldap_user) == 0) {
         $users[$uid]->status = 0;
       }
 
