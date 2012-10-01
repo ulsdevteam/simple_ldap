@@ -41,6 +41,8 @@ class SimpleLdapSchema {
 
   /**
    * Magic __get function.
+   *
+   * @todo Get entire schema array -- be sure the whole thing is loaded.
    */
   public function __get($name) {
     switch ($name) {
@@ -61,6 +63,8 @@ class SimpleLdapSchema {
 
   /**
    * Returns whether the given item exists.
+   *
+   * @todo Rename $type to $attribute.
    */
   public function exists($type, $name = NULL) {
     // Make sure the schema for the requested type is loaded.
@@ -85,6 +89,9 @@ class SimpleLdapSchema {
    *
    * @param string $name
    *   If specified, a single entry with this name is returned.
+   *
+   * @todo Rename $type to $attribute.
+   * @todo Handle an array of attributes, as well as default to all attributes.
    */
   public function get($type, $name = NULL) {
     if ($this->exists($type, $name)) {
@@ -191,7 +198,7 @@ class SimpleLdapSchema {
       $result = $this->server->search($this->dn, 'objectclass=*', 'base', $load);
 
       // Parse the schema.
-      foreach ($this->attributes as $attribute) {
+      foreach ($load as $attribute) {
         $attribute = strtolower($attribute);
         $this->schema[$attribute] = array();
 
@@ -204,7 +211,6 @@ class SimpleLdapSchema {
         }
       }
     }
-
   }
 
   /**

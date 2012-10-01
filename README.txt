@@ -53,18 +53,19 @@ _clean($entry)
 SimpleLdapSchema
 ================
 
-$types
+$attributes
+$dn
 
 __construct(SimpleLdapServer $server)
 __get($name)
 __set($name, $value)
 
-exists($type, $name)
-get($type, $name = NULL)
+exists($attribute, $name = NULL)
+get($attribute = NULL, $name = NULL)
 
-may($objectclass)
-must($objectclass)
-superclass($objectclass)
+may($objectclass, $recursive = FALSE)
+must($objectclass, $recursive = FALSE)
+superclass($objectclass, $recursive = FALSE)
 
 *isBinary($attribute)
 *getAssignedOCL($attribute)
