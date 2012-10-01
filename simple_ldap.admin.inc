@@ -12,7 +12,7 @@ function simple_ldap_admin() {
 
   $form['server'] = array(
     '#type' => 'fieldset',
-    '#title' => t('LDAP Server'),
+    '#title' => t('LDAP Server Connection Information'),
     '#collapsible' => FALSE,
   );
 
@@ -46,15 +46,22 @@ function simple_ldap_admin() {
   $form['directory']['simple_ldap_binddn'] = array(
     '#type' => 'textfield',
     '#title' => t('Bind DN'),
-    '#description' => t('Leave this blank to bind anonymously'),
     '#default_value' => variable_get('simple_ldap_binddn', ''),
+    '#description' => t('Leave this blank to bind anonymously'),
   );
 
   $form['directory']['simple_ldap_bindpw'] = array(
     '#type' => 'password',
-    '#title' => t('Bind Password'),
+    '#title' => t('Bind password'),
     '#description' => t('Leave this blank to bind anonymously'),
     '#attributes' => array('value' => array(variable_get('simple_ldap_bindpw', ''))),
+  );
+
+  $form['directory']['simple_ldap_pagesize'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Search result page size'),
+    '#default_value' => variable_get('simple_ldap_pagesize', ''),
+    '#description' => t('Leave this blank to disable paged queries.'),
   );
 
   return system_settings_form($form);
