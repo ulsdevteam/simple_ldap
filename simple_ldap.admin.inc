@@ -57,6 +57,8 @@ function simple_ldap_admin() {
     '#attributes' => array('value' => array(variable_get('simple_ldap_bindpw', ''))),
   );
 
+  // @todo Check whether the server supports paged queries. Look for the oid
+  // "1.2.840.113556.1.4.319" in the $server->rootdse['supportedcontrol'].
   $form['directory']['simple_ldap_pagesize'] = array(
     '#type' => 'textfield',
     '#title' => t('Search result page size'),

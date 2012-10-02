@@ -65,6 +65,7 @@ class SimpleLdapSchema {
    * Returns whether the given item exists.
    *
    * @todo Rename $type to $attribute.
+   * @todo Support oid as well as attribute name
    */
   public function exists($type, $name = NULL) {
     // Make sure the schema for the requested type is loaded.
@@ -91,6 +92,7 @@ class SimpleLdapSchema {
    *   If specified, a single entry with this name is returned.
    *
    * @todo Rename $type to $attribute.
+   * @todo Support oid as well as name.
    * @todo Handle an array of attributes, as well as default to all attributes.
    */
   public function get($type, $name = NULL) {
