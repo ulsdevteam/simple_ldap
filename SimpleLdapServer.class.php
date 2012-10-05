@@ -218,6 +218,8 @@ class SimpleLdapServer {
    * Search the LDAP server.
    *
    * @todo Handle paging of large results.
+   *   Check whether the server supports paged queries. Look for the oid
+   *   "1.2.840.113556.1.4.319" in the $server->rootdse['supportedcontrol'].
    */
   public function search($base_dn, $filter, $scope = 'sub', $attributes = array(), $attrsonly = 0, $sizelimit = 0, $timelimit = 0, $deref = LDAP_DEREF_NEVER) {
     // Make sure there is a valid binding.

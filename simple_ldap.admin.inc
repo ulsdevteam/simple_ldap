@@ -57,14 +57,19 @@ function simple_ldap_admin() {
     '#attributes' => array('value' => array(variable_get('simple_ldap_bindpw', ''))),
   );
 
-  // @todo Check whether the server supports paged queries. Look for the oid
-  // "1.2.840.113556.1.4.319" in the $server->rootdse['supportedcontrol'].
   $form['directory']['simple_ldap_pagesize'] = array(
     '#type' => 'textfield',
     '#title' => t('Search result page size'),
     '#default_value' => variable_get('simple_ldap_pagesize', ''),
-    '#description' => t('Leave this blank to disable paged queries.'),
+    '#description' => t('Leave this blank, or set to zero to disable paged queries.'),
   );
+
+  // Only enable the paged query option if it is supported.
+  if (!function_exists('ldap_control_paged_result_response') && !function_exists('ldap_control_paged_result')) {
+    $form['directory']['simple_ldap_pagesize']['#disabled'] = TRUE;
+    $form['directory']['simple_ldap_pagesize']['#default_value'] = '';
+    $form['directory']['simple_ldap_pagesize']['#description'] = t('Paged queries are not supported by this PHP installation.') . ' ' . t('Support was added in PHP version 5.4.');
+  }
 
   return system_settings_form($form);
 }
