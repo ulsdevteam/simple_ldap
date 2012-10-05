@@ -64,21 +64,20 @@ class SimpleLdapSchema {
   /**
    * Returns whether the given item exists.
    *
-   * @todo Rename $type to $attribute.
    * @todo Support oid as well as attribute name
    */
-  public function exists($type, $name = NULL) {
+  public function exists($attribute, $name = NULL) {
     // Make sure the schema for the requested type is loaded.
-    $this->load(array($type));
+    $this->load(array($attribute));
 
     // Check to see if the requested schema entry exists.
-    $type = strtolower($type);
-    if (isset($this->schema[$type])) {
+    $attribute = strtolower($attribute);
+    if (isset($this->schema[$attribute])) {
       if ($name === NULL) {
-        return (count($this->schema[$type]) > 0);
+        return (count($this->schema[$attribute]) > 0);
       }
       else {
-        return isset($this->schema[$type][strtolower($name)]);
+        return isset($this->schema[$attribute][strtolower($name)]);
       }
     }
 
@@ -91,17 +90,16 @@ class SimpleLdapSchema {
    * @param string $name
    *   If specified, a single entry with this name is returned.
    *
-   * @todo Rename $type to $attribute.
    * @todo Support oid as well as name.
    * @todo Handle an array of attributes, as well as default to all attributes.
    */
-  public function get($type, $name = NULL) {
-    if ($this->exists($type, $name)) {
+  public function get($attribute, $name = NULL) {
+    if ($this->exists($attribute, $name)) {
       if ($name === NULL) {
-        return $this->schema[strtolower($type)];
+        return $this->schema[strtolower($attribute)];
       }
       else {
-        return $this->schema[strtolower($type)][strtolower($name)];
+        return $this->schema[strtolower($attribute)][strtolower($name)];
       }
     }
 
