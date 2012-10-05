@@ -41,8 +41,6 @@ class SimpleLdapSchema {
 
   /**
    * Magic __get function.
-   *
-   * @todo Get entire schema array -- be sure the whole thing is loaded.
    */
   public function __get($name) {
     switch ($name) {

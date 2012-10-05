@@ -78,6 +78,7 @@ class SimpleLdapServer {
       case 'subschema':
         // Load the schema.
         $this->schema();
+        return $this->schema;
         break;
 
       // Handle PHP ldap options.
