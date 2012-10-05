@@ -50,6 +50,12 @@ class SimpleLdapSchema {
       case 'attributes':
         return $this->$name;
         break;
+
+      case 'entry':
+      case 'subentry':
+        $this->load();
+        return $this->schema;
+        break;
     }
   }
 
@@ -68,7 +74,7 @@ class SimpleLdapSchema {
    */
   public function exists($attribute, $name = NULL) {
     // Make sure the schema for the requested type is loaded.
-    $this->load(array($attribute));
+    $this->load($attribute);
 
     // Check to see if the requested schema entry exists.
     $attribute = strtolower($attribute);
@@ -91,7 +97,6 @@ class SimpleLdapSchema {
    *   If specified, a single entry with this name is returned.
    *
    * @todo Support oid as well as name.
-   * @todo Handle an array of attributes, as well as default to all attributes.
    */
   public function get($attribute, $name = NULL) {
     if ($this->exists($attribute, $name)) {
@@ -181,8 +186,14 @@ class SimpleLdapSchema {
    * are not already cached, are loaded.
    */
   protected function load($attributes = NULL) {
+    // If no attributes are specified, default to all attributes.
     if ($attributes === NULL) {
       $attributes = $this->attributes;
+    }
+
+    // Make sure $attributes is an array.
+    if (!is_array($attributes)) {
+      $attributes = array($attributes);
     }
 
     // Determine which attributes need to be loaded.
@@ -194,23 +205,28 @@ class SimpleLdapSchema {
       }
     }
 
+    // Load the attributes.
     if (!empty($load)) {
       $result = $this->server->search($this->dn, 'objectclass=*', 'base', $load);
 
-      // Parse the schema.
-      foreach ($load as $attribute) {
-        $attribute = strtolower($attribute);
-        $this->schema[$attribute] = array();
+      if ($result !== FALSE) {
+        // Parse the schema.
+        foreach ($load as $attribute) {
+          $attribute = strtolower($attribute);
+          $this->schema[$attribute] = array();
 
-        // Get the values for each attribute.
-        if (isset($result[$this->dn][$attribute])) {
-          foreach ($result[$this->dn][$attribute] as $value) {
-            $parsed = $this->parse($value);
-            $this->schema[$attribute][strtolower($parsed['name'])] = $parsed;
+          // Get the values for each attribute.
+          if (isset($result[$this->dn][$attribute])) {
+            foreach ($result[$this->dn][$attribute] as $value) {
+              $parsed = $this->parse($value);
+              $this->schema[$attribute][strtolower($parsed['name'])] = $parsed;
+            }
           }
         }
       }
+
     }
+
   }
 
   /**

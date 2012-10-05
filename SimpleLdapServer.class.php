@@ -75,6 +75,7 @@ class SimpleLdapServer {
         break;
 
       case 'schema':
+      case 'subschema':
         // Load the schema.
         $this->schema();
         break;

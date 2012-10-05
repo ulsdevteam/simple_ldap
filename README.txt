@@ -11,9 +11,9 @@ $version
 $binddn
 $bindpw
 
-// Load these in __get()
+// Dynamically loaded in __get()
 $rootdse
-$schema
+$[sub]schema
 
 SimpleLdapServer::singleton($reset = FALSE)
 
@@ -55,6 +55,9 @@ SimpleLdapSchema
 
 $attributes
 $dn
+
+// Dynamically loaded in __get()
+$[sub]entry
 
 __construct(SimpleLdapServer $server)
 __get($name)
