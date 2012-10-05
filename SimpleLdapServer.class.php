@@ -81,6 +81,10 @@ class SimpleLdapServer {
         return $this->schema;
         break;
 
+      case 'error':
+        return ldap_errno($this->resource);
+        break;
+
       // Handle PHP ldap options.
       case 'LDAP_OPT_DEREF':
       case 'LDAP_OPT_SIZELIMIT':
@@ -308,19 +312,6 @@ class SimpleLdapServer {
 
     // Add the entry.
     return @ldap_modify($this->resource, $dn, $attributes);
-  }
-
-  /**
-   * Return the last server error.
-   *
-   * @return array
-   *   The key of the array is the error number, and the value of the array is
-   *   the error string.
-   */
-  function error() {
-    $errno = ldap_errno($this->resource);
-    $error = array($errno => ldap_err2str($errno));
-    return $error;
   }
 
   /**

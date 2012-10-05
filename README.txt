@@ -12,6 +12,7 @@ $binddn
 $bindpw
 
 // Dynamically loaded in __get()
+$error
 $rootdse
 $[sub]schema
 
@@ -33,8 +34,6 @@ exists($dn)
 add($dn, $attributes)
 delete($dn, $recursive = false)
 modify($dn, $attributes)
-
-error()
 
 *move($dn, $newdn)
 *copy($dn, $newdn)
