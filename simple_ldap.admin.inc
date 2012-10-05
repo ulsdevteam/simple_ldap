@@ -61,7 +61,7 @@ function simple_ldap_admin() {
     '#type' => 'textfield',
     '#title' => t('Search result page size'),
     '#default_value' => variable_get('simple_ldap_pagesize', ''),
-    '#description' => t('Leave this blank, or set to zero to disable paged queries.'),
+    '#description' => t('Leave this blank to disable paged queries.'),
   );
 
   // Only enable the paged query option if it is supported.
