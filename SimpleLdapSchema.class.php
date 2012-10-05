@@ -67,8 +67,6 @@ class SimpleLdapSchema {
 
   /**
    * Returns whether the given item exists.
-   *
-   * @todo Support oid as well as attribute name
    */
   public function exists($attribute, $name = NULL) {
     // Make sure the schema for the requested type is loaded.
@@ -81,7 +79,18 @@ class SimpleLdapSchema {
         return (count($this->schema[$attribute]) > 0);
       }
       else {
-        return isset($this->schema[$attribute][strtolower($name)]);
+        if (isset($this->schema[$attribute][strtolower($name)])) {
+          // An attribute of the given name exists.
+          return TRUE;
+        }
+        else {
+          // Search for the OID.
+          foreach ($this->schema[$attribute] as $attribute) {
+            if ($attribute['oid'] == $name) {
+              return TRUE;
+            }
+          }
+        }
       }
     }
 
@@ -93,16 +102,27 @@ class SimpleLdapSchema {
    *
    * @param string $name
    *   If specified, a single entry with this name is returned.
-   *
-   * @todo Support oid as well as name.
    */
   public function get($attribute, $name = NULL) {
     if ($this->exists($attribute, $name)) {
+      $attribute = strtolower($attribute);
       if ($name === NULL) {
-        return $this->schema[strtolower($attribute)];
+        return $this->schema[$attribute];
       }
       else {
-        return $this->schema[strtolower($attribute)][strtolower($name)];
+        $name = strtolower($name);
+        if (isset($this->schema[$attribute][$name])) {
+          // Return a named attribute.
+          return $this->schema[$attribute][$name];
+        }
+        else {
+          // Search for a matching OID.
+          foreach ($this->schema[$attribute] as $attribute) {
+            if ($attribute['oid'] == $name) {
+              return $attribute;
+            }
+          }
+        }
       }
     }
 

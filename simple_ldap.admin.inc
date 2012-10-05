@@ -10,10 +10,6 @@
 function simple_ldap_admin() {
   $form = array();
 
-  $server = SimpleLdapServer::singleton();
-  $schema = $server->subschema->subentry;
-  dpm($schema);
-
   $form['server'] = array(
     '#type' => 'fieldset',
     '#title' => t('LDAP Server Connection Information'),
