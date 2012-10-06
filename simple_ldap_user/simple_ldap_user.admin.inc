@@ -56,7 +56,7 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#description' => t('Which LDAP objectClass should be used when searching for a user.'),
     '#ajax' => array(
       'callback' => 'simple_ldap_user_objectclass_ajax',
-      'wrapper' => 'simple-ldap-user-attribute-name',
+      'wrapper' => 'simple-ldap-user-attributes',
     ),
   );
 
@@ -74,17 +74,12 @@ function simple_ldap_user_admin($form, &$form_state) {
   $form['user']['simple_ldap_user_attribute_name'] = array(
     '#type' => 'select',
     '#title' => t('Username attribute'),
-    '#prefix' => '<div id="simple-ldap-user-attribute-name">',
-    '#suffix' => '</div>',
+    '#prefix' => '<div id="simple-ldap-user-attributes">',
     '#options' => $attributes,
     '#default_value' => $attribute_name_selected,
     '#required' => TRUE,
     '#description' => t('Which LDAP attribute should be mapped to a Drupal username.') . ' ' .
                       t('This is commonly "cn" or "uid" for openLDAP, and "sAMAccountName" for Active Directory.'),
-    '#ajax' => array(
-      'callback' => 'simple_ldap_user_attribute_name_ajax',
-      'wrapper' => 'simple-ldap-user-attribute-mail',
-    ),
   );
 
   // Get the selected mail attribute.
@@ -93,7 +88,6 @@ function simple_ldap_user_admin($form, &$form_state) {
   $form['user']['simple_ldap_user_attribute_mail'] = array(
     '#type' => 'select',
     '#title' => t('Email attribute'),
-    '#prefix' => '<div id="simple-ldap-user-attribute-mail">',
     '#suffix' => '</div>',
     '#options' => $attributes,
     '#default_value' => $attribute_mail_selected,
@@ -106,5 +100,5 @@ function simple_ldap_user_admin($form, &$form_state) {
 }
 
 function simple_ldap_user_objectclass_ajax($form, $form_state) {
-  return $form['user']['simple_ldap_user_attribute_name'];
+  return array($form['user']['simple_ldap_user_attribute_name'], $form['user']['simple_ldap_user_attribute_mail']);
 }
