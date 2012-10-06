@@ -66,6 +66,7 @@ __set($name, $value)
 exists($attribute, $name = NULL)
 get($attribute = NULL, $name = NULL)
 
+attributes($objectclass, $recursive = FALSE)
 may($objectclass, $recursive = FALSE)
 must($objectclass, $recursive = FALSE)
 superclass($objectclass, $recursive = FALSE)

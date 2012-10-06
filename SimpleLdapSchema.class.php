@@ -130,6 +130,16 @@ class SimpleLdapSchema {
   }
 
   /**
+   * Return a lis tof attributes defined for the objectclass.
+   */
+  public function attributes($objectclass, $recursive = FALSE) {
+    $may = $this->may($objectclass, $recursive);
+    $must = $this->must($objectclass, $recursive);
+    $attributes = array_merge($may, $must);
+    return $attributes;
+  }
+
+  /**
    * Return a list of attributes specified as MAY for the objectclass.
    */
   public function may($objectclass, $recursive = FALSE) {
