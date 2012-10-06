@@ -422,8 +422,6 @@ class SimpleLdapServer {
 
   /**
    * Cleans up an array returned by the ldap_* functions.
-   *
-   * @todo Un-array arrays with one entry.
    */
   protected function clean($entry) {
     if (is_array($entry)) {
