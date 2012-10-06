@@ -23,6 +23,7 @@ class SimpleLdapServer {
   // LDAP directory parameters.
   protected $binddn;
   protected $bindpw;
+  protected $pagesize = FALSE;
 
   // LDAP resource link.
   protected $resource = FALSE;
@@ -54,6 +55,13 @@ class SimpleLdapServer {
     $this->starttls = variable_get('simple_ldap_starttls', FALSE);
     $this->binddn = variable_get('simple_ldap_binddn');
     $this->bindpw = variable_get('simple_ldap_bindpw');
+
+    // Only set the pagesize if paged queries are supported.
+    if (function_exists('ldap_control_paged_result_response') &&
+        function_exists('ldap_control_paged_result')) {
+      $this->pagesize = variable_get('simple_ldap_pagesize');
+    }
+
     $this->bind();
   }
 
@@ -123,6 +131,7 @@ class SimpleLdapServer {
       case 'binddn':
       case 'bindpw':
         $this->unbind();
+      case 'pagesize':
         $this->$name = $value;
         break;
 
@@ -200,6 +209,18 @@ class SimpleLdapServer {
 
       // Bind to the LDAP server.
       $this->bound = @ldap_bind($this->resource, $this->binddn, $this->bindpw);
+
+      // If paged queries are enabled, verify whether the server supports them.
+      if ($this->bound && $this->pagesize) {
+        // Load the rootDSE.
+        $this->rootdse();
+
+        // Look for the paged query OID supported control.
+        if (!in_array('1.2.840.113556.1.4.319', $this->rootdse['supportedcontrol'])) {
+          $this->pagesize = FALSE;
+        }
+      }
+
     }
 
     return $this->bound;
@@ -220,10 +241,6 @@ class SimpleLdapServer {
 
   /**
    * Search the LDAP server.
-   *
-   * @todo Handle paging of large results.
-   *   Check whether the server supports paged queries. Look for the oid
-   *   "1.2.840.113556.1.4.319" in the $server->rootdse['supportedcontrol'].
    */
   public function search($base_dn, $filter, $scope = 'sub', $attributes = array(), $attrsonly = 0, $sizelimit = 0, $timelimit = 0, $deref = LDAP_DEREF_NEVER) {
     // Make sure there is a valid binding.
@@ -231,28 +248,51 @@ class SimpleLdapServer {
       return FALSE;
     }
 
-    // Perform the search based on the scope provided.
-    switch ($scope) {
-      case 'base':
-        $result = @ldap_read($this->resource, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
-        break;
+    // Use a post-test loop (do/while) because this will always be done once. It
+    // will only loop if paged queries are supported/enabled, and more than one
+    // page is available.
+    $entries = array('count' => 0);
+    $cookie = '';
+    do {
 
-      case 'one':
-        $result = @ldap_list($this->resource, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
-        break;
+      if ($this->pagesize) {
+        // Set the paged query cookie.
+        ldap_control_paged_result($this->resource, $this->pagesize, TRUE, $cookie);
+      }
 
-      case 'sub':
-      default:
-        $result = @ldap_search($this->resource, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
-        break;
-    }
+      // Perform the search based on the scope provided.
+      switch ($scope) {
+        case 'base':
+          $result = @ldap_read($this->resource, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
+          break;
 
-    // Error handler.
-    if ($result === FALSE) {
-      return FALSE;
-    }
+        case 'one':
+          $result = @ldap_list($this->resource, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
+          break;
 
-    $entries = @ldap_get_entries($this->resource, $result);
+        case 'sub':
+        default:
+          $result = @ldap_search($this->resource, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
+          break;
+      }
+
+      if ($this->pagesize) {
+        // Merge page into $entries.
+        $e = @ldap_get_entries($this->resource, $result);
+        $entries['count'] += $e['count'];
+        for ($i = 0; $i < $e['count']; $i++) {
+          $entries[] = $e[$i]; 
+        }
+
+        // Get the paged query response cookie.
+        @ldap_control_paged_result_response($this->resource, $result, $cookie);
+      }
+      else {
+        $entries = @ldap_get_entries($this->resource, $result);
+      }
+
+    } while ($cookie !== NULL && $cookie != '');
+
     return $this->clean($entries);
   }
 
@@ -382,6 +422,8 @@ class SimpleLdapServer {
 
   /**
    * Cleans up an array returned by the ldap_* functions.
+   *
+   * @todo Un-array arrays with one entry.
    */
   protected function clean($entry) {
     if (is_array($entry)) {

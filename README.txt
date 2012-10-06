@@ -10,6 +10,7 @@ $starttls
 $version
 $binddn
 $bindpw
+$pagesize
 
 // Dynamically loaded in __get()
 $error
@@ -42,11 +43,11 @@ modify($dn, $attributes)
 *getOption($option)
 *setOption($option, $value)
 
+_clean($entry)
 _connect()
 _disconnect()
 _rootdse()
 _schema()
-_clean($entry)
 
 
 SimpleLdapSchema

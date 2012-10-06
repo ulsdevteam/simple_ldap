@@ -6,6 +6,8 @@
 
 /**
  * LDAP server configuration form.
+ *
+ * @todo Require that simple_ldap_pagesize is an integer or empty.
  */
 function simple_ldap_admin() {
   $form = array();
@@ -64,7 +66,7 @@ function simple_ldap_admin() {
     '#description' => t('Leave this blank to disable paged queries.'),
   );
 
-  // Only enable the paged query option if it is supported.
+  // Disable the option if paged queries are not supported.
   if (!function_exists('ldap_control_paged_result_response') && !function_exists('ldap_control_paged_result')) {
     $form['directory']['simple_ldap_pagesize']['#disabled'] = TRUE;
     $form['directory']['simple_ldap_pagesize']['#default_value'] = '';
