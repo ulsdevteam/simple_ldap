@@ -23,7 +23,6 @@ class SimpleLdapServer {
   // LDAP directory parameters.
   protected $binddn;
   protected $bindpw;
-  protected $pagesize = FALSE;
 
   // LDAP resource link.
   protected $resource = FALSE;
@@ -32,6 +31,10 @@ class SimpleLdapServer {
   // Special LDAP entries.
   protected $rootdse;
   protected $schema;
+
+  // Options
+  protected $pagesize = FALSE;
+  protected $readonly;
 
   /**
    * Singleton constructor.
@@ -55,6 +58,7 @@ class SimpleLdapServer {
     $this->starttls = variable_get('simple_ldap_starttls', FALSE);
     $this->binddn = variable_get('simple_ldap_binddn');
     $this->bindpw = variable_get('simple_ldap_bindpw');
+    $this->readonly = variable_get('simple_ldap_readonly', FALSE);
 
     // Only set the pagesize if paged queries are supported.
     if (function_exists('ldap_control_paged_result_response') &&
@@ -311,8 +315,8 @@ class SimpleLdapServer {
    * Add an entry to the LDAP directory.
    */
   public function add($dn, $attributes) {
-    // Make sure there is a valid binding.
-    if (!$this->bind()) {
+    // Make sure there is a valid binding and that changes are allowed.
+    if ($this->reaonly || !$this->bind()) {
       return FALSE;
     }
 
@@ -324,8 +328,8 @@ class SimpleLdapServer {
    * Delete an entry from the directory.
    */
   public function delete($dn, $recursive = FALSE) {
-    // Make sure there is a valid binding.
-    if (!$this->bind()) {
+    // Make sure there is a valid binding and that changes are allowed.
+    if ($this->readonly || !$this->bind()) {
       return FALSE;
     }
 
@@ -345,13 +349,53 @@ class SimpleLdapServer {
    * Modify an LDAP entry.
    */
   public function modify($dn, $attributes) {
-    // Make sure there is a valid binding.
-    if (!$this->bind()) {
+    // Make sure there is a valid binding and that changes are allowed.
+    if ($this->readonly || !$this->bind()) {
       return FALSE;
     }
 
     // Add the entry.
     return @ldap_modify($this->resource, $dn, $attributes);
+  }
+
+  /**
+   * Move an entry to a new DN.
+   *
+   * @todo public function move($dn, $newdn)
+   */
+  public function move($dn, $newdn) {
+    // Make sure there is a valid binding and that changes are allowed.
+    if ($this->readonly || !$this->bind()) {
+      return FALSE;
+    }
+  }
+
+  /**
+   * Copy an entry to a new DN.
+   *
+   * @todo public function copy($dn, $newdn)
+   */
+  public function copy($dn, $newdn) {
+    // Make sure there is a valid binding and that changes are allowed.
+    if ($this->readonly || !$this->bind()) {
+      return FALSE;
+    }
+  }
+
+  /**
+   * UTF8-encode an attribute or array of attributes.
+   *
+   * @todo public function utf8encode($attributes)
+   */
+  public function utf8encode($attributes) {
+  }
+
+  /**
+   * UTF8-decode an attribute or array of attributes.
+   *
+   * @todo public function utf8decode($attributes)
+   */
+  public function utf8decode($attributes) {
   }
 
   /**

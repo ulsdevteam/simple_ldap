@@ -11,8 +11,7 @@ $version
 $binddn
 $bindpw
 $pagesize
-
-*$readonly
+$readonly
 
 // Dynamically loaded in __get()
 $error

@@ -10,6 +10,12 @@
 function simple_ldap_role_admin($form, &$form_state) {
   $form = array();
 
+  // Verify that simple_ldap_user has been configured.
+  if (!simple_ldap_user_configured()) {
+    drupal_set_message(t('Please configure Simple LDAP Users first.'), 'warning');
+    return $form;
+  }
+
   // Initialize a Simple LDAP Server object. Used for dropdown options.
   $server = SimpleLdapServer::singleton();
 

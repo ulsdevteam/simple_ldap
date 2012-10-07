@@ -30,3 +30,16 @@ function simple_ldap_menu() {
 
   return $items;
 }
+
+/**
+ * Returns whether simple_ldap has been configured.
+ */
+function simple_ldap_configured() {
+  $configured = TRUE;
+
+  // Check each of the required configuration items.
+  $configured = $configured && variable_get('simple_ldap_host') !== NULL;
+  $configured = $configured && variable_get('simple_ldap_port') !== NULL;
+
+  return $configured;
+}

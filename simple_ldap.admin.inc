@@ -39,6 +39,12 @@ function simple_ldap_admin() {
     '#default_value' => variable_get('simple_ldap_starttls', FALSE),
   );
 
+  $form['server']['simple_ldap_readonly'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Read-only'),
+    '#default_value' => variable_get('simple_ldap_readonly', FALSE),
+  );
+
   $form['directory'] = array(
     '#type' => 'fieldset',
     '#title' => t('Directory Information'),

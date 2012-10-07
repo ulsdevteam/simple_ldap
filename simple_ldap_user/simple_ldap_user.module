@@ -153,3 +153,19 @@ function simple_ldap_user_user_load($users) {
  */
 function simple_ldap_user_update(&$edit, $account, $category) {
 }
+
+/**
+ * Returns whether simple_ldap_user has been configured.
+ */
+function simple_ldap_user_configured() {
+  $configured = TRUE;
+
+  // Check each of the required configuration items.
+  $configured = $configured && variable_get('simple_ldap_user_basedn') !== NULL;
+  $configured = $configured && variable_get('simple_ldap_user_scope') !== NULL;
+  $configured = $configured && variable_get('simple_ldap_user_objectclass') !== NULL;
+  $configured = $configured && variable_get('simple_ldap_user_attribute_name') !== NULL;
+  $configured = $configured && variable_get('simple_ldap_user_attribute_mail') !== NULL;
+
+  return $configured;
+}
