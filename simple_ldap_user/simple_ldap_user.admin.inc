@@ -76,11 +76,16 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#title' => t('Username attribute'),
     '#prefix' => '<div id="simple-ldap-user-attributes">',
     '#options' => $attributes,
-    '#default_value' => $attribute_name_selected,
     '#required' => TRUE,
     '#description' => t('Which LDAP attribute should be mapped to a Drupal username.') . ' ' .
                       t('This is commonly "cn" or "uid" for openLDAP, and "sAMAccountName" for Active Directory.'),
   );
+
+  // Set default value if it exists in the list of attributes. If a default
+  // value is not set, the empty option is selected.
+  if (array_key_exists($attribute_name_selected, $attributes)) {
+    $form['user']['simple_ldap_user_attribute_name']['#default_value'] = $attribute_name_selected;
+  }
 
   // Get the selected mail attribute.
   $attribute_mail_selected = isset($form_state['values']['simple_ldap_user_attribute_mail']) ? $form_state['values']['simple_ldap_user_attribute_mail'] : variable_get('simple_ldap_user_attribute_mail', 'mail');
@@ -90,11 +95,16 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#title' => t('Email attribute'),
     '#suffix' => '</div>',
     '#options' => $attributes,
-    '#default_value' => $attribute_mail_selected,
     '#required' => TRUE,
     '#description' => t("Which LDAP attribute should be mapped to a Drupal user's email address.") . ' ' .
                       t('This is commonly "mail".'),
   );
+
+  // Set default value if it exists in the list of attributes. If a default
+  // value is not set, the empty option is selected.
+  if (array_key_exists($attribute_mail_selected, $attributes)) {
+    $form['user']['simple_ldap_user_attribute_mail']['#default_value'] = $attribute_mail_selected;
+  }
 
   return system_settings_form($form);
 }
