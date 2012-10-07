@@ -12,6 +12,8 @@ $binddn
 $bindpw
 $pagesize
 
+*$readonly
+
 // Dynamically loaded in __get()
 $error
 $rootdse
@@ -40,8 +42,6 @@ modify($dn, $attributes)
 *copy($dn, $newdn)
 *utf8encode($attributes)
 *utf8decode($attributes)
-*getOption($option)
-*setOption($option, $value)
 
 _clean($entry)
 _connect()
