@@ -1,8 +1,21 @@
 README.txt
 ==========
 
-SimpleLdapServer
-================
+Back of the napkin:
+
+- Override Drupal's user management, and force LDAP to be the source of
+  information (except for user:1)
+- If the given binddn does not have permission to create/modify entries, user
+  management via drupal is disabled
+- Assume information in LDAP is authoratative, and overwrite drupal info.
+- When a drupal account that has no matching LDAP account is accessed, attempt
+  to create the LDAP account.  If it fails, deny access.
+- Provision new LDAP accounts when a Drupal account is set to "active"
+- Handle password reset and account registration
+- Nested groups are not supported
+
+SimpleLdapServer Fingerprint
+============================
 
 $host
 $port
@@ -49,8 +62,8 @@ _rootdse()
 _schema()
 
 
-SimpleLdapSchema
-================
+SimpleLdapSchema Fingerprint
+============================
 
 $attributes
 $dn
