@@ -47,13 +47,13 @@ class SimpleLdapSchema {
       case 'dn':
       case 'attributes':
         return $this->$name;
-        break;
+      break;
 
       case 'entry':
       case 'subentry':
         $this->load();
         return $this->schema;
-        break;
+      break;
     }
   }
 

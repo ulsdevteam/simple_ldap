@@ -32,7 +32,7 @@ class SimpleLdapServer {
   protected $rootdse;
   protected $schema;
 
-  // Options
+  // Options.
   protected $pagesize = FALSE;
   protected $readonly;
 
@@ -91,11 +91,11 @@ class SimpleLdapServer {
         // Load the schema.
         $this->schema();
         return $this->schema;
-        break;
+      break;
 
       case 'error':
         return ldap_errno($this->resource);
-        break;
+      break;
 
       // Handle PHP ldap options.
       case 'LDAP_OPT_DEREF':
@@ -117,7 +117,7 @@ class SimpleLdapServer {
           return $value;
         }
         return FALSE;
-        break;
+      break;
     }
 
     return $this->$name;
@@ -163,7 +163,7 @@ class SimpleLdapServer {
       // LDAPv3 is required, do not allow it to be changed.
       case 'LDAP_OPT_PROTOCOL_VERSION':
         return FALSE;
-        break;
+      break;
 
       default:
     }
@@ -285,7 +285,7 @@ class SimpleLdapServer {
         $e = @ldap_get_entries($this->resource, $result);
         $entries['count'] += $e['count'];
         for ($i = 0; $i < $e['count']; $i++) {
-          $entries[] = $e[$i]; 
+          $entries[] = $e[$i];
         }
 
         // Get the paged query response cookie.
@@ -412,7 +412,7 @@ class SimpleLdapServer {
       }
     }
 
-    // Set the LDAP version
+    // Set the LDAP version.
     @ldap_set_option($this->resource, LDAP_OPT_PROTOCOL_VERSION, $this->version);
 
     return TRUE;

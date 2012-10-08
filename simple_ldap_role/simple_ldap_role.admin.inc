@@ -66,10 +66,10 @@ function simple_ldap_role_admin($form, &$form_state) {
     ),
   );
 
-  // Generate a list of attributes for the selected objectclass
+  // Generate a list of attributes for the selected objectclass.
   $result = $server->schema->attributes($objectclass_selected, TRUE);
   $attributes = array();
-  foreach($result as $attribute) {
+  foreach ($result as $attribute) {
     $attributes[strtolower($attribute)] = $attribute;
   }
   asort($attributes);
@@ -116,6 +116,9 @@ function simple_ldap_role_admin($form, &$form_state) {
   return system_settings_form($form);
 }
 
+/**
+ * Handle simple_ldap_role_objectclass ajax calls.
+ */
 function simple_ldap_role_objectclass_ajax($form, $form_state) {
   return array($form['role']['simple_ldap_role_attribute_name'], $form['role']['simple_ldap_role_attribute_member']);
 }
