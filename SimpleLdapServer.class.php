@@ -245,6 +245,8 @@ class SimpleLdapServer {
 
   /**
    * Search the LDAP server.
+   *
+   * @todo look into using ldap_free_result before returning.
    */
   public function search($base_dn, $filter, $scope = 'sub', $attributes = array(), $attrsonly = 0, $sizelimit = 0, $timelimit = 0, $deref = LDAP_DEREF_NEVER) {
     // Make sure there is a valid binding.
@@ -359,6 +361,8 @@ class SimpleLdapServer {
 
   /**
    * Modify an LDAP entry.
+   *
+   * @todo Should ldap_mod_add, ldap_mod_del, and ldap_mod_replace be used?
    */
   public function modify($dn, $attributes) {
     // Make sure there is a valid binding and that changes are allowed.
