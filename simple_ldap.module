@@ -4,10 +4,6 @@
  * Main simple_ldap module file.
  */
 
-// Include the simple_ldap class files.
-module_load_include('php', 'simple_ldap', 'SimpleLdapSchema.class');
-module_load_include('php', 'simple_ldap', 'SimpleLdapServer.class');
-
 /**
  * Implements hook_menu().
  */
