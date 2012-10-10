@@ -46,6 +46,7 @@ search($base_dn, $filter, $scope = 'sub', $attributes = array(),
        $deref = LDAP_DEREF_NEVER)
 
 exists($dn)
+entry($dn)
 compare($dn, $attribute, $value)
 add($dn, $attributes)
 delete($dn, $recursive = false)

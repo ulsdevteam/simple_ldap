@@ -314,6 +314,14 @@ class SimpleLdapServer {
   }
 
   /**
+   * Gets a single entry from the LDAP server.
+   */
+  public function entry($dn) {
+    $entry = $this->search($dn, '(objectclass=*)', 'base');
+    return $entry;
+  }
+
+  /**
    * Compare the given attribute value with what is in the LDAP server.
    */
   public function compare($dn, $attribute, $value) {
