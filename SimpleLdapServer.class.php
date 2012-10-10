@@ -385,25 +385,46 @@ class SimpleLdapServer {
   /**
    * Move an entry to a new DN.
    *
+   * @return boolean
+   *   TRUE on success, FALSE on failure.
+   *
    * @todo public function move($dn, $newdn)
+   *
+   * Pseudocode:
+   *  - Derive rdn and parent from $newdn
+   *  - use ldap_rename() to do the move
+   *    http://us1.php.net/manual/en/function.ldap-rename.php
    */
   public function move($dn, $newdn) {
     // Make sure there is a valid binding and that changes are allowed.
     if ($this->readonly || !$this->bind()) {
       return FALSE;
     }
+
+    // Placeholder.
+    return FALSE;
   }
 
   /**
    * Copy an entry to a new DN.
    *
+   * @return boolean
+   *   TRUE on success, FALSE on failure.
+   *
    * @todo public function copy($dn, $newdn)
+   *
+   * Pseudocode:
+   *  - load $attributes from $dn with $this->entry($dn)
+   *  - use $this->add($newdn, $attributes) to make a copy
    */
   public function copy($dn, $newdn) {
     // Make sure there is a valid binding and that changes are allowed.
     if ($this->readonly || !$this->bind()) {
       return FALSE;
     }
+
+    // Placeholder.
+    return FALSE;
   }
 
   /**
@@ -412,6 +433,8 @@ class SimpleLdapServer {
    * @todo public function utf8encode($attributes)
    */
   public function utf8encode($attributes) {
+    // Placeholder.
+    return $attributes;
   }
 
   /**
@@ -420,6 +443,8 @@ class SimpleLdapServer {
    * @todo public function utf8decode($attributes)
    */
   public function utf8decode($attributes) {
+    // Placeholder.
+    return $attributes;
   }
 
   /**

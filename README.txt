@@ -17,6 +17,7 @@ Back of the napkin:
 SimpleLdapServer Fingerprint
 ============================
 
+// Variables exposed by __get() and __set()
 $host
 $port
 $starttls
@@ -31,60 +32,72 @@ $error
 $rootdse
 $[sub]schema
 
+// Static functions
 SimpleLdapServer::singleton($reset = FALSE)
 
+// Magic functions
 __construct()
 __destruct()
 __get($name)
 __set($name, $value)
 
+// Control functions
 bind($binddn = null, $bindpw = null)
 unbind()
 
+// Read functions
 search($base_dn, $filter, $scope = 'sub', $attributes = array(),
        $attrsonly = 0, $sizelimit = 0, $timelimit = 0,
        $deref = LDAP_DEREF_NEVER)
-
 exists($dn)
 entry($dn)
 compare($dn, $attribute, $value)
+
+// Write functions
 add($dn, $attributes)
 delete($dn, $recursive = false)
 modify($dn, $attributes)
+move($dn, $newdn)
+copy($dn, $newdn)
 
-*move($dn, $newdn)
-*copy($dn, $newdn)
-*utf8encode($attributes)
-*utf8decode($attributes)
+// Utility functions
+utf8encode($attributes)
+utf8decode($attributes)
 
-_clean($entry)
-_connect()
-_disconnect()
-_rootdse()
-_schema()
+// Private functions
+clean($entry)
+connect()
+disconnect()
+rootdse()
+schema()
 
 
 SimpleLdapSchema Fingerprint
 ============================
 
+// Variables exposed by __get() and __set()
 $attributes
 $dn
 
 // Dynamically loaded in __get()
 $[sub]entry
 
+// Magic functions
 __construct(SimpleLdapServer $server)
 __get($name)
 __set($name, $value)
 
+// Query functions
 exists($attribute, $name = NULL)
 get($attribute = NULL, $name = NULL)
 
+// ObjectClass functions
 attributes($objectclass, $recursive = FALSE)
 may($objectclass, $recursive = FALSE)
 must($objectclass, $recursive = FALSE)
 superclass($objectclass, $recursive = FALSE)
 
-*isBinary($attribute)
-*getAssignedOCL($attribute)
-*checkAttribute($attribute, $objectclasses)
+// Potential candidates for future implementation
+isBinary($attribute)
+getAssignedOCL($attribute)
+checkAttribute($attribute, $objectclasses)
