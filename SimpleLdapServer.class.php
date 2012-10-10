@@ -312,6 +312,18 @@ class SimpleLdapServer {
   }
 
   /**
+   * Compare the given attribute value with what is in the LDAP server.
+   */
+  public function compare($dn, $attribute, $value) {
+    // Make sure there is a valid binding.
+    if (!$this->bind()) {
+      return FALSE;
+    }
+
+    return @ldap_compare($this->resource, $dn, $attribute, $value);
+  }
+
+  /**
    * Add an entry to the LDAP directory.
    */
   public function add($dn, $attributes) {
