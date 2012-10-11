@@ -6,6 +6,9 @@
 
 /**
  * Simple LDAP User configuration form.
+ *
+ * @todo show/hide simple_ldap_user_attribute_pass based on whether
+ *       simple_ldap_user_rebind is selected.
  */
 function simple_ldap_user_admin($form, &$form_state) {
   $form = array();
@@ -41,6 +44,13 @@ function simple_ldap_user_admin($form, &$form_state) {
     ),
     '#required' => TRUE,
     '#default_value' => variable_get('simple_ldap_user_scope', 'sub'),
+  );
+
+  $form['user']['simple_ldap_user_rebind'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Rebind as user when authenticating'),
+    '#default_value' => variable_get('simple_ldap_user_rebind', FALSE),
+    '#description' => t('This is required for Active Directory.') . ' ' . t('If disabled, an LDAP attribute compare will be done against the password attribute selected below.'),
   );
 
   // Generate a list of object classes supported by the server.
@@ -83,8 +93,7 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#prefix' => '<div id="simple-ldap-user-attributes">',
     '#options' => $attributes,
     '#required' => TRUE,
-    '#description' => t('Which LDAP attribute should be mapped to a Drupal username.') . ' ' .
-                      t('This is commonly "cn" or "uid" for openLDAP, and "sAMAccountName" for Active Directory.'),
+    '#description' => t('Which LDAP attribute should be mapped to a Drupal username.') . ' ' . t('This is commonly "cn" or "uid" for openLDAP, and "sAMAccountName" for Active Directory.'),
   );
 
   // Set default value if it exists in the list of attributes. If a default
@@ -99,17 +108,33 @@ function simple_ldap_user_admin($form, &$form_state) {
   $form['user']['simple_ldap_user_attribute_mail'] = array(
     '#type' => 'select',
     '#title' => t('Email attribute'),
-    '#suffix' => '</div>',
     '#options' => $attributes,
     '#required' => TRUE,
-    '#description' => t("Which LDAP attribute should be mapped to a Drupal user's email address.") . ' ' .
-                      t('This is commonly "mail".'),
+    '#description' => t("Which LDAP attribute should be mapped to a Drupal user's email address.") . ' ' . t('This is commonly "mail".'),
   );
 
   // Set default value if it exists in the list of attributes. If a default
   // value is not set, the empty option is selected.
   if (array_key_exists($attribute_mail_selected, $attributes)) {
     $form['user']['simple_ldap_user_attribute_mail']['#default_value'] = $attribute_mail_selected;
+  }
+
+  // Get the selected password attribute.
+  $attribute_pass_selected = isset($form_state['values']['simple_ldap_user_attribute_pass']) ? $form_state['values']['simple_ldap_user_attribute_pass'] : variable_get('simple_ldap_user_attribute_pass', 'userpassword');
+
+  $form['user']['simple_ldap_user_attribute_pass'] = array(
+    '#type' => 'select',
+    '#title' => t('Password attribute'),
+    '#suffix' => '</div>',
+    '#options' => $attributes,
+    '#required' => FALSE,
+    '#description' => t("Which LDAP attribute should be used to verify the user's password when authenticating.") . ' ' . t('This is commonly "userPassword".'),
+  );
+
+  // Set default value if it exists in the list of attributes. If a default
+  // value is not set, the empty option is selected.
+  if (array_key_exists($attribute_pass_selected, $attributes)) {
+    $form['user']['simple_ldap_user_attribute_pass']['#default_value'] = $attribute_pass_selected;
   }
 
   return system_settings_form($form);
@@ -119,5 +144,9 @@ function simple_ldap_user_admin($form, &$form_state) {
  * Handle simple_ldap_user_objectclass ajax calls.
  */
 function simple_ldap_user_objectclass_ajax($form, $form_state) {
-  return array($form['user']['simple_ldap_user_attribute_name'], $form['user']['simple_ldap_user_attribute_mail']);
+  return array(
+    $form['user']['simple_ldap_user_attribute_name'],
+    $form['user']['simple_ldap_user_attribute_mail'],
+    $form['user']['simple_ldap_user_attribute_pass'],
+  );
 }
