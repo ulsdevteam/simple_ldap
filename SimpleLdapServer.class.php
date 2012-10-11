@@ -173,36 +173,38 @@ class SimpleLdapServer {
    * Connect and bind to the LDAP server.
    *
    * @param mixed $binddn
-   *   Use the given DN while binding. This sets the object's binddn to this
-   *   value, and rebinds if already bound. The default is FALSE because NULL is
-   *   a valid binddn for an anonymous bind.
+   *   Use the given DN while binding. Use NULL for an anonymous bind.
    * @param mixed $bindpw
-   *   Use the given password while binding. This sets the object's bindpw to
-   *   this value, and rebinds if already bound. The default is FALSE because
-   *   NULL is a valid binddn for an anonymous bind.
+   *   Use the given password while binding. Use NULL for an anonymous bind.
+   * @param boolean $rebind
+   *   Reset the object's bind credentials to those provided. Otherwise, just
+   *   bind to verify that the credentials are valid.
    *
    * @return boolean
    *   TRUE on success, FALSE on failure.
    */
-  public function bind($binddn = FALSE, $bindpw = FALSE) {
+  public function bind($binddn = FALSE, $bindpw = FALSE, $rebind = FALSE) {
     // Connect first.
     if ($this->connect() === FALSE) {
       return FALSE;
     }
 
-    // Reset bind DN if provided.
-    if ($binddn && $binddn != $this->binddn) {
+    // Reset bind DN if provided, and reset is specified.
+    if ($rebind && $binddn !== FALSE && $binddn != $this->binddn) {
       $this->binddn = $binddn;
       $this->bound = FALSE;
     }
 
-    // Reset bind PW if provided.
-    if ($bindpw && $bindpw != $this->bindpw) {
+    // Reset bind PW if provided, and reset is specified.
+    if ($rebind && $bindpw !== FALSE && $bindpw != $this->bindpw) {
       $this->bindpw = $bindpw;
       $this->bound = FALSE;
     }
 
-    if (!$this->bound) {
+    // Attempt to bind if not already bound, or rebind is specified, or
+    // credentials are given.
+    if (!$this->bound || $rebind || $binddn !== FALSE && $bindpw !== FALSE) {
+
       // Start TLS if enabled.
       if ($this->starttls) {
         $tls = @ldap_start_tls($this->resource);
@@ -212,7 +214,16 @@ class SimpleLdapServer {
       }
 
       // Bind to the LDAP server.
-      $this->bound = @ldap_bind($this->resource, $this->binddn, $this->bindpw);
+      if ($rebind || $binddn === FALSE || $bindpw === FALSE) {
+        $this->bound = @ldap_bind($this->resource, $this->binddn, $this->bindpw);
+      }
+      else {
+        // Bind with the given credentials. This is a temporary bind to verify
+        // the password, so $this->bound is reset to FALSE.
+        $result = @ldap_bind($this->resource, $binddn, $bindpw);
+        $this->bound = FALSE;
+        return $result;
+      }
 
       // If paged queries are enabled, verify whether the server supports them.
       if ($this->bound && $this->pagesize) {
@@ -426,12 +437,10 @@ class SimpleLdapServer {
     }
 
     ldap_get_option($this->resource, LDAP_OPT_CLIENT_CONTROLS, $controls);
-    dpm($controls);
 
     $entry = $this->entry($dn);
     if ($entry !== FALSE) {
       $result = $this->add($newdn, $entry[$dn]);
-      dpm($result);
     }
 
     return FALSE;

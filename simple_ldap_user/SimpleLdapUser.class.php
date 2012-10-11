@@ -8,6 +8,7 @@ class SimpleLdapUser {
 
   public $dn;
   public $attributes;
+  protected $server;
 
   private static $users;
 
@@ -25,8 +26,9 @@ class SimpleLdapUser {
     );
 
     // Load attributes from directory.
-    $server = SimpleLdapServer::singleton();
-    $this->attributes = $server->search($this->dn, 'objectClass=*', 'base', $attributes);
+    $this->server = SimpleLdapServer::singleton();
+    $entry = $this->server->entry($this->dn);
+    $this->attributes = $entry[$this->dn];
 
   }
 
@@ -77,7 +79,15 @@ class SimpleLdapUser {
     if ($ldap_user === FALSE || count($ldap_user) == 0) {
       return FALSE;
     }
-    return $ldap_user[0]['dn'];
+    return $ldap_user[0];
+  }
+
+  /**
+   * Authenticates the user with the given password.
+   */
+  public function authenticate($password) {
+    $auth = $this->server->bind($this->dn, $password);
+    return $auth;
   }
 
   /**
@@ -94,7 +104,7 @@ class SimpleLdapUser {
     $filter = '(' . $search . '=' . $name . ')';
 
     // Search for the entry.
-    return $server->search($base_dn, $filter, $scope, array('dn'), 1, 1);
+    return array_keys($server->search($base_dn, $filter, $scope, array('dn'), 1, 1));
   }
 
 }

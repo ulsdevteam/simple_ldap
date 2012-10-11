@@ -26,8 +26,8 @@ function simple_ldap_user_menu() {
 /**
  * Implements hook_form_FORM_ID_alter().
  *
- * Overrides the built-in user module's list of users, removing any accounts
- * from the list that do not have a matching LDAP account.
+ * Overrides the built-in user module's list of users, setting accounts to
+ * "blocked" if there is no matching LDAP account.
  */
 function simple_ldap_user_form_user_admin_account_alter(&$form, &$form_state, $form_id) {
   // Update the user array.
@@ -54,6 +54,9 @@ function simple_ldap_user_form_user_admin_account_alter(&$form, &$form_state, $f
 
 /**
  * Implements hook_entity_info_alter().
+ *
+ * Specifies that SimpleLdapuserController should be used to load users instead
+ * of the default controller.
  */
 function simple_ldap_user_entity_info_alter(&$entity_info) {
   if (isset($entity_info['user'])) {
@@ -91,11 +94,15 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
 /**
  * Implements hook_menu_alter().
  *
- * Disables the user register and password reminder pages.
+ * Disables the user register and password reminder pages if the LDAP server is
+ * read-only.
  */
 function simple_ldap_user_menu_alter(&$items) {
-  unset($items['user/register']);
-  unset($items['user/password']);
+  $server = SimpleLdapServer::singleton();
+  if ($server->readonly) {
+    unset($items['user/register']);
+    unset($items['user/password']);
+  }
 }
 
 /**
@@ -113,7 +120,10 @@ function simple_ldap_user_login_authenticate_validate($form, &$form_state) {
 
     // Authenticate the credentials against the LDAP directory.
     $ldap_user = SimpleLdapUser::load($form_state['values']['name']);
-    if ($ldap_user !== FALSE && SimpleLdapServer::authenticate($ldap_user->dn, $password)) {
+    if ($ldap_user !== FALSE && $ldap_user->authenticate($password)) {
+
+      $server = SimpleLdapServer::singleton();
+      $results = $server->search('ou=users,dc=lulladev,dc=com');
 
       // Attempt to load the drupal user, if it exists.
       $drupal_user = user_load_by_name($form_state['values']['name']);
@@ -127,30 +137,11 @@ function simple_ldap_user_login_authenticate_validate($form, &$form_state) {
         $drupal_user = user_save(NULL, $account);
       }
 
-      // Synchronize LDAP attrubtes to Drupal user.
-      $edit = array(
-        'mail' => $ldap_user->attributes[variable_get('simple_ldap_user_attribute_mail')][0],
-        'pass' => $password,
-      );
-      $drupal_user = user_save($drupal_user, $edit);
-
       // Set the form uid to indicate that the user is authenticated.
       $form_state['uid'] = $drupal_user->uid;
     }
 
   }
-}
-
-/**
- * Implements hook_user_load().
- */
-function simple_ldap_user_user_load($users) {
-}
-
-/**
- * Implements hook_user_update().
- */
-function simple_ldap_user_user_update(&$edit, $account, $category) {
 }
 
 /**
