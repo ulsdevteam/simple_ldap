@@ -388,13 +388,6 @@ class SimpleLdapServer {
    *
    * @return boolean
    *   TRUE on success, FALSE on failure.
-   *
-   * @todo public function move($dn, $newdn)
-   *
-   * Pseudocode:
-   *  - Derive rdn and parent from $newdn
-   *  - use ldap_rename() to do the move
-   *    http://us1.php.net/manual/en/function.ldap-rename.php
    */
   public function move($dn, $newdn, $deleteoldrdn = TRUE) {
     // Make sure there is a valid binding and that changes are allowed.
