@@ -396,14 +396,28 @@ class SimpleLdapServer {
    *  - use ldap_rename() to do the move
    *    http://us1.php.net/manual/en/function.ldap-rename.php
    */
-  public function move($dn, $newdn) {
+  public function move($dn, $newdn, $deleteoldrdn = TRUE) {
     // Make sure there is a valid binding and that changes are allowed.
     if ($this->readonly || !$this->bind()) {
       return FALSE;
     }
 
-    // Placeholder.
-    return FALSE;
+    // Parse $newdn into a format that ldap_rename() can use.
+    $parts = ldap_explode_dn($newdn, 0);
+    $rdn = $parts[0];
+    $parent = '';
+    for ($i = 1; $i < $parts['count']; $i++) {
+      $parent .= $parts[$i];
+      if ($i < $parts['count'] - 1) {
+        $parent .= ',';
+      }
+    }
+
+    // Move the entry.
+    $result = ldap_rename($this->resource, $dn, $rdn, $parent, $deleteoldrdn);
+
+    // Return the result.
+    return $result;
   }
 
   /**
