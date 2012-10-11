@@ -439,22 +439,67 @@ class SimpleLdapServer {
 
   /**
    * UTF8-encode an attribute or array of attributes.
-   *
-   * @todo public function utf8encode($attributes)
    */
   public function utf8encode($attributes) {
-    // Placeholder.
-    return $attributes;
+    // $attributes is expected to be an associative array.
+    if (!is_array($attributes) || array_key_exists(0, $attributes)) {
+      return FALSE;
+    }
+
+    // Make sure the schema is loaded.
+    $this->schema();
+
+    // Loop through the given attributes.
+    $utf8 =  array();
+    foreach ($attributes as $attribute => $value) {
+
+      // Verify the schema entry for the current attribute is supposed to be
+      // utf8 encoded. This is specified by a syntax OID of
+      // 1.3.6.1.4.1.1466.115.121.1.15
+      $attributetype = $this->schema->get('attributetypes', $attribute);
+      if (isset($attributetype['syntax']) && $attributetype['syntax'] == '1.3.6.1.4.1.1466.115.121.1.15') {
+        $utf8[$attribute] = utf8_encode($value);
+      }
+      else {
+        $utf8[$attribute] = $value;
+      }
+
+    }
+
+    return $utf8;
   }
 
   /**
    * UTF8-decode an attribute or array of attributes.
-   *
-   * @todo public function utf8decode($attributes)
    */
   public function utf8decode($attributes) {
-    // Placeholder.
-    return $attributes;
+    // $attributes is expected to be an associative array.
+    if (!is_array($attributes) || array_key_exists(0, $attributes)) {
+      return FALSE;
+    }
+
+    // Make sure the schema is loaded.
+    $this->schema();
+
+    // Loop through the given attributes.
+    $utf8 =  array();
+    foreach ($attributes as $attribute => $value) {
+
+      // Verify the schema entry for the current attribute is supposed to be
+      // utf8 encoded. This is specified by a syntax OID of
+      // 1.3.6.1.4.1.1466.115.121.1.15
+      $attributetype = $this->schema->get('attributetypes', $attribute);
+      if (isset($attributetype['syntax']) && $attributetype['syntax'] == '1.3.6.1.4.1.1466.115.121.1.15') {
+        $utf8[$attribute] = utf8_decode($value);
+      }
+      else {
+        $utf8[$attribute] = $value;
+      }
+
+    }
+
+    // Return the utf8-decoded array.
+    return $utf8;
   }
 
   /**
