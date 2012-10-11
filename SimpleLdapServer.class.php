@@ -261,7 +261,7 @@ class SimpleLdapServer {
 
       if ($this->pagesize) {
         // Set the paged query cookie.
-        ldap_control_paged_result($this->resource, $this->pagesize, TRUE, $cookie);
+        @ldap_control_paged_result($this->resource, $this->pagesize, FALSE, $cookie);
       }
 
       // Perform the search based on the scope provided.
