@@ -261,7 +261,7 @@ class SimpleLdapServer {
 
       if ($this->pagesize) {
         // Set the paged query cookie.
-        ldap_control_paged_result($this->resource, $this->pagesize, TRUE, $cookie);
+        @ldap_control_paged_result($this->resource, $this->pagesize, FALSE, $cookie);
       }
 
       // Perform the search based on the scope provided.
@@ -339,7 +339,7 @@ class SimpleLdapServer {
    */
   public function add($dn, $attributes) {
     // Make sure there is a valid binding and that changes are allowed.
-    if ($this->reaonly || !$this->bind()) {
+    if ($this->readonly || !$this->bind()) {
       return FALSE;
     }
 
@@ -388,22 +388,29 @@ class SimpleLdapServer {
    *
    * @return boolean
    *   TRUE on success, FALSE on failure.
-   *
-   * @todo public function move($dn, $newdn)
-   *
-   * Pseudocode:
-   *  - Derive rdn and parent from $newdn
-   *  - use ldap_rename() to do the move
-   *    http://us1.php.net/manual/en/function.ldap-rename.php
    */
-  public function move($dn, $newdn) {
+  public function move($dn, $newdn, $deleteoldrdn = TRUE) {
     // Make sure there is a valid binding and that changes are allowed.
     if ($this->readonly || !$this->bind()) {
       return FALSE;
     }
 
-    // Placeholder.
-    return FALSE;
+    // Parse $newdn into a format that ldap_rename() can use.
+    $parts = ldap_explode_dn($newdn, 0);
+    $rdn = $parts[0];
+    $parent = '';
+    for ($i = 1; $i < $parts['count']; $i++) {
+      $parent .= $parts[$i];
+      if ($i < $parts['count'] - 1) {
+        $parent .= ',';
+      }
+    }
+
+    // Move the entry.
+    $result = ldap_rename($this->resource, $dn, $rdn, $parent, $deleteoldrdn);
+
+    // Return the result.
+    return $result;
   }
 
   /**
@@ -411,12 +418,6 @@ class SimpleLdapServer {
    *
    * @return boolean
    *   TRUE on success, FALSE on failure.
-   *
-   * @todo public function copy($dn, $newdn)
-   *
-   * Pseudocode:
-   *  - load $attributes from $dn with $this->entry($dn)
-   *  - use $this->add($newdn, $attributes) to make a copy
    */
   public function copy($dn, $newdn) {
     // Make sure there is a valid binding and that changes are allowed.
@@ -424,28 +425,81 @@ class SimpleLdapServer {
       return FALSE;
     }
 
-    // Placeholder.
+    ldap_get_option($this->resource, LDAP_OPT_CLIENT_CONTROLS, $controls);
+    dpm($controls);
+
+    $entry = $this->entry($dn);
+    if ($entry !== FALSE) {
+      $result = $this->add($newdn, $entry[$dn]);
+      dpm($result);
+    }
+
     return FALSE;
   }
 
   /**
    * UTF8-encode an attribute or array of attributes.
-   *
-   * @todo public function utf8encode($attributes)
    */
   public function utf8encode($attributes) {
-    // Placeholder.
-    return $attributes;
+    // $attributes is expected to be an associative array.
+    if (!is_array($attributes) || array_key_exists(0, $attributes)) {
+      return FALSE;
+    }
+
+    // Make sure the schema is loaded.
+    $this->schema();
+
+    // Loop through the given attributes.
+    $utf8 =  array();
+    foreach ($attributes as $attribute => $value) {
+
+      // Verify the schema entry for the current attribute is supposed to be
+      // utf8 encoded. This is specified by a syntax OID of
+      // 1.3.6.1.4.1.1466.115.121.1.15
+      $attributetype = $this->schema->get('attributetypes', $attribute);
+      if (isset($attributetype['syntax']) && $attributetype['syntax'] == '1.3.6.1.4.1.1466.115.121.1.15') {
+        $utf8[$attribute] = utf8_encode($value);
+      }
+      else {
+        $utf8[$attribute] = $value;
+      }
+
+    }
+
+    return $utf8;
   }
 
   /**
    * UTF8-decode an attribute or array of attributes.
-   *
-   * @todo public function utf8decode($attributes)
    */
   public function utf8decode($attributes) {
-    // Placeholder.
-    return $attributes;
+    // $attributes is expected to be an associative array.
+    if (!is_array($attributes) || array_key_exists(0, $attributes)) {
+      return FALSE;
+    }
+
+    // Make sure the schema is loaded.
+    $this->schema();
+
+    // Loop through the given attributes.
+    $utf8 =  array();
+    foreach ($attributes as $attribute => $value) {
+
+      // Verify the schema entry for the current attribute is supposed to be
+      // utf8 encoded. This is specified by a syntax OID of
+      // 1.3.6.1.4.1.1466.115.121.1.15
+      $attributetype = $this->schema->get('attributetypes', $attribute);
+      if (isset($attributetype['syntax']) && $attributetype['syntax'] == '1.3.6.1.4.1.1466.115.121.1.15') {
+        $utf8[$attribute] = utf8_decode($value);
+      }
+      else {
+        $utf8[$attribute] = $value;
+      }
+
+    }
+
+    // Return the utf8-decoded array.
+    return $utf8;
   }
 
   /**
