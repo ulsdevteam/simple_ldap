@@ -261,7 +261,7 @@ class SimpleLdapServer {
 
       if ($this->pagesize) {
         // Set the paged query cookie.
-        ldap_control_paged_result($this->resource, $this->pagesize, TRUE, $cookie);
+        @ldap_control_paged_result($this->resource, $this->pagesize, FALSE, $cookie);
       }
 
       // Perform the search based on the scope provided.
@@ -339,7 +339,7 @@ class SimpleLdapServer {
    */
   public function add($dn, $attributes) {
     // Make sure there is a valid binding and that changes are allowed.
-    if ($this->reaonly || !$this->bind()) {
+    if ($this->readonly || !$this->bind()) {
       return FALSE;
     }
 
@@ -411,12 +411,6 @@ class SimpleLdapServer {
    *
    * @return boolean
    *   TRUE on success, FALSE on failure.
-   *
-   * @todo public function copy($dn, $newdn)
-   *
-   * Pseudocode:
-   *  - load $attributes from $dn with $this->entry($dn)
-   *  - use $this->add($newdn, $attributes) to make a copy
    */
   public function copy($dn, $newdn) {
     // Make sure there is a valid binding and that changes are allowed.
@@ -424,7 +418,15 @@ class SimpleLdapServer {
       return FALSE;
     }
 
-    // Placeholder.
+    ldap_get_option($this->resource, LDAP_OPT_CLIENT_CONTROLS, $controls);
+    dpm($controls);
+
+    $entry = $this->entry($dn);
+    if ($entry !== FALSE) {
+      $result = $this->add($newdn, $entry[$dn]);
+      dpm($result);
+    }
+
     return FALSE;
   }
 
