@@ -245,10 +245,8 @@ class SimpleLdapServer {
 
   /**
    * Search the LDAP server.
-   *
-   * @todo look into using ldap_free_result before returning.
    */
-  public function search($base_dn, $filter, $scope = 'sub', $attributes = array(), $attrsonly = 0, $sizelimit = 0, $timelimit = 0, $deref = LDAP_DEREF_NEVER) {
+  public function search($base_dn, $filter = 'objectclass=*', $scope = 'sub', $attributes = array(), $attrsonly = 0, $sizelimit = 0, $timelimit = 0, $deref = LDAP_DEREF_NEVER) {
     // Make sure there is a valid binding.
     if (!$this->bind()) {
       return FALSE;
@@ -296,6 +294,9 @@ class SimpleLdapServer {
       else {
         $entries = @ldap_get_entries($this->resource, $result);
       }
+
+      // Free the query result memory.
+      @ldap_free_result($result);
 
     } while ($cookie !== NULL && $cookie != '');
 
