@@ -64,6 +64,9 @@ function simple_ldap_user_entity_info_alter(&$entity_info) {
 
 /**
  * Implements hook_form_alter().
+ *
+ * @TODO It would be better to use hook_user_login() which works
+ * even if the login is not coming from a form submission.
  */
 function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
   switch ($form_id) {
@@ -147,7 +150,7 @@ function simple_ldap_user_user_load($users) {
 /**
  * Implements hook_user_update().
  */
-function simple_ldap_user_update(&$edit, $account, $category) {
+function simple_ldap_user_user_update(&$edit, $account, $category) {
 }
 
 /**
