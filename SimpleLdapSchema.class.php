@@ -235,7 +235,7 @@ class SimpleLdapSchema {
 
     // Load the attributes.
     if (!empty($load)) {
-      $result = $this->server->search($this->dn, 'objectclass=*', 'base', $load);
+      $result = $this->server->clean($this->server->search($this->dn, 'objectclass=*', 'base', $load));
 
       if ($result !== FALSE) {
         // Parse the schema.

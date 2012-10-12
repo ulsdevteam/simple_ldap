@@ -311,7 +311,7 @@ class SimpleLdapServer {
 
     } while ($cookie !== NULL && $cookie != '');
 
-    return $this->clean($entries);
+    return $entries;
   }
 
   /**
@@ -319,7 +319,7 @@ class SimpleLdapServer {
    */
   public function exists($dn) {
     $entry = $this->search($dn, '(objectclass=*)', 'base', array('dn'));
-    if ($entry === FALSE || count($entry) == 0) {
+    if ($entry === FALSE || $entry['count'] == 0) {
       return FALSE;
     }
     return TRUE;
@@ -330,7 +330,7 @@ class SimpleLdapServer {
    */
   public function entry($dn) {
     $entry = $this->search($dn, '(objectclass=*)', 'base');
-    return $entry;
+    return $this->clean($entry);
   }
 
   /**
@@ -368,7 +368,7 @@ class SimpleLdapServer {
     }
 
     if ($recursive) {
-      $subentries = $this->search($dn, '(objectclass=*)', 'one', array('dn'));
+      $subentries = $this->clean($this->search($dn, '(objectclass=*)', 'one', array('dn')));
       foreach ($subentries as $subdn => $entry) {
         if (!$this->delete($subdn, TRUE)) {
           return FALSE;
@@ -562,7 +562,7 @@ class SimpleLdapServer {
         'subschemaSubentry',
       );
 
-      $result = $this->search('', 'objectclass=*', 'base', $attributes);
+      $result = $this->clean($this->search('', 'objectclass=*', 'base', $attributes));
       $this->rootdse = $result[''];
     }
 
@@ -580,7 +580,7 @@ class SimpleLdapServer {
   /**
    * Cleans up an array returned by the ldap_* functions.
    */
-  protected function clean($entry) {
+  public function clean($entry) {
     if (is_array($entry)) {
       $clean = array();
       for ($i = 0; $i < $entry['count']; $i++) {
