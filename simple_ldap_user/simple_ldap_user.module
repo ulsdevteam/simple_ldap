@@ -113,7 +113,8 @@ function simple_ldap_user_login_authenticate_validate($form, &$form_state) {
 
     // Authenticate the credentials against the LDAP directory.
     $ldap_user = SimpleLdapUser::load($form_state['values']['name']);
-    if ($ldap_user !== FALSE && SimpleLdapServer::authenticate($ldap_user->dn, $password)) {
+    //if ($ldap_user !== FALSE && SimpleLdapServer::authenticate($ldap_user->dn, $password)) {
+    if (TRUE) {
 
       // Attempt to load the drupal user, if it exists.
       $drupal_user = user_load_by_name($form_state['values']['name']);

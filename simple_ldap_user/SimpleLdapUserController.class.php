@@ -29,7 +29,7 @@ class SimpleLdapUserController extends UserController {
       }
 
       // Try to find a matching LDAP user.
-      $filter = '(' . $search . '=' . $drupal_user->name . ')';
+      $filter = '(&(' . $search . '=' . $drupal_user->name . ')' . SimpleLdapUser::filter() . ')';
       $ldap_user = $server->search($base_dn, $filter, $scope, array('dn'), 1);
 
       // Block the user if there is no LDAP match.
