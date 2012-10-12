@@ -2,117 +2,33 @@
 /**
  * @file
  * Class defining a simple LDAP user.
+ *
+ * @todo cache user lookups. singleton($name), maybe?
  */
 
 class SimpleLdapUser {
 
-  public $dn;
-  public $attributes;
-  protected $server;
+  // Variables exposed by __get() and __set()
+  protected $dn = FALSE;
+  protected $attributes = array();
 
-  private static $users;
+  // Internal variables
+  protected $server;
+  protected $dirty = FALSE;
 
   /**
    * Constructor.
    */
-  public function __construct($dn) {
-    $this->dn = $dn;
-    $this->attributes = array();
+  public function __construct($name) {
+    // Load the LDAP server object.
+    $this->server = SimpleLdapServer::singleton();
 
-    // List of attributes to fetch.
+    // List of attributes to fetch from the server.
     $attributes = array(
       variable_get('simple_ldap_user_attribute_name'),
       variable_get('simple_ldap_user_attribute_mail'),
+      'pager',
     );
-
-    // Load attributes from directory.
-    $this->server = SimpleLdapServer::singleton();
-    $this->attributes = $this->server->search($this->dn, self::filter(), 'base', $attributes);
-
-  }
-
-  /**
-   * Sets the object properties to read-only.
-   */
-  public function __set($name, $value) {
-  }
-
-  /**
-   * Searches for an LDAP entry, and returns a SimpleLdapUser object if found.
-   */
-  public static function load($name) {
-    if (!isset(self::$users)) {
-      self::$users = array();
-    }
-
-    if (!isset(self::$users[$name])) {
-      // Load the user if it exists.
-      $dn = self::dn($name);
-      if ($dn === FALSE) {
-        self::$users[$name] = FALSE;
-      }
-      else {
-        self::$users[$name] = new SimpleLdapUser($dn);
-      }
-    }
-
-    return self::$users[$name];
-  }
-
-  /**
-   * Checks for the existance of an LDAP user entry matching the given name.
-   */
-  public static function exists($name) {
-    $ldap_user = self::doSearch($name);
-    if ($ldap_user === FALSE || count($ldap_user) == 0) {
-      return FALSE;
-    }
-    return TRUE;
-  }
-
-  /**
-   * Fetches the DN for the given user name.
-   */
-  public static function dn($name) {
-    $ldap_user = self::doSearch($name);
-    if ($ldap_user === FALSE || count($ldap_user) == 0) {
-      return FALSE;
-    }
-    return $ldap_user[0];
-  }
-
-  /**
-   * Authenticates the user with the given password.
-   */
-  public function authenticate($password) {
-    $auth = $this->server->bind($this->dn, $password);
-    return $auth;
-  }
-
-  /**
-   * Return the LDAP filter needed to search for users, based on the module
-   * configuration.
-   */
-  public static function filter() {
-    // Get the relevant configurations.
-    $objectclass = variable_get('simple_ldap_user_objectclass');
-    $extrafilter = variable_get('simple_ldap_user_filter');
-
-    // Construct the filter.
-    $filter = '(objectclass=' . $objectclass . ')';
-    if ($extrafilter !== NULL) {
-      $filter = '(&' . $filter . '(' . $extrafilter . '))';
-    }
-
-    return $filter;
-  }
-
-  /**
-   * Internal search helper function.
-   */
-  protected static function doSearch($name) {
-    // Load the LDAP server object.
-    $server = SimpleLdapServer::singleton();
 
     // Get the LDAP configuration.
     $base_dn = variable_get('simple_ldap_user_basedn');
@@ -120,8 +36,91 @@ class SimpleLdapUser {
     $search = variable_get('simple_ldap_user_attribute_name');
     $filter = '(&(' . $search . '=' . $name . ')' . self::filter() . ')';
 
-    // Search for the entry.
-    return array_keys($server->search($base_dn, $filter, $scope, array('dn'), 1, 1));
+    // Attempt to load the user from the LDAP server.
+    $result = $this->server->search($base_dn, $filter, $scope, $attributes, 0, 1);
+    if ($result['count'] == 1) {
+      $this->dn = $result[0]['dn'];
+      foreach ($attributes as $attribute) {
+        if (isset($result[0][$attribute]['count']) && $result[0][$attribute]['count'] > 0) {
+          $this->attributes[$attribute] = $result[0][$attribute][0];
+        }
+      }
+    }
+  }
+
+  /**
+   * Destructor.
+   *
+   * @todo Save any changes back to LDAP if !$this->server->readonly.
+   */
+  public function __destruct() {
+  }
+
+  /**
+   * Magic __get() function.
+   */
+  public function __get($name) {
+    switch ($name) {
+      case 'attributes':
+      case 'dn':
+        return $this->$name;
+      break;
+
+      default:
+        if (isset($this->attributes[$name])) {
+          return $this->attributes[$name];
+        }
+      break;
+    }
+
+    return FALSE;
+  }
+
+  /**
+   * Magic __set() function.
+   *
+   * @todo __set() only if !$this->server->readonly
+   */
+  public function __set($name, $value) {
+  }
+
+  /**
+   * Returns whether this user exists in LDAP.
+   */
+  public function exists() {
+    return (boolean) $this->dn;
+  }
+
+  /**
+   * Authenticates this user with the given password.
+   */
+  public function authenticate($password) {
+    if ($this->exists()) {
+      $auth = $this->server->bind($this->dn, $password);
+      return $auth;
+    }
+    return FALSE;
+  }
+
+  /**
+   * Return the LDAP search filter, as set by the module configuration.
+   */
+  public static function filter() {
+    static $filter;
+
+    if (!isset($filter)) {
+      // Get the relevant configurations.
+      $objectclass = variable_get('simple_ldap_user_objectclass', '*');
+      $extrafilter = variable_get('simple_ldap_user_filter');
+
+      // Construct the filter.
+      $filter = '(objectclass=' . $objectclass . ')';
+      if ($extrafilter !== NULL) {
+        $filter = '(&' . $filter . '(' . $extrafilter . '))';
+      }
+    }
+
+    return $filter;
   }
 
 }

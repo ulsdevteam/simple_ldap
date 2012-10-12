@@ -1,10 +1,19 @@
-Implemented Hooks
-=================
+SimpleLdapUser fingerprint
+==========================
 
-hook_menu()
-hook_menu_alter()
-hook_form_alter()
-hook_form_user_admin_account_alter()
-hook_entity_info_alter()
--hook_user_load()
--hook_user_update()
+// Variables exposed by __get() and __set()
+$dn
+$attributes 
+
+// Magic methods
+__construct($name)
+__destruct()
+__get($name)
+__set($name, $value)
+
+// Public functions
+exists()
+authenticate($password)
+
+// Public static methods
+filter()

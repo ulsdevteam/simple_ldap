@@ -28,12 +28,11 @@ class SimpleLdapUserController extends UserController {
         continue;
       }
 
-      // Try to find a matching LDAP user.
-      $filter = '(&(' . $search . '=' . $drupal_user->name . ')' . SimpleLdapUser::filter() . ')';
-      $ldap_user = $server->search($base_dn, $filter, $scope, array('dn'), 1);
+      // Try to load the user from LDAP.
+      $ldap_user = new SimpleLdapUser($drupal_user->name);
 
-      // Block the user if there is no LDAP match.
-      if ($ldap_user === FALSE || count($ldap_user) == 0) {
+      // Block the user if it does not exist in LDAP.
+      if (!$ldap_user->exists()) {
         $users[$uid]->status = 0;
       }
 
