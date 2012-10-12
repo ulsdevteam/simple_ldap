@@ -27,8 +27,7 @@ class SimpleLdapUser {
 
     // Load attributes from directory.
     $this->server = SimpleLdapServer::singleton();
-    $entry = $this->server->entry($this->dn);
-    $this->attributes = $entry[$this->dn];
+    $this->attributes = $this->server->search($this->dn, self::filter(), 'base', $attributes);
 
   }
 
@@ -91,6 +90,24 @@ class SimpleLdapUser {
   }
 
   /**
+   * Return the LDAP filter needed to search for users, based on the module
+   * configuration.
+   */
+  public static function filter() {
+    // Get the relevant configurations.
+    $objectclass = variable_get('simple_ldap_user_objectclass');
+    $extrafilter = variable_get('simple_ldap_user_filter');
+
+    // Construct the filter.
+    $filter = '(objectclass=' . $objectclass . ')';
+    if ($extrafilter !== NULL) {
+      $filter = '(&' . $filter . '(' . $extrafilter . '))';
+    }
+
+    return $filter;
+  }
+
+  /**
    * Internal search helper function.
    */
   protected static function doSearch($name) {
@@ -100,8 +117,8 @@ class SimpleLdapUser {
     // Get the LDAP configuration.
     $base_dn = variable_get('simple_ldap_user_basedn');
     $scope = variable_get('simple_ldap_user_scope');
-    $search = strtolower(variable_get('simple_ldap_user_attribute_name'));
-    $filter = '(' . $search . '=' . $name . ')';
+    $search = variable_get('simple_ldap_user_attribute_name');
+    $filter = '(&(' . $search . '=' . $name . ')' . self::filter() . ')';
 
     // Search for the entry.
     return array_keys($server->search($base_dn, $filter, $scope, array('dn'), 1, 1));

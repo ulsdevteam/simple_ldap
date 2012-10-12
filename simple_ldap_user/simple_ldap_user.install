@@ -12,4 +12,5 @@ function simple_ldap_user_uninstall() {
   variable_del('simple_ldap_user_scope');
   variable_del('simple_ldap_user_attribute_name');
   variable_del('simple_ldap_user_attribute_mail');
+  variable_del('simple_ldap_user_filter');
 }
