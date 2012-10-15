@@ -103,18 +103,14 @@ class SimpleLdapUser {
    * Return the LDAP search filter, as set by the module configuration.
    */
   public static function filter() {
-    static $filter;
+    // Get the relevant configurations.
+    $objectclass = variable_get('simple_ldap_user_objectclass', '*');
+    $extrafilter = variable_get('simple_ldap_user_filter');
 
-    if (!isset($filter)) {
-      // Get the relevant configurations.
-      $objectclass = variable_get('simple_ldap_user_objectclass', '*');
-      $extrafilter = variable_get('simple_ldap_user_filter');
-
-      // Construct the filter.
-      $filter = '(objectclass=' . $objectclass . ')';
-      if ($extrafilter !== NULL) {
-        $filter = '(&' . $filter . '(' . $extrafilter . '))';
-      }
+    // Construct the filter.
+    $filter = '(objectclass=' . $objectclass . ')';
+    if (!empty($extrafilter)) {
+      $filter = '(&' . $filter . '(' . $extrafilter . '))';
     }
 
     return $filter;
