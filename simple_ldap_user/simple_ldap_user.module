@@ -45,7 +45,7 @@ function simple_ldap_user_form_user_admin_account_alter(&$form, &$form_state, $f
       $drupal_user = user_load($uid);
 
       // Check whether the user exists in LDAP.
-      $ldap_user = new SimpleLdapUser($drupal_user->name);
+      $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
       if (!$ldap_user->exists()) {
         $form['accounts']['#options'][$uid]['status'] = 'blocked';
       }
@@ -115,13 +115,16 @@ function simple_ldap_user_login_authenticate_validate($form, &$form_state) {
     return;
   }
 
+  // Reset validation for all other users.
+  unset($form_state['uid']);
+
   // Only attempt validation if both a username and password are present.
   $name = trim($form_state['values']['name']);
   $pass = trim($form_state['values']['pass']);
   if (!empty($name) && !empty($pass)) {
 
     // Authenticate the credentials against the LDAP directory.
-    $ldap_user = new SimpleLdapUser($name);
+    $ldap_user = SimpleLdapUser::singleton($name);
     if ($ldap_user->authenticate($pass)) {
 
       // Attempt to load the drupal user, if it exists.

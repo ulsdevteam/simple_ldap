@@ -2,8 +2,6 @@
 /**
  * @file
  * Class defining a simple LDAP user.
- *
- * @todo cache user lookups. singleton($name), maybe?
  */
 
 class SimpleLdapUser {
@@ -120,6 +118,22 @@ class SimpleLdapUser {
     }
 
     return $filter;
+  }
+
+  /**
+   * Return a SimpleLdapUser object for the given username.
+   */
+  public static function singleton($name) {
+    static $users;
+    if (!isset($users)) {
+      $users = array();
+    }
+
+    if (!isset($users[$name])) {
+      $users[$name] = new SimpleLdapUser($name);
+    }
+
+    return $users[$name];
   }
 
 }
