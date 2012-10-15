@@ -205,14 +205,6 @@ class SimpleLdapServer {
     // credentials are given.
     if (!$this->bound || $rebind || $binddn !== FALSE && $bindpw !== FALSE) {
 
-      // Start TLS if enabled.
-      if ($this->starttls) {
-        $tls = @ldap_start_tls($this->resource);
-        if ($tls === FALSE) {
-          return FALSE;
-        }
-      }
-
       // Bind to the LDAP server.
       if ($rebind || $binddn === FALSE || $bindpw === FALSE) {
         $this->bound = @ldap_bind($this->resource, $this->binddn, $this->bindpw);
@@ -519,14 +511,26 @@ class SimpleLdapServer {
    */
   protected function connect() {
     if ($this->resource === FALSE) {
+
+      // Set up the connection.
       $this->resource = @ldap_connect($this->host, $this->port);
       if ($this->resource === FALSE) {
         return FALSE;
       }
-    }
 
-    // Set the LDAP version.
-    @ldap_set_option($this->resource, LDAP_OPT_PROTOCOL_VERSION, $this->version);
+      // Set the LDAP version.
+      if (!@ldap_set_option($this->resource, LDAP_OPT_PROTOCOL_VERSION, $this->version)) {
+        return FALSE;
+      }
+
+      // StartTLS.
+      if ($this->starttls) {
+        if (!@ldap_start_tls($this->resource)) {
+          return FALSE;
+        }
+      }
+
+    }
 
     return TRUE;
   }
