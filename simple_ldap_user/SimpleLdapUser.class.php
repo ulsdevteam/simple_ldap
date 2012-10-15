@@ -27,7 +27,6 @@ class SimpleLdapUser {
     $attributes = array(
       variable_get('simple_ldap_user_attribute_name'),
       variable_get('simple_ldap_user_attribute_mail'),
-      'pager',
     );
 
     // Get the LDAP configuration.

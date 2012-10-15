@@ -116,15 +116,16 @@ function simple_ldap_user_login_authenticate_validate($form, &$form_state) {
   }
 
   // Only attempt validation if both a username and password are present.
-  $password = trim($form_state['values']['pass']);
-  if (!empty($form_state['values']['name']) && !empty($password)) {
+  $name = trim($form_state['values']['name']);
+  $pass = trim($form_state['values']['pass']);
+  if (!empty($name) && !empty($pass)) {
 
     // Authenticate the credentials against the LDAP directory.
-    $ldap_user = new SimpleLdapUser($form_state['values']['name']);
-    if ($ldap_user->authenticate($password)) {
+    $ldap_user = new SimpleLdapUser($name);
+    if ($ldap_user->authenticate($pass)) {
 
       // Attempt to load the drupal user, if it exists.
-      $drupal_user = user_load_by_name($form_state['values']['name']);
+      $drupal_user = user_load_by_name($name);
 
       // Create a new user object if one did not exist.
       if (empty($drupal_user)) {
