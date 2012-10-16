@@ -110,11 +110,39 @@ function simple_ldap_user_admin($form, &$form_state) {
     $form['user']['simple_ldap_user_attribute_mail']['#default_value'] = $attribute_mail_selected;
   }
 
-  $form['user']['simple_ldap_user_filter'] = array(
+  $form['advanced'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Advanced'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+
+  $form['advanced']['simple_ldap_user_filter'] = array(
     '#type' => 'textfield',
     '#title' => t('Search filter'),
     '#default_value' => variable_get('simple_ldap_user_filter'),
     '#description' => t('This filter will be combined with the normal search filter to find users.') . ' ' . t('This can be used to require a certain attribute be present, for example.'),
+  );
+
+  $readonly = variable_get('simple_ldap_readonly', FALSE);
+  $default = $readonly ? 'ldap' : variable_get('simple_ldap_user_sync', 'ldap');
+
+  $form['advanced']['simple_ldap_user_sync'] = array(
+    '#type' => 'radios',
+    '#title' => t('Authoratative data source'),
+    '#options' => array(
+      'ldap' => t('LDAP'),
+      'drupal' => t('Drupal'),
+    ),
+    '#default_value' => $default,
+    '#disabled' => $readonly,
+    '#description' => t('This determines the behavior of the data sync in the event of a conflict between LDAP and Drupal.') . ' ' . t('Note, that if the LDAP server is set as read-only, LDAP is always considered to be the authoratative data source.'),
+  );
+
+  $form['advanced']['simple_ldap_user_map'] = array(
+    '#type' => 'item',
+    '#title' => t('Attribute map'),
+    '#description' => t('Additional attribute maps can be specified in settings.php.') . ' ' . t('The format of how this should be set is shown below.') . "<pre>\$conf['simple_ldap_user_map'] = array(\n  // Generic example.\n  array(\n    'drupal' => 'drupal-user-field-machine-name',\n    'ldap' => 'ldap-attribute',\n  ),\n  // First name example.\n  array(\n    'drupal' => 'field_first_name',\n    'ldap' => 'givenName',\n  ),\n  // Last name example.\n  array(\n    'drupal' => 'field_last_name',\n    'ldap' => 'sn',\n  ),\n  // Static value example.\n  array(\n    'ldap' => 'employeeType',\n    'static' => 'Entry Level',\n  ),\n);</pre>",
   );
 
   return system_settings_form($form);
