@@ -107,6 +107,119 @@ function simple_ldap_user_menu_alter(&$items) {
 }
 
 /**
+ * Implements hook_user_login().
+ *
+ * Fires when a user logs in.
+ *
+ * @param array $edit
+ *   The form values submitted by the user to log in,
+ *   including raw username and password.
+ *
+ * @todo simple_ldap_user_user_login()
+ */
+function simple_ldap_user_user_login(&$edit, $account) {
+}
+
+/**
+ * Implements hook_user_logout().
+ *
+ * Fires when the user logs out.
+ *
+ * @todo simple_ldap_user_user_logout()
+ */
+function simple_ldap_user_user_logout($account) {
+}
+
+/**
+ * Implements hook_user_presave().
+ *
+ * Fires before an account is created or changed.
+ *
+ * @param array $edit
+ *   The form values submitted by the user.
+ *
+ * @todo simple_ldap_user_user_presave()
+ */
+function simple_ldap_user_user_presave(&$edit, $account, $category) {
+}
+
+/**
+ * Implements hook_user_insert().
+ *
+ * Fires after a new account is created.
+ *
+ * @param array $edit
+ *   The form values submitted by the user.
+ *
+ * @todo simple_ldap_user_user_insert()
+ */
+function simple_ldap_user_user_insert(&$edit, $account, $category) {
+}
+
+/**
+ * Implements hook_user_update().
+ *
+ * Fires when a user account is edited.
+ *
+ * @param array $edit
+ *   The form values submitted by the user.
+ *
+ * @todo simple_ldap_user_user_update()
+ */
+function simple_ldap_user_user_update(&$edit, $account, $category) {
+}
+
+/**
+ * Implements hook_user_cancel().
+ *
+ * Fires on user account cancellations, before account is
+ * cancelled. Operates on all cancellations except delete.
+ *
+ * @param array $edit
+ *   The form values submitted by the user.
+ * @param $method
+ *   The type of cancellation,
+ *   see http://lb.cm/user_cancel_methods-7
+ *
+ * @todo simple_ldap_user_user_cancel()
+ */
+function simple_ldap_user_user_cancel($edit, $account, $method) {
+}
+
+/**
+ * Implements hook_user_delete().
+ *
+ * Fires when a user account is deleted, before account is
+ * deleted.
+ *
+ * @todo simple_ldap_user_user_delete()
+ */
+function simple_ldap_user_user_delete($account) {
+}
+
+/**
+ * Implements hook_user_load().
+ *
+ * Fires when user information is being loaded from the database.
+ * User information is cached, so this does not fire every time
+ * a user object is handled.
+ *
+ * @todo simple_ldap_user_load()
+ */
+function simple_ldap_user_user_load($users) {
+}
+
+/**
+ * Implements hook_user_view().
+ *
+ * Fires when user account information is being viewed.
+ *
+ * @todo simple_ldap_user_user_view()
+ */
+function simple_ldap_user_user_view($account, $view_mode, $langcode) {
+}
+
+/**
  * Validate a user login form against the LDAP directory.
  */
 function simple_ldap_user_login_authenticate_validate($form, &$form_state) {
