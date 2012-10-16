@@ -235,8 +235,7 @@ function simple_ldap_user_login_authenticate_validate($form, &$form_state) {
   $name = trim($form_state['values']['name']);
   $pass = trim($form_state['values']['pass']);
   if (!empty($name) && !empty($pass)) {
-
-    // Authenticate the credentials against the LDAP directory.
+// Authenticate the credentials against the LDAP directory.
     $ldap_user = SimpleLdapUser::singleton($name);
     if ($ldap_user->authenticate($pass)) {
 
@@ -274,4 +273,36 @@ function simple_ldap_user_configured() {
   $configured = $configured && variable_get('simple_ldap_user_attribute_mail') !== NULL;
 
   return $configured;
+}
+
+/**
+ * Returns the data sync direction based on configurations of both simple_ldap
+ * and simple_ldap_user.
+ */
+function simple_ldap_user_sync() {
+  // If the LDAP server is set to read-only, force ldap->drupal sync.
+  $readonly = variable_get('simple_ldap_readonly', FALSE);
+  if ($readonly) {
+    return 'ldap';
+  }
+
+  // Get the sync config from simple_ldap_user, defaulting to ldap->drupal.
+  $sync = variable_get('simple_ldap_user_sync', 'ldap');
+  return $sync;
+}
+
+/**
+ * Returns the attribute map, if configured.
+ */
+function simple_ldap_user_map() {
+  global $conf;
+  if (isset($conf['simple_ldap_user_map'])) {
+    foreach ($conf['simple_ldap_user_map'] as $key => $map) {
+      if (!isset($map['type'])) {
+        $conf['simple_ldap_user_map'][$key]['type'] = 'default';
+      }
+    }
+    return $conf['simple_ldap_user_map'];
+  }
+  return array();
 }

@@ -21,11 +21,17 @@ class SimpleLdapUser {
     // Load the LDAP server object.
     $this->server = SimpleLdapServer::singleton();
 
-    // List of attributes to fetch from the server.
+    // List of attributes to fetch from the LDAP server.
     $attributes = array(
-      variable_get('simple_ldap_user_attribute_name'),
-      variable_get('simple_ldap_user_attribute_mail'),
+      strtolower(variable_get('simple_ldap_user_attribute_name')),
+      strtolower(variable_get('simple_ldap_user_attribute_mail')),
     );
+    $map = simple_ldap_user_map();
+    foreach ($map as $attribute) {
+      if (isset($attribute['ldap'])) {
+        $attributes[] = strtolower($attribute['ldap']);
+      }
+    }
 
     // Get the LDAP configuration.
     $base_dn = variable_get('simple_ldap_user_basedn');
@@ -39,7 +45,7 @@ class SimpleLdapUser {
       $this->dn = $result[0]['dn'];
       foreach ($attributes as $attribute) {
         if (isset($result[0][$attribute]['count']) && $result[0][$attribute]['count'] > 0) {
-          $this->attributes[$attribute] = $result[0][$attribute][0];
+          $this->attributes[$attribute] = $result[0][$attribute];
         }
       }
     }

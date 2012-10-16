@@ -142,7 +142,7 @@ function simple_ldap_user_admin($form, &$form_state) {
   $form['advanced']['simple_ldap_user_map'] = array(
     '#type' => 'item',
     '#title' => t('Attribute map'),
-    '#description' => t('Additional attribute maps can be specified in settings.php.') . ' ' . t('The format of how this should be set is shown below.') . "<pre>\$conf['simple_ldap_user_map'] = array(\n  // Generic example.\n  array(\n    'drupal' => 'drupal-user-field-machine-name',\n    'ldap' => 'ldap-attribute',\n  ),\n  // First name example.\n  array(\n    'drupal' => 'field_first_name',\n    'ldap' => 'givenName',\n  ),\n  // Last name example.\n  array(\n    'drupal' => 'field_last_name',\n    'ldap' => 'sn',\n  ),\n  // Static value example.\n  array(\n    'ldap' => 'employeeType',\n    'static' => 'Entry Level',\n  ),\n);</pre>",
+    '#description' => t('Additional attribute maps can be specified in settings.php.') . ' ' . t('The format of how this should be set is shown below.') . "<pre>\$conf['simple_ldap_user_map'] = array(\n  // Generic example.\n  array(\n    'type' => 'field',\n    'drupal' => 'drupal-user-field-machine-name',\n    'ldap' => 'ldap-attribute',\n  ),\n  // First name example.\n  array(\n    'type' => 'field',\n    'drupal' => 'field_first_name',\n    'ldap' => 'givenName',\n  ),\n  // Last name example.\n  array(\n    'type' => 'field',\n    'drupal' => 'field_last_name',\n    'ldap' => 'sn',\n  ),\n;</pre>",
   );
 
   return system_settings_form($form);

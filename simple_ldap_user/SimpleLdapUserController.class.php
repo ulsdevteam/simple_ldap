@@ -31,8 +31,91 @@ class SimpleLdapUserController extends UserController {
       // Try to load the user from LDAP.
       $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
 
-      // Block the user if it does not exist in LDAP.
-      if (!$ldap_user->exists()) {
+      if ($ldap_user->exists()) {
+        // Load the attribute map.
+        $map = simple_ldap_user_map();
+
+        // Synchronize attributes.
+        switch (simple_ldap_user_sync()) {
+
+          // Synchronize attributes ldap->drupal.
+          case 'ldap':
+            // Initialize array of attribute changes.
+            $edit = array();
+
+            // Mail is a special attribute.
+            $mail = variable_get('simple_ldap_user_attribute_mail');
+            if ($drupal_user->mail != $ldap_user->{$mail}[0]) {
+              $edit['mail'] = $ldap_user->{$mail}[0];
+            }
+
+            // Synchronize other mapped attributes.
+            if (!empty($map)) {
+              foreach ($map as $attribute) {
+                $attribute['ldap'] = strtolower($attribute['ldap']);
+
+                // Verify that the user field exists.
+                if (isset($drupal_user->$attribute['drupal'])) {
+                  switch ($attribute['type']) {
+
+                    // Update the value in drupal using Field API.
+                    case 'field':
+                      // Get the Drupal field values and metadata.
+                      $items = field_get_items('user', $drupal_user, $attribute['drupal']);
+                      $info = field_info_field($attribute['drupal']);
+                      $language = field_language('user', $drupal_user, $attribute['drupal']);
+
+                      // Sync field data from LDAP data.
+                      $dirty = FALSE;
+                      for ($i = 0; $i < $ldap_user->{$attribute['ldap']}['count']; $i++) {
+                        if ($i < $info['cardinality'] || $info['cardinality'] == FIELD_CARDINALITY_UNLIMITED) {
+                          $edit[$attribute['drupal']][$language][$i]['value'] = $ldap_user->{$attribute['ldap']}[$i];
+                          if ($items[$i]['value'] != $ldap_user->{$attribute['ldap']}[$i]) {
+                            $dirty = TRUE;
+                          }
+                        }
+                      }
+
+                      // Check if any changes were actually made.
+                      if (!$dirty) {
+                        // No need to trigger a user_save() on account of this
+                        // attribute.
+                        unset($edit[$attribute['drupal']]);
+                      }
+
+                    break;
+
+                    // Update the value directly on the user object.
+                    case 'default':
+                    default:
+                      if ($drupal_user->$attribute['drupal'] != $ldap_user->{$attribute['ldap']}[0]) {
+                        $edit[$attribute['drupal']] = $ldap_user->{$attribute['ldap']}[0];
+                      }
+                    break;
+
+                  }
+                }
+
+              }
+            }
+
+            // Save any changes.
+            if (!empty($edit)) {
+              // Clone $drupal_user into $drupal_user->original in order to
+              // avoid an infinite loop.
+              $drupal_user->original = clone $drupal_user;
+              $users[$uid] = user_save($drupal_user, $edit);
+            }
+            break;
+
+          // Synchronize attributes drupal->ldap.
+          case 'drupal':
+            break;
+
+        }
+      }
+      else {
+        // Block the user if it does not exist in LDAP.
         $users[$uid]->status = 0;
       }
 
