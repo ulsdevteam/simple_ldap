@@ -139,10 +139,28 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#description' => t('This determines the behavior of the data sync in the event of a conflict between LDAP and Drupal.') . ' ' . t('Note, that if the LDAP server is set as read-only, LDAP is always considered to be the authoratative data source.'),
   );
 
+  // Generate a table to display the attribute map if one is configured.
+  $table = '';
+  $map = simple_ldap_user_map();
+  if (!empty($map)) {
+    $table = '<table>';
+    $table .= '<thead><tr><th>' . t('Drupal field') . '</th><th>' . t('LDAP attribute') . '</th></tr></thead>';
+    $table .= '<tbody>';
+    $class = 'odd';
+    foreach ($map as $item) {
+      $table .= '<tr class="' . $class . '">';
+      $table .= '<td>' . $item['drupal'] . '</td>';
+      $table .= '<td>' . $item['ldap'] . '</td>';
+      $table .= '</tr>';
+      $class = $class == 'odd' ? 'even' : 'odd';
+    }
+    $table .= '</tbody></table>';
+  }
+
   $form['advanced']['simple_ldap_user_map'] = array(
     '#type' => 'item',
     '#title' => t('Attribute map'),
-    '#description' => t('Additional attribute maps can be specified in settings.php.') . ' ' . t('The format of how this should be set is shown below.') . "<pre>\$conf['simple_ldap_user_map'] = array(\n  // Generic example.\n  array(\n    'type' => 'field',\n    'drupal' => 'drupal-user-field-machine-name',\n    'ldap' => 'ldap-attribute',\n  ),\n  // First name example.\n  array(\n    'type' => 'field',\n    'drupal' => 'field_first_name',\n    'ldap' => 'givenName',\n  ),\n  // Last name example.\n  array(\n    'type' => 'field',\n    'drupal' => 'field_last_name',\n    'ldap' => 'sn',\n  ),\n;</pre>",
+    '#description' => $table . t('Additional attribute maps can be specified in settings.php.') . ' ' . t('The format of how this should be set is shown below.') . "<pre>\$conf['simple_ldap_user_map'] = array(\n  // Generic example.\n  array(\n    'type' => 'field',\n    'drupal' => 'drupal-user-field-machine-name',\n    'ldap' => 'ldap-attribute',\n  ),\n  // First name example.\n  array(\n    'type' => 'field',\n    'drupal' => 'field_first_name',\n    'ldap' => 'givenName',\n  ),\n  // Last name example.\n  array(\n    'type' => 'field',\n    'drupal' => 'field_last_name',\n    'ldap' => 'sn',\n  ),\n;</pre>",
   );
 
   return system_settings_form($form);
