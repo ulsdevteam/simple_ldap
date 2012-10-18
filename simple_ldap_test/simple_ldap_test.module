@@ -13,7 +13,7 @@
 function simple_ldap_test_config() {
   // Include the file that contains the server configuration.
   $path = DRUPAL_ROOT . '/' . drupal_get_path('module', 'simple_ldap_test');
-  $file = $path . "/simple_ldap_test.inc";
+  $file = $path . "/simple_ldap_test.config.inc";
   if (is_file($file)) {
     include $file;
   }

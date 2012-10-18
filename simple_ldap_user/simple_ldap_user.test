@@ -231,6 +231,9 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
 
+    // Set sync config to ldap->drupal.
+    variable_set('simple_ldap_user_sync', 'ldap');
+
     // Initialize a user account object.
     $account = new stdClass();
     $account->name = $ldap_user[$attribute_name];
@@ -244,8 +247,34 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
     $drupal_user = user_load_by_name($ldap_user[$attribute_name]);
     $this->assertNotIdentical($drupal_user, FALSE, t('The test user is present in Drupal.'));
 
-    // Verify user parameters.
+    // Verify email.
     $this->assertEqual($drupal_user->mail, $ldap_user[$attribute_mail], t('Mail is synchronzied from LDAP to Drupal.'));
+
+    // Verify other attributes.
+    $map = simple_ldap_user_map();
+    foreach ($map as $attribute) {
+      $attribute['ldap'] = strtolower($attribute['ldap']);
+
+      // Verify that the Drupal user field exists.
+      $this->assertTrue(isset($drupal_user->$attribute['drupal']), t('The :field user field exists.', array(':field' => $attribute['drupal'])));
+
+      // Verify that the values match.
+      switch ($attribute['type']) {
+        case 'field':
+          // Get the drupal field values.
+          $items = field_get_items('user', $drupal_user, $attribute['drupal']);
+
+          // Verify the field values.
+          $this->assertEqual($items[0]['value'], $ldap_user[$attribute['ldap']], t('The :field field was synchronized from the :attribute LDAP attribute.', array(':field' => $attribute['drupal'], ':attribute' => $attribute['ldap'])));
+
+          break;
+
+        case 'default':
+        default:
+          break;
+
+      }
+    }
 
   }
 

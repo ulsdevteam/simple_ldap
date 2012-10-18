@@ -295,14 +295,11 @@ function simple_ldap_user_sync() {
  * Returns the attribute map, if configured.
  */
 function simple_ldap_user_map() {
-  global $conf;
-  if (isset($conf['simple_ldap_user_map'])) {
-    foreach ($conf['simple_ldap_user_map'] as $key => $map) {
-      if (!isset($map['type'])) {
-        $conf['simple_ldap_user_map'][$key]['type'] = 'default';
-      }
+  $map = variable_get('simple_ldap_user_map', array());
+  foreach ($map as $key => $value) {
+    if (!isset($value['type'])) {
+      $map[$key]['type'] = 'default';
     }
-    return $conf['simple_ldap_user_map'];
   }
-  return array();
+  return $map;
 }
