@@ -122,20 +122,29 @@ class SimpleLdapUser {
     return $filter;
   }
 
+  protected static $users = array();
+
   /**
    * Return a SimpleLdapUser object for the given username.
    */
   public static function singleton($name) {
-    static $users;
-    if (!isset($users)) {
-      $users = array();
+    if (!isset(self::$users[$name])) {
+      self::$users[$name] = new SimpleLdapUser($name);
     }
 
-    if (!isset($users[$name])) {
-      $users[$name] = new SimpleLdapUser($name);
-    }
+    return self::$users[$name];
+  }
 
-    return $users[$name];
+  /**
+   * Clear the cache for the given username.
+   */
+  public static function reset($name = NULL) {
+    if ($name === NULL) {
+      self::$users = array();
+    }
+    else {
+      unset(self::$users[$name]);
+    }
   }
 
 }
