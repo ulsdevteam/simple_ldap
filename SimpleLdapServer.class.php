@@ -10,7 +10,7 @@
 class SimpleLdapServer {
 
   // Singleton instance.
-  private static $instance;
+  protected static $instance;
 
   // LDAP connection parameters.
   protected $host;
@@ -466,7 +466,7 @@ class SimpleLdapServer {
     $this->schema();
 
     // Loop through the given attributes.
-    $utf8 =  array();
+    $utf8 = array();
     foreach ($attributes as $attribute => $value) {
 
       // Verify the schema entry for the current attribute is supposed to be
@@ -498,7 +498,7 @@ class SimpleLdapServer {
     $this->schema();
 
     // Loop through the given attributes.
-    $utf8 =  array();
+    $utf8 = array();
     foreach ($attributes as $attribute => $value) {
 
       // Verify the schema entry for the current attribute is supposed to be

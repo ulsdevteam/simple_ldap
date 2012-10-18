@@ -84,8 +84,7 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#prefix' => '<div id="simple-ldap-role-attributes">',
     '#options' => $attributes,
     '#required' => TRUE,
-    '#description' => t('Which LDAP attribute should be mapped to a Drupal role name.') . ' ' .
-                      t('This is commonly "cn".'),
+    '#description' => t('Which LDAP attribute should be mapped to a Drupal role name.') . ' ' . t('This is commonly "cn".'),
   );
 
   // Set default value if it exists in the list of attributes. If a default
@@ -103,8 +102,7 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#suffix' => '</div>',
     '#options' => $attributes,
     '#required' => TRUE,
-    '#description' => t('Which LDAP attribute defines the members of the role.') . ' ' .
-                      t('This is commonly "member".'),
+    '#description' => t('Which LDAP attribute defines the members of the role.') . ' ' . t('This is commonly "member".'),
   );
 
   // Set default value if it exists in the list of attributes. If a default

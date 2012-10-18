@@ -23,6 +23,9 @@ class SimpleLdapServerTestCase extends SimpleLdapWebTestCase {
     );
   }
 
+  /**
+   * Test the LDAP server as it is configured.
+   */
   public function testConfiguration() {
     // Test that simple_ldap is configured.
     $this->assertTrue(simple_ldap_configured(), t('The Simple LDAP module is configured.'));
@@ -47,6 +50,9 @@ class SimpleLdapServerPlainTestCase extends SimpleLdapWebTestCase {
     );
   }
 
+  /**
+   * Test connectivity to the LDAP server on port 389, unencrypted.
+   */
   public function testUnencrypted() {
     // Test that simple_ldap is configured.
     $this->assertTrue(simple_ldap_configured(), t('The Simple LDAP module is configured.'));
@@ -77,6 +83,9 @@ class SimpleLdapServerStartTLSTestCase extends SimpleLdapWebTestCase {
     );
   }
 
+  /**
+   * Test connectivity to the LDAP server on port 389, with startTLS.
+   */
   public function testStartTLS() {
     // Test that simple_ldap is configured.
     $this->assertTrue(simple_ldap_configured(), t('The Simple LDAP module is configured.'));
@@ -107,6 +116,9 @@ class SimpleLdapServerSSLTestCase extends SimpleLdapWebTestCase {
     );
   }
 
+  /**
+   * Test connectivity to the LDAP server on port 636, with SSL.
+   */
   public function testSSL() {
     // Test that simple_ldap is configured.
     $this->assertTrue(simple_ldap_configured(), t('The Simple LDAP module is configured.'));

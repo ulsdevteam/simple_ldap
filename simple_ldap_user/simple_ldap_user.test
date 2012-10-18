@@ -61,8 +61,10 @@ class SimpleLdapUserAuthenticationTestCase extends SimpleLdapUserWebTestCase {
   }
 
   /**
-   * #15 Test that user can authenticate to Drupal using LDAP credentials.
-   * #16 User cannot authenticate to Drupal using incorrect credentials.
+   * Test user authentication.
+   *
+   * #15 - Test that user can authenticate to Drupal using LDAP credentials.
+   * #16 - User cannot authenticate to Drupal using incorrect credentials.
    */
   public function testAuthentication() {
     // Load configuration variables.
@@ -101,8 +103,8 @@ class SimpleLdapUserAuthenticationTestCase extends SimpleLdapUserWebTestCase {
 
     debug('A user exists in both Drupal and LDAP.');
 
-    // Verify again that the user can log in, now that the account exists in both
-    // Drupal and LDAP.
+    // Verify again that the user can log in, now that the account exists in
+    // both Drupal and LDAP.
     $this->drupalLogin($account);
 
     // Verify that the user cannot log in with incorrect credentials.
@@ -135,7 +137,9 @@ class SimpleLdapUserFilterWebTestCase extends SimpleLdapUserWebTestCase {
   }
 
   /**
-   * #26 Verify that user not in active group cannot authenticate.
+   * Test the configured search filter.
+   *
+   * #26 - Verify that user not in active group cannot authenticate.
    */
   public function testFilter() {
     // Load configuration variables.
@@ -197,12 +201,14 @@ class SimpleLdapUserUserOneLoginTestCase extends SimpleLdapUserWebTestCase {
   }
 
   /**
-   * #20 Log into Drupal as User 1 avoids LDAP.
+   * Test User 1 authentication.
+   *
+   * #20 - Log into Drupal as User 1 avoids LDAP.
    */
   public function testUserOneLogin() {
     // Load password hashing API.
     require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
- 
+
     // Generate a random password.
     $pass = hash('sha256', microtime());
 
@@ -237,6 +243,9 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
     );
   }
 
+  /**
+   * Runs the necessary assertions to test the LDAP->Drupal data sync.
+   */
   public function ldapToDrupalSync($suffix = '') {
     // Load configuration variables.
     $ldap_user = variable_get('simple_ldap_test_user');
@@ -257,7 +266,7 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
 
     // Verify that the user exists. Using user_load_multiple() here so that the
     // cache can be reset and the user is forced to be reloaded.
-    $drupal_user = user_load_multiple(array(),  array('name' => $ldap_user[$attribute_name]), TRUE);
+    $drupal_user = user_load_multiple(array(), array('name' => $ldap_user[$attribute_name]), TRUE);
     $drupal_user = reset($drupal_user);
     $this->assertNotIdentical($drupal_user, FALSE, t('The test user is present in Drupal.'));
 
@@ -291,6 +300,9 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
     }
   }
 
+  /**
+   * Modifies the test user entry in LDAP.
+   */
   public function modifyLdapAttributes() {
     // Load configuration variables.
     $test_user = variable_get('simple_ldap_test_user');
@@ -319,6 +331,9 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
     }
   }
 
+  /**
+   * Restores the LDAP attributes to their configured values.
+   */
   public function restoreLdapAttributes() {
     // Load configuration variables.
     $test_user = variable_get('simple_ldap_test_user');
@@ -333,19 +348,29 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
 
     // Restore the mail field.
     $result = $server->modify($ldap_user->dn, array($attribute_mail => $test_user[$attribute_mail]));
-    $this->assertTrue($result, t('Restored the :attribute field of :dn to :value', array(':attribute' => $attribute_mail, ':dn' => $ldap_user->dn, ':value' => $test_user[$attribute_mail])));
+    $this->assertTrue($result, t('Restored the :attribute field of :dn to :value', array(
+      ':attribute' => $attribute_mail,
+      ':dn' => $ldap_user->dn,
+      ':value' => $test_user[$attribute_mail],
+    )));
 
     // Modify the other mapped attributes.
     $map = simple_ldap_user_map();
     foreach ($map as $attribute) {
       $attribute['ldap'] = strtolower($attribute['ldap']);
       $result = $server->modify($ldap_user->dn, array($attribute['ldap'] => $test_user[$attribute['ldap']]));
-      $this->assertTrue($result, t('Restored the :attribute field of :dn to :value.', array(':attribute' => $attribute['ldap'], ':dn' => $ldap_user->dn, ':value' => $test_user[$attribute['ldap']])));
+      $this->assertTrue($result, t('Restored the :attribute field of :dn to :value.', array(
+        ':attribute' => $attribute['ldap'],
+        ':dn' => $ldap_user->dn,
+        ':value' => $test_user[$attribute['ldap']],
+      )));
     }
   }
 
   /**
-   * #6 Update Drupal fields from LDAP attributes.
+   * Test data synchronization from LDAP to Drupal.
+   *
+   * #6 - Update Drupal fields from LDAP attributes.
    */
   public function testLdapToDrupalSync() {
     $this->ldapToDrupalSync();

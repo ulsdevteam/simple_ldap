@@ -10,7 +10,7 @@ class SimpleLdapUser {
   protected $dn = FALSE;
   protected $attributes = array();
 
-  // Internal variables
+  // Internal variables.
   protected $server;
   protected $dirty = FALSE;
 
@@ -73,7 +73,6 @@ class SimpleLdapUser {
         if (isset($this->attributes[$name])) {
           return $this->attributes[$name];
         }
-      break;
     }
 
     return FALSE;
