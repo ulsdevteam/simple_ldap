@@ -9,6 +9,21 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
   public function setUp() {
     parent::setUp(array('simple_ldap', 'simple_ldap_user', 'simple_ldap_test'));
     simple_ldap_test_config();
+
+    $map = simple_ldap_user_map();
+    foreach ($map as $attribute) {
+      if ($attribute['type'] == 'field') {
+        $field = field_create_field(array(
+          'field_name' => $attribute['drupal'],
+          'type' => 'text',
+        ));
+        $instance = field_create_instance(array(
+          'field_name' => $attribute['drupal'],
+          'entity_type' => 'user',
+          'bundle' => 'user',
+        ));
+      }
+    }
   }
 
   /**
@@ -222,10 +237,7 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
     );
   }
 
-  /**
-   * #6 Update Drupal fields from LDAP attributes.
-   */
-  public function testLdapToDrupalSync() {
+  public function ldapToDrupalSync($suffix = '') {
     // Load configuration variables.
     $ldap_user = variable_get('simple_ldap_test_user');
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
@@ -243,12 +255,14 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
     // user.
     $this->drupalLogin($account);
 
-    // Verify that the user exists.
-    $drupal_user = user_load_by_name($ldap_user[$attribute_name]);
+    // Verify that the user exists. Using user_load_multiple() here so that the
+    // cache can be reset and the user is forced to be reloaded.
+    $drupal_user = user_load_multiple(array(),  array('name' => $ldap_user[$attribute_name]), TRUE);
+    $drupal_user = reset($drupal_user);
     $this->assertNotIdentical($drupal_user, FALSE, t('The test user is present in Drupal.'));
 
     // Verify email.
-    $this->assertEqual($drupal_user->mail, $ldap_user[$attribute_mail], t('Mail is synchronzied from LDAP to Drupal.'));
+    $this->assertEqual($drupal_user->mail, $ldap_user[$attribute_mail] . $suffix, t('Mail is synchronzied from LDAP to Drupal.'));
 
     // Verify other attributes.
     $map = simple_ldap_user_map();
@@ -265,17 +279,79 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
           $items = field_get_items('user', $drupal_user, $attribute['drupal']);
 
           // Verify the field values.
-          $this->assertEqual($items[0]['value'], $ldap_user[$attribute['ldap']], t('The :field field was synchronized from the :attribute LDAP attribute.', array(':field' => $attribute['drupal'], ':attribute' => $attribute['ldap'])));
-
+          $this->assertEqual($items[0]['value'], $ldap_user[$attribute['ldap']] . $suffix, t('The :field field was synchronized from the :attribute LDAP attribute.', array(':field' => $attribute['drupal'], ':attribute' => $attribute['ldap'])));
           break;
 
         case 'default':
         default:
+          // Verify the field value.
+          $this->assertEqual($drupal_user->$attribute['drupal'], $ldap_user[$attribute['ldap']] . $suffix, t('The :field field was synchronized from the :attribute LDAP attribute.', array(':field' => $attribute['drupal'], ':attribute' => $attribute['ldap'])));
           break;
-
       }
     }
+  }
 
+  public function modifyLdapAttributes() {
+    // Load configuration variables.
+    $test_user = variable_get('simple_ldap_test_user');
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+    $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+
+    // Load LDAP user.
+    $ldap_user = new SimpleLdapUser($test_user[$attribute_name]);
+
+    // Verify that the LDAP user exists.
+    $this->assertTrue($ldap_user->exists(), t('Successfully loaded the LDAP user.'));
+
+    // Get an LDAP server instance.
+    $server = SimpleLdapServer::singleton();
+
+    // Modify the email field.
+    $result = $server->modify($ldap_user->dn, array($attribute_mail => $test_user[$attribute_mail] . 'modified'));
+    $this->assertTrue($result, t('Modified the :mail attribute of :dn.', array(':mail' => $attribute_mail, ':dn' => $ldap_user->dn)));
+
+    // Modify the other mapped attributes.
+    $map = simple_ldap_user_map();
+    foreach ($map as $attribute) {
+      $attribute['ldap'] = strtolower($attribute['ldap']);
+      $result = $server->modify($ldap_user->dn, array($attribute['ldap'] => $test_user[$attribute['ldap']] . 'modified'));
+      $this->assertTrue($result, t('Modified the :attribute attribute of :dn.', array(':attribute' => $attribute['ldap'], ':dn' => $ldap_user->dn)));
+    }
+  }
+
+  public function restoreLdapAttributes() {
+    // Load configuration variables.
+    $test_user = variable_get('simple_ldap_test_user');
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+    $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+
+    // Load LDAP user.
+    $ldap_user = new SimpleLdapUser($test_user[$attribute_name]);
+
+    // Get an LDAP server instance.
+    $server = SimpleLdapServer::singleton();
+
+    // Restore the mail field.
+    $result = $server->modify($ldap_user->dn, array($attribute_mail => $test_user[$attribute_mail]));
+    $this->assertTrue($result, t('Restored the :attribute field of :dn to :value', array(':attribute' => $attribute_mail, ':dn' => $ldap_user->dn, ':value' => $test_user[$attribute_mail])));
+
+    // Modify the other mapped attributes.
+    $map = simple_ldap_user_map();
+    foreach ($map as $attribute) {
+      $attribute['ldap'] = strtolower($attribute['ldap']);
+      $result = $server->modify($ldap_user->dn, array($attribute['ldap'] => $test_user[$attribute['ldap']]));
+      $this->assertTrue($result, t('Restored the :attribute field of :dn to :value.', array(':attribute' => $attribute['ldap'], ':dn' => $ldap_user->dn, ':value' => $test_user[$attribute['ldap']])));
+    }
+  }
+
+  /**
+   * #6 Update Drupal fields from LDAP attributes.
+   */
+  public function testLdapToDrupalSync() {
+    $this->ldapToDrupalSync();
+    $this->modifyLdapAttributes();
+    $this->ldapToDrupalSync('modified');
+    $this->restoreLdapAttributes();
   }
 
 }
