@@ -373,17 +373,32 @@ class SimpleLdapServer {
 
   /**
    * Modify an LDAP entry.
-   *
-   * @todo Should ldap_mod_add, ldap_mod_del, and ldap_mod_replace be used?
    */
-  public function modify($dn, $attributes) {
+  public function modify($dn, $attributes, $type = NULL) {
     // Make sure there is a valid binding and that changes are allowed.
     if ($this->readonly || !$this->bind()) {
       return FALSE;
     }
 
-    // Add the entry.
-    return @ldap_modify($this->resource, $dn, $attributes);
+    switch ($type) {
+      case 'add':
+        $result = @ldap_mod_add($this->resource, $dn, $attributes);
+        break;
+
+      case 'del':
+      case 'delete':
+        $result = @ldap_mod_del($this->resource, $dn, $attributes);
+        break;
+
+      case 'replace':
+        $result = @ldap_mod_replace($this->resource, $dn, $attributes);
+        break;
+
+      default:
+        $result = @ldap_modify($this->resource, $dn, $attributes);
+    }
+
+    return $result;
   }
 
   /**

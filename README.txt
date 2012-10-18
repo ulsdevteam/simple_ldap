@@ -56,7 +56,7 @@ compare($dn, $attribute, $value)
 // Write functions
 add($dn, $attributes)
 delete($dn, $recursive = false)
-modify($dn, $attributes)
+modify($dn, $attributes, $type = FALSE)
 move($dn, $newdn)
 copy($dn, $newdn)
 
