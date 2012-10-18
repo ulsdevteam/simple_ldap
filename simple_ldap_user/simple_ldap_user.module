@@ -76,7 +76,10 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
   switch ($form_id) {
     case 'user_login_block':
       // Remove the register and password reminder links.
-      unset($form['links']);
+      $server = SimpleLdapServer::singleton();
+      if ($server->readonly) {
+        unset($form['links']);
+      }
     case 'user_login':
       $validate = array();
       foreach ($form['#validate'] as $callback) {
