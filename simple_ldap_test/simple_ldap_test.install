@@ -1,0 +1,22 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the simple_ldap_test module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function simple_ldap_test_install() {
+  module_load_include('module', 'simple_ldap_test');
+  simple_ldap_test_config();
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function simple_ldap_test_uninstall() {
+  module_load_include('module', 'simple_ldap_test');
+  simple_ldap_test_clear();
+}

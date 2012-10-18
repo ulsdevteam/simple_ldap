@@ -1,0 +1,51 @@
+<?php
+
+/**
+ * @file
+ * Test module for the Simple LDAP module.
+ *
+ * To be used if custom module hooks need to be tested.
+ */
+
+/**
+ * Reusable function to set up the server settings.
+ */
+function simple_ldap_test_config() {
+  // Include the file that contains the server configuration.
+  $path = DRUPAL_ROOT . '/' . drupal_get_path('module', 'simple_ldap_test');
+  $file = $path . "/simple_ldap_test.inc";
+  if (is_file($file)) {
+    include $file;
+  }
+}
+
+/**
+ * Reusable function to clear all the server settings.
+ */
+function simple_ldap_test_clear() {
+
+  // From Simple LDAP module.
+  variable_del('simple_ldap_host');
+  variable_del('simple_ldap_port');
+  variable_del('simple_ldap_starttls');
+  variable_del('simple_ldap_binddn');
+  variable_del('simple_ldap_bindpw');
+  variable_del('simple_ldap_readonly');
+  variable_del('simple_ldap_pagesize');
+
+  // From Simple LDAP User module.
+  variable_del('simple_ldap_user_basedn');
+  variable_del('simple_ldap_user_scope');
+  variable_del('simple_ldap_user_objectclass');
+  variable_del('simple_ldap_user_attribute_name');
+  variable_del('simple_ldap_user_attribute_mail');
+  variable_del('simple_ldap_user_filter');
+
+  // From Simple LDAP Role module.
+  variable_del('simple_ldap_role_basedn');
+  variable_del('simple_ldap_role_objectclass');
+  variable_del('simple_ldap_role_scope');
+  variable_del('simple_ldap_role_attribute_name');
+  variable_del('simple_ldap_role_attribute_member');
+
+}

@@ -1,0 +1,252 @@
+<?php
+/**
+ * @file
+ * Tests for Simple LDAP User module.
+ */
+
+abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
+
+  public function setUp() {
+    parent::setUp(array('simple_ldap', 'simple_ldap_user', 'simple_ldap_test'));
+    simple_ldap_test_config();
+  }
+
+  /**
+   * Verify that a user is unable to log in.
+   */
+  public function drupalNoLogin(stdClass $user) {
+    if ($this->loggedInUser) {
+      $this->drupalLogout();
+    }
+
+    $edit = array(
+      'name' => $user->name,
+      'pass' => $user->pass_raw,
+    );
+    $this->drupalPost('user', $edit, t('Log in'));
+
+    // Verify that the user was unable to log in.
+    $pass = $this->assertNoLink(t('Log out'), 0, t('User %name unable to log in.', array('%name' => $user->name)), t('User login'));
+
+    if (!$pass) {
+      $this->loggedInUser = $user;
+    }
+  }
+
+}
+
+class SimpleLdapUserAuthenticationTestCase extends SimpleLdapUserWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'LDAP user authentication',
+      'description' => 'Tests that an LDAP user can authenticate to Drupal with the correct LDAP credentials.',
+      'group' => 'Simple LDAP User',
+    );
+  }
+
+  /**
+   * #15 Test that user can authenticate to Drupal using LDAP credentials.
+   * #16 User cannot authenticate to Drupal using incorrect credentials.
+   */
+  public function testAuthentication() {
+    // Load configuration variables.
+    $test_user = variable_get('simple_ldap_test_user');
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+
+    // Initialize a user account object.
+    $account = new stdClass();
+    $account->name = $test_user[$attribute_name];
+
+    debug('A user exists in LDAP but not in Drupal.');
+
+    // Verify that the test user exists in LDAP.
+    $ldap_user = new SimpleLdapUser($test_user[$attribute_name]);
+    $this->assertTrue($ldap_user->exists(), t('The test user was found in LDAP.'));
+
+    // Verify that the test user does not exist in Drupal.
+    $drupal_user = user_load_by_name($test_user[$attribute_name]);
+    $this->assertIdentical($drupal_user, FALSE, t('The test user does not exist in Drupal.'));
+
+    // Verify that the user cannot log in with incorrect credentials.
+    $account->pass_raw = $test_user['pass'] . 'invalid';
+    $this->drupalNoLogin($account);
+
+    // Verify that the user still does not exist in Drupal.
+    $drupal_user = user_load_by_name($test_user[$attribute_name]);
+    $this->assertIdentical($drupal_user, FALSE, t('The test user still does not exist in Drupal.'));
+
+    // Verify that the user can log in.
+    $account->pass_raw = $test_user['pass'];
+    $this->drupalLogin($account);
+
+    // Verify that the Drupal user was created during authentication.
+    $drupal_user = user_load_by_name($test_user[$attribute_name]);
+    $this->assertNotIdentical($drupal_user, FALSE, t('The test user was created in Drupal.'));
+
+    debug('A user exists in both Drupal and LDAP.');
+
+    // Verify again that the user can log in, now that the account exists in both
+    // Drupal and LDAP.
+    $this->drupalLogin($account);
+
+    // Verify that the user cannot log in with incorrect credentials.
+    $account->pass_raw = $test_user['pass'] . 'invalid';
+    $this->drupalNoLogin($account);
+
+    debug('A user exists in Drupal but not in LDAP.');
+
+    // Create a new Drupal user that is not in LDAP.
+    $account = $this->drupalCreateuser(array());
+
+    // Verify that the user does not exist in LDAP by random chance.
+    $ldap_user = new SimpleLdapUser($account->name);
+    $this->assertFalse($ldap_user->exists(), t('The user account does not exist in LDAP.'));
+
+    // Verify that the user cannot log in.
+    $this->drupalNoLogin($account);
+  }
+
+}
+
+class SimpleLdapUserFilterWebTestCase extends SimpleLdapUserWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'LDAP user search filter',
+      'description' => 'Tests whether the LDAP search filter is working.',
+      'group' => 'Simple LDAP User',
+    );
+  }
+
+  /**
+   * #26 Verify that user not in active group cannot authenticate.
+   */
+  public function testFilter() {
+    // Load configuration variables.
+    $inactive_user = variable_get('simple_ldap_test_inactive_user');
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+
+    // Initialize a user account object.
+    $account = new stdClass();
+    $account->name = $inactive_user[$attribute_name];
+    $account->pass_raw = $inactive_user['pass'];
+
+    // Verify that the user does not exist per the configured search filter.
+    $ldap_user = new SimpleLdapUser($account->name);
+    $this->assertFalse($ldap_user->exists(), t('The user does not exist according to the LDAP search filter.'));
+
+    // Verify that the test user does not exist in Drupal.
+    $drupal_user = user_load_by_name($inactive_user[$attribute_name]);
+    $this->assertIdentical($drupal_user, FALSE, t('The test user does not exist in Drupal.'));
+
+    // Attempt to log in anyway.
+    $this->drupalNoLogin($account);
+
+    // Clear the search filter.
+    $filter = variable_get('simple_ldap_user_filter');
+    variable_set('simple_ldap_user_filter', '');
+
+    // Verify that the user now exists.
+    $ldap_user = new SimpleLdapUser($account->name);
+    $this->assertTrue($ldap_user->exists(), t('The user exists in the LDAP directory.'));
+
+    // Attempt to log in again.
+    $this->drupalLogin($account);
+
+    // Verify that the user now exists in Drupal.
+    $drupal_user = user_load_by_name($inactive_user[$attribute_name]);
+    $this->assertNotIdentical($drupal_user, FALSE, t('The test user was created in Drupal.'));
+
+    // Now that the user exists in Drupal, reset the filter, and check again.
+    variable_set('simple_ldap_user_filter', $filter);
+
+    // Verify that the user does not exist per the configured search filter.
+    $ldap_user = new SimpleLdapUser($account->name);
+    $this->assertFalse($ldap_user->exists(), t('The user does not exist according to the LDAP search filter.'));
+
+    // Attempt to log in anyway.
+    $this->drupalNoLogin($account);
+  }
+
+}
+
+class SimpleLdapUserUserOneLoginTestCase extends SimpleLdapUserWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'User 1 login',
+      'description' => 'Tests whether User 1 can log in, skipping LDAP authentication.',
+      'group' => 'Simple LDAP User',
+    );
+  }
+
+  /**
+   * #20 Log into Drupal as User 1 avoids LDAP.
+   */
+  public function testUserOneLogin() {
+    // Load password hashing API.
+    require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
+ 
+    // Generate a random password.
+    $pass = hash('sha256', microtime());
+
+    // Update user-1's password in the database.
+    db_query("UPDATE {users} SET pass = :hash WHERE uid = 1", array(':hash' => user_hash_password($pass)));
+
+    // Load user-1.
+    $admin_user = user_load(1);
+    $admin_user->pass_raw = $pass;
+
+    // Verify that user-1 does not exist in LDAP.
+    $ldap_user = new SimpleLdapUser($admin_user->name);
+    $this->assertFalse($ldap_user->exists(), t('User 1 does not exist in LDAP.'));
+
+    // Attempt to log in.
+    $this->drupalLogin($admin_user);
+
+    // Verify that user-1 does not exist in LDAP.
+    $ldap_user = new SimpleLdapUser($admin_user->name);
+    $this->assertFalse($ldap_user->exists(), t('User 1 does not exist in LDAP.'));
+  }
+
+}
+
+class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Synchronize from LDAP to Drupal',
+      'description' => 'Tests the synchronization of LDAP attributes to Drupal user fields.',
+      'group' => 'Simple LDAP User',
+    );
+  }
+
+  /**
+   * #6 Update Drupal fields from LDAP attributes.
+   */
+  public function testLdapToDrupalSync() {
+    // Load configuration variables.
+    $ldap_user = variable_get('simple_ldap_test_user');
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+    $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+
+    // Initialize a user account object.
+    $account = new stdClass();
+    $account->name = $ldap_user[$attribute_name];
+    $account->pass_raw = $ldap_user['pass'];
+
+    // Verify that the user can log in, which should create and/or sync the
+    // user.
+    $this->drupalLogin($account);
+
+    // Verify that the user exists.
+    $drupal_user = user_load_by_name($ldap_user[$attribute_name]);
+    $this->assertNotIdentical($drupal_user, FALSE, t('The test user is present in Drupal.'));
+
+    // Verify user parameters.
+    $this->assertEqual($drupal_user->mail, $ldap_user[$attribute_mail], t('Mail is synchronzied from LDAP to Drupal.'));
+
+  }
+
+}
