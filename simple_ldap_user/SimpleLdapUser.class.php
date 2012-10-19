@@ -102,7 +102,7 @@ class SimpleLdapUser {
       case 'attributes':
       case 'dn':
       case 'exists':
-      break;
+        break;
 
       // Set attributes.
       default:
@@ -132,19 +132,10 @@ class SimpleLdapUser {
   }
 
   /**
-   * Returns whether this user exists in LDAP.
-   *
-   * @todo deprecate this function in favor of __get('exists')
-   */
-  public function exists() {
-    return $this->exists;
-  }
-
-  /**
    * Authenticates this user with the given password.
    */
   public function authenticate($password) {
-    if ($this->exists()) {
+    if ($this->exists) {
       $auth = $this->server->bind($this->dn, $password);
       return $auth;
     }

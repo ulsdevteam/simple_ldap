@@ -46,7 +46,7 @@ function simple_ldap_user_form_user_admin_account_alter(&$form, &$form_state, $f
 
       // Check whether the user exists in LDAP.
       $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
-      if (!$ldap_user->exists()) {
+      if (!$ldap_user->exists) {
         $form['accounts']['#options'][$uid]['status'] = 'blocked';
       }
     }

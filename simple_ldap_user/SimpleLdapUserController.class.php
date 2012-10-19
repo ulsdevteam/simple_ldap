@@ -48,7 +48,7 @@ class SimpleLdapUserController extends UserController {
       // Try to load the user from LDAP.
       $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
 
-      if ($ldap_user->exists()) {
+      if ($ldap_user->exists) {
         // Synchronize attributes.
         switch (simple_ldap_user_sync()) {
 

@@ -79,7 +79,7 @@ class SimpleLdapUserAuthenticationTestCase extends SimpleLdapUserWebTestCase {
 
     // Verify that the test user exists in LDAP.
     $ldap_user = new SimpleLdapUser($test_user[$attribute_name]);
-    $this->assertTrue($ldap_user->exists(), t('The test user was found in LDAP.'));
+    $this->assertTrue($ldap_user->exists, t('The test user was found in LDAP.'));
 
     // Verify that the test user does not exist in Drupal.
     $drupal_user = user_load_by_name($test_user[$attribute_name]);
@@ -118,7 +118,7 @@ class SimpleLdapUserAuthenticationTestCase extends SimpleLdapUserWebTestCase {
 
     // Verify that the user does not exist in LDAP by random chance.
     $ldap_user = new SimpleLdapUser($account->name);
-    $this->assertFalse($ldap_user->exists(), t('The user account does not exist in LDAP.'));
+    $this->assertFalse($ldap_user->exists, t('The user account does not exist in LDAP.'));
 
     // Verify that the user cannot log in.
     $this->drupalNoLogin($account);
@@ -153,7 +153,7 @@ class SimpleLdapUserFilterWebTestCase extends SimpleLdapUserWebTestCase {
 
     // Verify that the user does not exist per the configured search filter.
     $ldap_user = new SimpleLdapUser($account->name);
-    $this->assertFalse($ldap_user->exists(), t('The user does not exist according to the LDAP search filter.'));
+    $this->assertFalse($ldap_user->exists, t('The user does not exist according to the LDAP search filter.'));
 
     // Verify that the test user does not exist in Drupal.
     $drupal_user = user_load_by_name($inactive_user[$attribute_name]);
@@ -168,7 +168,7 @@ class SimpleLdapUserFilterWebTestCase extends SimpleLdapUserWebTestCase {
 
     // Verify that the user now exists.
     $ldap_user = new SimpleLdapUser($account->name);
-    $this->assertTrue($ldap_user->exists(), t('The user exists in the LDAP directory.'));
+    $this->assertTrue($ldap_user->exists, t('The user exists in the LDAP directory.'));
 
     // Attempt to log in again.
     $this->drupalLogin($account);
@@ -182,7 +182,7 @@ class SimpleLdapUserFilterWebTestCase extends SimpleLdapUserWebTestCase {
 
     // Verify that the user does not exist per the configured search filter.
     $ldap_user = new SimpleLdapUser($account->name);
-    $this->assertFalse($ldap_user->exists(), t('The user does not exist according to the LDAP search filter.'));
+    $this->assertFalse($ldap_user->exists, t('The user does not exist according to the LDAP search filter.'));
 
     // Attempt to log in anyway.
     $this->drupalNoLogin($account);
@@ -221,14 +221,14 @@ class SimpleLdapUserUserOneLoginTestCase extends SimpleLdapUserWebTestCase {
 
     // Verify that user-1 does not exist in LDAP.
     $ldap_user = new SimpleLdapUser($admin_user->name);
-    $this->assertFalse($ldap_user->exists(), t('User 1 does not exist in LDAP.'));
+    $this->assertFalse($ldap_user->exists, t('User 1 does not exist in LDAP.'));
 
     // Attempt to log in.
     $this->drupalLogin($admin_user);
 
     // Verify that user-1 does not exist in LDAP.
     $ldap_user = new SimpleLdapUser($admin_user->name);
-    $this->assertFalse($ldap_user->exists(), t('User 1 does not exist in LDAP.'));
+    $this->assertFalse($ldap_user->exists, t('User 1 does not exist in LDAP.'));
   }
 
 }
@@ -313,7 +313,7 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
     $ldap_user = new SimpleLdapUser($test_user[$attribute_name]);
 
     // Verify that the LDAP user exists.
-    $this->assertTrue($ldap_user->exists(), t('Successfully loaded the LDAP user.'));
+    $this->assertTrue($ldap_user->exists, t('Successfully loaded the LDAP user.'));
 
     // Get an LDAP server instance.
     $server = SimpleLdapServer::singleton();
