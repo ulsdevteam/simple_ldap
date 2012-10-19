@@ -77,13 +77,16 @@ function simple_ldap_user_admin($form, &$form_state) {
   // Get the selected name attribute.
   $attribute_name_selected = isset($form_state['values']['simple_ldap_user_attribute_name']) ? $form_state['values']['simple_ldap_user_attribute_name'] : variable_get('simple_ldap_user_attribute_name', 'cn');
 
+  // Additional description if !$server->readonly.
+  $description = $server->readonly ? '' : ' ' . t('This attribute is also used as the RDN when provisioning user accounts to LDAP.');
+
   $form['user']['simple_ldap_user_attribute_name'] = array(
     '#type' => 'select',
     '#title' => t('Username attribute'),
     '#prefix' => '<div id="simple-ldap-user-attributes">',
     '#options' => $attributes,
     '#required' => TRUE,
-    '#description' => t('Which LDAP attribute should be mapped to a Drupal username.') . ' ' . t('This is commonly "cn" or "uid" for openLDAP, and "sAMAccountName" for Active Directory.'),
+    '#description' => t('Which LDAP attribute should be mapped to a Drupal username.') . ' ' . t('This is commonly "cn" or "uid" for openLDAP, and "sAMAccountName" for Active Directory.') . $description,
   );
 
   // Set default value if it exists in the list of attributes. If a default

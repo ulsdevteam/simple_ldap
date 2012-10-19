@@ -6,6 +6,9 @@
 
 /**
  * Simple LDAP server class.
+ *
+ * @todo throw exceptions when errors occur.
+ *   This includes trying to do a write operation when $this->readonly == TRUE.
  */
 class SimpleLdapServer {
 
@@ -344,6 +347,13 @@ class SimpleLdapServer {
     // Make sure there is a valid binding and that changes are allowed.
     if ($this->readonly || !$this->bind()) {
       return FALSE;
+    }
+
+    // Verify that there ar eno empty attributes.
+    foreach ($attributes as $key => $value) {
+      if (is_array($value) && count($value) == 0) {
+        unset($attributes[$key]);
+      }
     }
 
     // Add the entry.

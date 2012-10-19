@@ -294,7 +294,7 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
         case 'default':
         default:
           // Verify the field value.
-          $this->assertEqual($drupal_user->$attribute['drupal'], $ldap_user[$attribute['ldap']] . $suffix, t('The :field field was synchronized from the :attribute LDAP attribute.', array(':field' => $attribute['drupal'], ':attribute' => $attribute['ldap'])));
+          $this->assertEqual($drupal_user->{$attribute['drupal']}, $ldap_user[$attribute['ldap']] . $suffix, t('The :field field was synchronized from the :attribute LDAP attribute.', array(':field' => $attribute['drupal'], ':attribute' => $attribute['ldap'])));
           break;
       }
     }

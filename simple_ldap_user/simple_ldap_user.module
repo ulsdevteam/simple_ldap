@@ -68,9 +68,6 @@ function simple_ldap_user_entity_info_alter(&$entity_info) {
 
 /**
  * Implements hook_form_alter().
- *
- * @TODO It would be better to use hook_user_login() which works
- * even if the login is not coming from a form submission.
  */
 function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
   switch ($form_id) {
@@ -170,6 +167,54 @@ function simple_ldap_user_user_insert(&$edit, $account, $category) {
  * @todo simple_ldap_user_user_update()
  */
 function simple_ldap_user_user_update(&$edit, $account, $category) {
+  // Get the relevant simple_ldap_user configurations.
+  $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+  $map = variable_get('simple_ldap_user_map');
+  $sync = variable_get('simple_ldap_user_sync');
+
+  // Only synchronize to LDAP if Drupal is the authoratative data source.
+  if ($sync == 'drupal') {
+
+    // Get the LDAP user instance.
+    $ldap_user = SimpleLdapUser::singleton($account->name);
+
+    // Only make changes if the LDAP account already exists, or if the account
+    // status is 1 (this catches new accounts being set to active).
+    if ($ldap_user->exists || $account->status == 1) {
+
+      // Set the mail attribute (mail is a special attribute).
+      $ldap_user->$attribute_mail = $account->mail;
+
+      // Set the remaining attributes.
+      foreach ($map as $attribute) {
+        // LDAP likes lowercase.
+        $attribute['ldap'] = strtolower($attribute['ldap']);
+
+        switch ($attribute['type']) {
+
+          // Get the value using Field API.
+          case 'field':
+            // Get the Drupal field values.
+            $items = field_get_items('user', $account, $attribute['drupal']);
+            $values = array();
+            if (is_array($items)) {
+              foreach ($items as $item) {
+                $values[] = $item['value'];
+              }
+            }
+
+            // Set the LDAP user attribute.
+            $ldap_user->{$attribute['ldap']} = $values;
+            break;
+
+          // Get the value directly from the user object.
+          case 'default':
+          default:
+            $ldap_user->{$attribute['ldap']} = $account->{$attribute['drupal']};
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -207,7 +252,7 @@ function simple_ldap_user_user_delete($account) {
  * User information is cached, so this does not fire every time
  * a user object is handled.
  *
- * @todo simple_ldap_user_load()
+ * @todo simple_ldap_user_user_load()
  */
 function simple_ldap_user_user_load($users) {
 }
