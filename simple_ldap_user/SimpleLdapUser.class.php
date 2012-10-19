@@ -61,7 +61,7 @@ class SimpleLdapUser {
    * Destructor.
    */
   public function __destruct() {
-    if ($this->dirty) {
+    if ($this->dirty && !$this->server->readonly) {
       if ($this->exists) {
         unset($this->attributes[variable_get('simple_ldap_user_attribute_name')]);
         $this->server->modify($this->dn, $this->attributes);
