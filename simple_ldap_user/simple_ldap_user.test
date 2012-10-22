@@ -524,27 +524,116 @@ class SimpleLdapUserDrupalToLdapSyncWebTestCase extends SimpleLdapUserWebTestCas
     );
   }
 
-  public function drupalToLdapSync($suffix = '') {
+  public function drupalToLdapSync($name) {
+    // Load configuration variables.
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+    $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+
+    // Load the Drupal user, force uncached load.
+    $drupal_user = user_load_multiple(array(), array('name' => $name), TRUE);
+    $drupal_user = reset($drupal_user);
+    $this->assertNotIdentical($drupal_user, FALSE, t(':name is a valid Drupal user.', array(':name' => $name)));
+
+    // Load the LDAP user.
+    $ldap_user = new SimpleLdapUser($name);
+    $this->assertTrue($ldap_user->exists, t(':name is a valid LDAP user.', array(':name' => $name)));
+
+    // Verify email.
+    $this->assertEqual($drupal_user->mail, $ldap_user->{$attribute_mail}[0], t('Mail is synchronized from Drupal to LDAP.'));
+
+    // Verify other attributes.
+    $map = simple_ldap_user_map();
+    foreach ($map as $attribute) {
+      switch ($attribute['type']) {
+        case 'field':
+          // Get the drupal field values.
+          $items = field_get_items('user', $drupal_user, $attribute['drupal']);
+          if (is_array($items)) {
+            // The field has a value.
+            foreach ($items as $item) {
+              $this->assertTrue(in_array($item['value'], $ldap_user->{$attribute['ldap']}), t('The drupal field :field matches the :attribute LDAP attribute', array(':field' => $attribute['drupal'], ':attribute' => $attribute['ldap'])));
+            }
+          }
+          else {
+            // The field is empty.
+            $this->assertEqual($ldap_user->{$attribute['ldap']}['count'], 0, t('the drupal field :field matches the :attribute LDAP attribute', array(':field' => $attribute['drupal'], ':attribute' => $attribute['ldap'])));
+          }
+          break;
+
+        case 'default':
+        default:
+          if (!empty($drupal_user->{$attribute['drupal']})) {
+            // The field has a value.
+            $this->assertEqual($ldap_user->{$attribute['ldap']}[0], $drupal_user->{$attribute['drupal']}, t('the drupal :field matches the LDAP :attribute attribute', array(':field' => $attribute['drupal'], ':attribute' => $attribute['ldap'])));
+          }
+          else {
+            // Teh field is empty
+            $this->assertEqual($ldap_user->{$attribute['ldap']}['count'], 0, t('The drupal :field matches the LDAP :attribute attribute', array(':field' => $attribute['drupal'], ':attribute' => $attribute['ldap'])));
+          }
+      }
+    }
+
   }
 
-  public function modifyDrupalFields($suffux = '') {
+  public function modifyDrupalFields($name) {
+    // Load the drupal user, force uncached load.
+    $drupal_user = user_load_multiple(array(), array('name' => $name), TRUE);
+    $drupal_user = reset($drupal_user);
+    $this->assertNotIdentical($drupal_user, FALSE, t(':name is a valid Drupal user.', array(':name' => $name)));
+
+    // Initialize the edit array.
+    $edit = array();
+
+    // Modify the email address.
+    $edit['mail'] = $this->randomName() . $drupal_user->mail;
+
+    // Modify other fields.
+    $map = simple_ldap_user_map();
+    foreach ($map as $attribute) {
+      switch ($attribute['type']) {
+        case 'field':
+          // Get the current field values and metadata.
+          $items = field_get_items('user', $drupal_user, $attribute['drupal']);
+
+          // Modify the field.
+          $edit[$attribute['drupal']]['und'][0]['value'] = $this->randomName() . $items[0]['value'];
+          break;
+
+        case 'default':
+        default:
+          $edit[$attribute['drupal']] = $this->randomName() . $drupal_user->{$attribute['drupal']};
+      }
+    }
+
+    // Save the changes.
+    user_save($drupal_user, $edit);
   }
+
 
   public function testDrupalToLdapSync() {
+    // Set sync config to drupal->ldap.
+    variable_set('simple_ldap_user_sync', 'drupal');
+
+    // Clear the search filter.
+    variable_set('simple_ldap_user_filter', '');
+
+    // Create a new Drupal user. This should be enough to create a matching user
+    // in LDAP (covered in a different simpletest scenario).
+    $drupal_user = $this->drupalCreateUser();
+
     // Test the initial data sync.
-    $this->drupalToLdapSync();
+    $this->drupalToLdapSync($drupal_user->name);
 
     // Append "modified" to each of the configured fields.
-    $this->modifyDrupalFields('modified');
+    $this->modifyDrupalFields($drupal_user->name);
 
     // Verify that the values changes.
-    $this->drupalToLdapSync('modified');
+    $this->drupalToLdapSync($drupal_user->name, 'modified');
 
-    // Restore the original values.
-    $this->modifyDrupalFields();
-
-    // Verify that the values were restored.
-    $this->drupalToLdapSync();
+    // Clean up LDAP user.
+    $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
+    $result = $ldap_user->delete();
+    $this->assertFalse($ldap_user->exists, t('Cleaned up LDAP user (deleted :dn).', array(':dn' => $ldap_user->dn)));
   }
 
 }
