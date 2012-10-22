@@ -54,7 +54,7 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
    *
    * Need to make sure that required fields are set.
    */
-  function drupalCreateUser(array $permissions = array()) {
+  function drupalCreateUser(array $permissions = array(), $status = 1) {
     // Create a role with the given permission set, if any.
     $rid = FALSE;
     if ($permissions) {
@@ -69,7 +69,7 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
     $edit['name']   = $this->randomName();
     $edit['mail']   = $edit['name'] . '@example.com';
     $edit['pass']   = user_password();
-    $edit['status'] = 1;
+    $edit['status'] = $status;
     if ($rid) {
       $edit['roles'] = array($rid => $rid);
     }
@@ -412,33 +412,28 @@ class SimpleLdapUserProvisionLdapEntryTestCase extends SimpleLdapUserWebTestCase
   public static function getInfo() {
     return array(
       'name' => 'LDAP user provisioning',
-      'description' => 'Tests that new Drupal users, and users that are set to "active" are provisioned to LDAP.',
+      'description' => 'Tests that new Drupal users are provisioned to LDAP.',
       'group' => 'Simple LDAP User',
     );
   }
 
-  public function testNewUser() {
+  public function verifyLdapUser($name, $cleanup = TRUE) {
     // Get configuration variables.
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
     $map = simple_ldap_user_map();
 
-    // Set sync config to drupal->ldap.
-    variable_set('simple_ldap_user_sync', 'drupal');
-
     // Clear the configured search filter.
     variable_set('simple_ldap_user_filter', '');
 
-    // Create a new Drupal user.
-    $new_user = $this->drupalCreateUser();
-
-    // Load the full Drupal user object.
-    $drupal_user = user_load_multiple(array(), array('name' => $new_user->name), TRUE);
+    // Verify that the user exists in Drupal.
+    $drupal_user = user_load_multiple(array(), array('name' => $name), TRUE);
     $drupal_user = reset($drupal_user);
+    $this->assertNotIdentical($drupal_user, FALSE, t('The :name account exists in Drupal.', array(':name' => $name)));
 
-    // Verify that the user was created in LDAP, and can be loaded.
-    $ldap_user = new SimpleLdapUser($drupal_user->name);
-    $this->assertTrue($ldap_user->exists, t('The user exists in LDAP.'));
+    // Verify that the user exists in LDAP.
+    $ldap_user = new SimpleLdapUser($name);
+    $this->assertTrue($ldap_user->exists, t('The :name account exists in LDAP.', array(':name' => $name)));
 
     // Verify that the name and mail fields match
     $this->assertEqual($drupal_user->name, $ldap_user->{$attribute_name}[0], t('The drupal name matches the :attribute LDAP attribute', array(':attribute' => $attribute_name)));
@@ -477,9 +472,44 @@ class SimpleLdapUserProvisionLdapEntryTestCase extends SimpleLdapUserWebTestCase
       }
     }
 
-    // Clean Up.
-    $ldap_user->delete();
-    $this->assertFalse($ldap_user->exists, t('Cleaned up LDAP user (deleted :dn).', array(':dn' => $ldap_user->dn)));
+    // Clean up.
+    if ($cleanup) {
+      $ldap_user->delete();
+      $this->assertFalse($ldap_user->exists, t('Cleaned up LDAP user (deleted :dn).', array(':dn' => $ldap_user->dn)));
+    }
+  }
+
+  public function cleanUpLdap($name) {
+  }
+
+  public function testNewActiveUser() {
+    // Set sync config to drupal->ldap.
+    variable_set('simple_ldap_user_sync', 'drupal');
+
+    // Create a new active Drupal user.
+    $drupal_user = $this->drupalCreateUser();
+
+    // Verify the user.
+    $this->verifyLdapUser($drupal_user->name);
+  }
+
+  public function testNewInactiveUser() {
+    // Set sync config to drupal->ldap.
+    variable_set('simple_ldap_user_sync', 'drupal');
+
+    // Create a new inactive Drupal user.
+    $drupal_user = $this->drupalCreateUser(array(), 0);
+
+    // Verify that the user does not exist in LDAP.
+    $ldap_user = new SimpleLdapUser($drupal_user->name);
+    $this->assertFalse($ldap_user->exists, t('The new inactive user was not provisioned to LDAP.'));
+
+    // Set the user to active, and save it.
+    $edit = array('status' => 1);
+    $drupal_user = user_save($drupal_user, $edit);
+
+    // Verify the user in LDAP.
+    $this->verifyLdapUser($drupal_user->name, FALSE);
   }
 
 }
