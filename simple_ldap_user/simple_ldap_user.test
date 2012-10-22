@@ -303,7 +303,7 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
   /**
    * Modifies the test user entry in LDAP.
    */
-  public function modifyLdapAttributes() {
+  public function modifyLdapAttributes($suffix = '') {
     // Load configuration variables.
     $test_user = variable_get('simple_ldap_test_user');
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
@@ -319,50 +319,22 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
     $server = SimpleLdapServer::singleton();
 
     // Modify the email field.
-    $result = $server->modify($ldap_user->dn, array($attribute_mail => $test_user[$attribute_mail] . 'modified'));
-    $this->assertTrue($result, t('Modified the :mail attribute of :dn.', array(':mail' => $attribute_mail, ':dn' => $ldap_user->dn)));
-
-    // Modify the other mapped attributes.
-    $map = simple_ldap_user_map();
-    foreach ($map as $attribute) {
-      $attribute['ldap'] = strtolower($attribute['ldap']);
-      $result = $server->modify($ldap_user->dn, array($attribute['ldap'] => $test_user[$attribute['ldap']] . 'modified'));
-      $this->assertTrue($result, t('Modified the :attribute attribute of :dn.', array(':attribute' => $attribute['ldap'], ':dn' => $ldap_user->dn)));
-    }
-  }
-
-  /**
-   * Restores the LDAP attributes to their configured values.
-   */
-  public function restoreLdapAttributes() {
-    // Load configuration variables.
-    $test_user = variable_get('simple_ldap_test_user');
-    $attribute_name = variable_get('simple_ldap_user_attribute_name');
-    $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
-
-    // Load LDAP user.
-    $ldap_user = new SimpleLdapUser($test_user[$attribute_name]);
-
-    // Get an LDAP server instance.
-    $server = SimpleLdapServer::singleton();
-
-    // Restore the mail field.
-    $result = $server->modify($ldap_user->dn, array($attribute_mail => $test_user[$attribute_mail]));
-    $this->assertTrue($result, t('Restored the :attribute field of :dn to :value', array(
+    $result = $server->modify($ldap_user->dn, array($attribute_mail => $test_user[$attribute_mail] . $suffix));
+    $this->assertTrue($result, t('Modified the :attribute attribute of :dn to :value.', array(
       ':attribute' => $attribute_mail,
       ':dn' => $ldap_user->dn,
-      ':value' => $test_user[$attribute_mail],
+      ':value' => $test_user[$attribute_mail] . $suffix,
     )));
 
     // Modify the other mapped attributes.
     $map = simple_ldap_user_map();
     foreach ($map as $attribute) {
       $attribute['ldap'] = strtolower($attribute['ldap']);
-      $result = $server->modify($ldap_user->dn, array($attribute['ldap'] => $test_user[$attribute['ldap']]));
-      $this->assertTrue($result, t('Restored the :attribute field of :dn to :value.', array(
+      $result = $server->modify($ldap_user->dn, array($attribute['ldap'] => $test_user[$attribute['ldap']] . $suffix));
+      $this->assertTrue($result, t('Modified the :attribute attribute of :dn to :value.', array(
         ':attribute' => $attribute['ldap'],
         ':dn' => $ldap_user->dn,
-        ':value' => $test_user[$attribute['ldap']],
+        ':value' => $test_user[$attribute['ldap']] . $suffix,
       )));
     }
   }
@@ -373,10 +345,55 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
    * #6 - Update Drupal fields from LDAP attributes.
    */
   public function testLdapToDrupalSync() {
+    // Test initial data sync.
     $this->ldapToDrupalSync();
-    $this->modifyLdapAttributes();
+
+    // Append "modified" to each of the configured fields.
+    $this->modifyLdapAttributes('modified');
+
+    // Verify that the values changed.
     $this->ldapToDrupalSync('modified');
-    $this->restoreLdapAttributes();
+
+    // Restore the original values.
+    $this->modifyLdapAttributes();
+
+    // Verify that the values were restored.
+    $this->ldapToDrupalSync();
+  }
+
+}
+
+class SimpleLdapUserDrupalToLdapSyncWebTestCase extends SimpleLdapUserWebTestCase {
+
+  public static function getInfo() {
+    return array (
+      'name' => 'Modify user fields',
+      'description' => 'Tests whether a user can modify their email, along with any other mapped fields, and that the values are updated in LDAP.',
+      'group' => 'Simple LDAP User',
+    );
+  }
+
+  public function drupalToLdapSync($suffix = '') {
+  }
+
+  public function modifyDrupalFields($suffux = '') {
+  }
+
+  public function testDrupalToLdapSync() {
+    // Test the initial data sync.
+    $this->drupalToLdapSync();
+
+    // Append "modified" to each of the configured fields.
+    $this->modifyDrupalFields('modified');
+
+    // Verify that the values changes.
+    $this->drupalToLdapSync('modified');
+
+    // Restore the original values.
+    $this->modifyDrupalFields();
+
+    // Verify that the values were restored.
+    $this->drupalToLdapSync();
   }
 
 }
