@@ -154,6 +154,11 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
  * @todo simple_ldap_user_user_insert()
  */
 function simple_ldap_user_user_insert(&$edit, $account, $category) {
+  if ($account->status == 1) {
+    // Pass to simple_ldap_user_user_update(), which handles provisioning to
+    // LDAP.
+    simple_ldap_user_user_update($edit, $account, $category);
+  }
 }
 
 /**
@@ -169,7 +174,7 @@ function simple_ldap_user_user_insert(&$edit, $account, $category) {
 function simple_ldap_user_user_update(&$edit, $account, $category) {
   // Get the relevant simple_ldap_user configurations.
   $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
-  $map = variable_get('simple_ldap_user_map');
+  $map = simple_ldap_user_map();
   $sync = variable_get('simple_ldap_user_sync');
 
   // Only synchronize to LDAP if Drupal is the authoratative data source.
@@ -210,9 +215,14 @@ function simple_ldap_user_user_update(&$edit, $account, $category) {
           // Get the value directly from the user object.
           case 'default':
           default:
-            $ldap_user->{$attribute['ldap']} = $account->{$attribute['drupal']};
+            if (!empty($account->{$attribute['drupal']})) {
+              $ldap_user->{$attribute['ldap']} = $account->{$attribute['drupal']};
+            }
         }
       }
+
+      // Save any changes.
+      $ldap_user->save();
     }
   }
 }
