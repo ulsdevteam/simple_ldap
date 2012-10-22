@@ -61,16 +61,7 @@ class SimpleLdapUser {
    * Destructor.
    */
   public function __destruct() {
-    if ($this->dirty && !$this->server->readonly) {
-      if ($this->exists) {
-        unset($this->attributes[variable_get('simple_ldap_user_attribute_name')]);
-        $this->server->modify($this->dn, $this->attributes);
-      }
-      else {
-        $this->attributes['objectclass'] = array(variable_get('simple_ldap_user_objectclass'));
-        $result = $this->server->add($this->dn, $this->attributes);
-      }
-    }
+    $this->save();
   }
 
   /**
@@ -139,6 +130,45 @@ class SimpleLdapUser {
       $auth = $this->server->bind($this->dn, $password);
       return $auth;
     }
+    return FALSE;
+  }
+
+  /**
+   * Save user to LDAP.
+   *
+   * @return boolean
+   *   TRUE on success, FALSE on failure.
+   */
+  public function save() {
+    // If there is nothing to save, return "success".
+    if (!$this->dirty) {
+      return TRUE;
+    }
+
+    // If the server is set to readonly, return "fail".
+    if ($this->server->readonly) {
+      return FALSE;
+    }
+
+    if ($this->exists) {
+      // Update existing entry.
+      unset($this->attributes[variable_get('simple_ldap_user_attribute_name')]);
+      $result = $this->server->modify($this->dn, $this->attributes);
+    }
+    else {
+      // create new entry.
+      $this->attributes['objectclass'] = array(variable_get('simple_ldap_user_objectclass'));
+      $result = $this->server->add($this->dn, $this->attributes);
+    }
+
+    // Successfully saved.
+    if ($result !== FALSE) {
+      $this->dirty = FALSE;
+      $this->exists = TRUE;
+      return TRUE;
+    }
+
+    // Default to "fail".
     return FALSE;
   }
 

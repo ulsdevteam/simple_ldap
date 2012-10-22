@@ -2,8 +2,9 @@ SimpleLdapUser fingerprint
 ==========================
 
 // Variables exposed by __get() and __set()
-$dn
 $attributes 
+$dn
+$exists
 
 // Magic methods
 __construct($name)
@@ -12,8 +13,8 @@ __get($name)
 __set($name, $value)
 
 // Public functions
-exists()
 authenticate($password)
+save()
 
 // Public static methods
 filter()
