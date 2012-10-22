@@ -637,3 +637,37 @@ class SimpleLdapUserDrupalToLdapSyncWebTestCase extends SimpleLdapUserWebTestCas
   }
 
 }
+
+class SimpleLdapUserUserChangesProfileTestCase extends SimpleLdapUserWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'User can modify profile',
+      'description' => 'Tests whether a user can modify their profile, and that the changes are synchronized to LDAP.',
+      'group' => 'Simple LDAP User',
+    );
+  }
+
+  public function testUserChangesProfile() {
+    // Load configuration variables.
+    $test_user = variable_get('simple_ldap_test_user');
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+
+    // Initialize a user account object.
+    $account = new stdClass();
+    $account->name = $test_user[$attribute_name];
+    $account->pass_raw = $test_user['pass'];
+
+    // Log in user. This should create/sync an LDAP user (tested elsewhere)
+    $this->drupalLogin($account);
+    $drupal_user = user_load_by_name($test_user[$attribute_name]);
+
+    $edit['current_pass'] = $test_user['pass'];
+    $edit['mail'] = $drupal_user->mail . 'modified';
+    $edit['field_last_name[und][0][value]'] = 'MyLastname';
+
+    // Submit user edit form.
+    $this->drupalPost('user/' . $drupal_user->uid . '/edit', $edit, 'Save');
+
+  }
+}
