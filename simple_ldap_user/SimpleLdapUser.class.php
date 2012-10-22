@@ -172,6 +172,25 @@ class SimpleLdapUser {
   }
 
   /**
+   * Delete user from LDAP directory.
+   *
+   * @return boolean
+   *   TRUE on success, FALSE on failure.
+   */
+  public function delete() {
+    if ($this->exists) {
+      $result = $this->server->delete($this->dn);
+      if ($result) {
+        $this->exists = FALSE;
+        $this->dirty = FALSE;
+        return TRUE;
+      }
+    }
+
+    return FALSE;
+  }
+
+  /**
    * Return the LDAP search filter, as set by the module configuration.
    */
   public static function filter() {

@@ -15,6 +15,7 @@ __set($name, $value)
 // Public functions
 authenticate($password)
 save()
+delete()
 
 // Public static methods
 filter()
