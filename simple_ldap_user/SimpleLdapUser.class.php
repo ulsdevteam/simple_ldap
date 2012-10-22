@@ -164,7 +164,6 @@ class SimpleLdapUser {
     // Successfully saved.
     if ($result !== FALSE) {
       $this->dirty = FALSE;
-      $this->exists = TRUE;
       return TRUE;
     }
 
