@@ -509,7 +509,7 @@ class SimpleLdapUserProvisionLdapEntryTestCase extends SimpleLdapUserWebTestCase
     $drupal_user = user_save($drupal_user, $edit);
 
     // Verify the user in LDAP.
-    $this->verifyLdapUser($drupal_user->name, FALSE);
+    $this->verifyLdapUser($drupal_user->name);
   }
 
 }
@@ -518,8 +518,8 @@ class SimpleLdapUserDrupalToLdapSyncWebTestCase extends SimpleLdapUserWebTestCas
 
   public static function getInfo() {
     return array (
-      'name' => 'Modify user fields',
-      'description' => 'Tests whether a user can modify their email, along with any other mapped fields, and that the values are updated in LDAP.',
+      'name' => 'Synchronize from Drupal to LDAP',
+      'description' => 'Tests the synchronization of Drupal user fields to LDAP attributes.',
       'group' => 'Simple LDAP User',
     );
   }
