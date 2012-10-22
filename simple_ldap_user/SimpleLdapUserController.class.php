@@ -92,7 +92,6 @@ class SimpleLdapUserController extends UserController {
 
     // Synchronize other mapped attributes.
     foreach ($map as $attribute) {
-      $attribute['ldap'] = strtolower($attribute['ldap']);
 
       // Verify that the user field exists.
       if (isset($drupal_user->$attribute['drupal'])) {

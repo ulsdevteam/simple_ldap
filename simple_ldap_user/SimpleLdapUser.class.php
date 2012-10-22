@@ -79,9 +79,8 @@ class SimpleLdapUser {
         if (isset($this->attributes[$name])) {
           return $this->attributes[$name];
         }
+        return array('count' => 0);
     }
-
-    return FALSE;
   }
 
   /**

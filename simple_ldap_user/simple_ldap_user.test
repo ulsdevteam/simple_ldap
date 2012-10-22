@@ -21,6 +21,7 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
           'field_name' => $attribute['drupal'],
           'entity_type' => 'user',
           'bundle' => 'user',
+          'required' => $attribute['required'],
         ));
       }
     }
@@ -46,6 +47,51 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
     if (!$pass) {
       $this->loggedInUser = $user;
     }
+  }
+
+  /**
+   * Override DrupalWebTestCase::drupalCreateUser().
+   *
+   * Need to make sure that required fields are set.
+   */
+  function drupalCreateUser(array $permissions = array()) {
+    // Create a role with the given permission set, if any.
+    $rid = FALSE;
+    if ($permissions) {
+      $rid = $this->drupalCreateRole($permissions);
+      if (!$rid) {
+        return FALSE;
+      }
+    }
+
+    // Create a user assigned to that role.
+    $edit = array();
+    $edit['name']   = $this->randomName();
+    $edit['mail']   = $edit['name'] . '@example.com';
+    $edit['pass']   = user_password();
+    $edit['status'] = 1;
+    if ($rid) {
+      $edit['roles'] = array($rid => $rid);
+    }
+
+    // Add require fields.
+    $map = simple_ldap_user_map();
+    foreach ($map as $attribute) {
+      if ($attribute['required']) {
+        $edit[$attribute['drupal']]['und'][0]['value'] = $this->randomName();
+      }
+    }
+
+    $account = user_save(drupal_anonymous_user(), $edit);
+
+    $this->assertTrue(!empty($account->uid), t('User created with name %name and pass %pass', array('%name' => $edit['name'], '%pass' => $edit['pass'])), t('User login'));
+    if (empty($account->uid)) {
+      return FALSE;
+    }
+
+    // Add the raw password so that we can log in as this user.
+    $account->pass_raw = $edit['pass'];
+    return $account;
   }
 
 }
@@ -276,7 +322,6 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
     // Verify other attributes.
     $map = simple_ldap_user_map();
     foreach ($map as $attribute) {
-      $attribute['ldap'] = strtolower($attribute['ldap']);
 
       // Verify that the Drupal user field exists.
       $this->assertTrue(isset($drupal_user->$attribute['drupal']), t('The :field user field exists.', array(':field' => $attribute['drupal'])));
@@ -329,7 +374,6 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
     // Modify the other mapped attributes.
     $map = simple_ldap_user_map();
     foreach ($map as $attribute) {
-      $attribute['ldap'] = strtolower($attribute['ldap']);
       $result = $server->modify($ldap_user->dn, array($attribute['ldap'] => $test_user[$attribute['ldap']] . $suffix));
       $this->assertTrue($result, t('Modified the :attribute attribute of :dn to :value.', array(
         ':attribute' => $attribute['ldap'],
@@ -359,6 +403,83 @@ class SimpleLdapUserLdapToDrupalSyncWebTestCase extends SimpleLdapUserWebTestCas
 
     // Verify that the values were restored.
     $this->ldapToDrupalSync();
+  }
+
+}
+
+class SimpleLdapUserProvisionLdapEntryTestCase extends SimpleLdapUserWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'LDAP user provisioning',
+      'description' => 'Tests that new Drupal users, and users that are set to "active" are provisioned to LDAP.',
+      'group' => 'Simple LDAP User',
+    );
+  }
+
+  public function testNewUser() {
+    // Get configuration variables.
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+    $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+    $map = simple_ldap_user_map();
+
+    // Set sync config to drupal->ldap.
+    variable_set('simple_ldap_user_sync', 'drupal');
+
+    // Clear the configured search filter.
+    variable_set('simple_ldap_user_filter', '');
+
+    // Create a new Drupal user.
+    $new_user = $this->drupalCreateUser();
+
+    // Load the full Drupal user object.
+    $drupal_user = user_load_multiple(array(), array('name' => $new_user->name), TRUE);
+    $drupal_user = reset($drupal_user);
+
+    // Verify that the user was created in LDAP, and can be loaded.
+    $ldap_user = new SimpleLdapUser($drupal_user->name);
+    $this->assertTrue($ldap_user->exists, t('The user exists in LDAP.'));
+
+    // Verify that the name and mail fields match
+    $this->assertEqual($drupal_user->name, $ldap_user->{$attribute_name}[0], t('The drupal name matches the :attribute LDAP attribute', array(':attribute' => $attribute_name)));
+    $this->assertEqual($drupal_user->mail, $ldap_user->{$attribute_mail}[0], t('The drupal mail matches the :attribute LDAP attribute', array(':attribute' => $attribute_mail)));
+
+    // Verify the other mapped attributes.
+    $map = simple_ldap_user_map();
+    foreach ($map as $attribute) {
+      switch ($attribute['type']) {
+        case 'field':
+          // Get the drupal field values.
+          $items = field_get_items('user', $drupal_user, $attribute['drupal']);
+          if (is_array($items)) {
+            // The field has a value.
+            foreach ($items as $item) {
+              $this->assertTrue(in_array($item['value'], $ldap_user->{$attribute['ldap']}), t('The drupal field :field matches the :attribute LDAP attribute', array(':field' => $attribute['drupal'], ':attribute' => $attribute['ldap'])));
+            }
+          }
+          else {
+            // The field does not have a value.
+            $this->assertEqual($ldap_user->{$attribute['ldap']}['count'], 0, t('The drupal field :field matches the :attribute LDAP attribute', array(':field' => $attribute['drupal'], ':attribute' => $attribute['ldap'])));
+          }
+          break;
+
+        case 'default':
+        default:
+          if (!empty($drupal_user->{$attribute['drupal']})) {
+            // The field has a value.
+            $this->assertEqual($ldap_user->{$attribute['ldap']}[0], $drupal_user->{$attribute['drupal']}, t('The drupal :field matches the LDAP :attribute attribute', array(':field' => $attribute['drupal'], ':attribute' => $attribute['ldap'])));
+          }
+          else {
+            // The field is empty.
+            $this->assertEqual($ldap_user->{$attribute['ldap']}['count'], 0, t('The drupal :field matches the LDAP :attribute attribute', array(':field' => $attribute['drupal'], ':attribute' => $attribute['ldap'])));
+          }
+
+      }
+    }
+
+    // Clean Up.
+    $ldap_user->delete();
+    $this->assertFalse($ldap_user->exists, t('Cleaned up LDAP user (deleted :dn).', array(':dn' => $ldap_user->dn)));
   }
 
 }

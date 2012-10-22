@@ -192,9 +192,6 @@ function simple_ldap_user_user_update(&$edit, $account, $category) {
 
       // Set the remaining attributes.
       foreach ($map as $attribute) {
-        // LDAP likes lowercase.
-        $attribute['ldap'] = strtolower($attribute['ldap']);
-
         switch ($attribute['type']) {
 
           // Get the value using Field API.
@@ -357,8 +354,17 @@ function simple_ldap_user_sync() {
 function simple_ldap_user_map() {
   $map = variable_get('simple_ldap_user_map', array());
   foreach ($map as $key => $value) {
+    // LDAP likes lowercase.
+    $map[$key]['ldap'] = strtolower($map[$key]['ldap']);
+
+    // Make sure a type is set.
     if (!isset($value['type'])) {
       $map[$key]['type'] = 'default';
+    }
+
+    // Make sure "required" is set.
+    if (!isset($value['required'])) {
+      $map[$key]['required'] = FALSE;
     }
   }
   return $map;
