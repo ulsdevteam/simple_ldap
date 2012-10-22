@@ -124,7 +124,7 @@ class SimpleLdapUserController extends UserController {
           // Update the value directly on the user object.
           case 'default':
           default:
-            if ($drupal_user->$attribute['drupal'] != $ldap_user->{$attribute['ldap']}[0]) {
+            if (isset($ldap_user->{$attribute['ldap']}[0]) && $drupal_user->$attribute['drupal'] != $ldap_user->{$attribute['ldap']}[0]) {
               $edit[$attribute['drupal']] = $ldap_user->{$attribute['ldap']}[0];
             }
             break;
