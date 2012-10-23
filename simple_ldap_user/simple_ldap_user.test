@@ -16,12 +16,17 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
         $field = field_create_field(array(
           'field_name' => $attribute['drupal'],
           'type' => 'text',
+          'cardinality' => 1,
         ));
         $instance = field_create_instance(array(
           'field_name' => $attribute['drupal'],
           'entity_type' => 'user',
+          'label' => $attribute['drupal'],
           'bundle' => 'user',
           'required' => $attribute['required'],
+          'settings' => array(
+            'user_register_form' => $attribute['required'],
+          ),
         ));
       }
     }
@@ -96,7 +101,7 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
 
 }
 
-class SimpleLdapUserAuthenticationTestCase extends SimpleLdapUserWebTestCase {
+class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserWebTestCase {
 
   public static function getInfo() {
     return array(
@@ -236,7 +241,7 @@ class SimpleLdapUserFilterWebTestCase extends SimpleLdapUserWebTestCase {
 
 }
 
-class SimpleLdapUserUserOneLoginTestCase extends SimpleLdapUserWebTestCase {
+class SimpleLdapUserUserOneLoginWebTestCase extends SimpleLdapUserWebTestCase {
 
   public static function getInfo() {
     return array(
@@ -638,7 +643,7 @@ class SimpleLdapUserDrupalToLdapSyncWebTestCase extends SimpleLdapUserWebTestCas
 
 }
 
-class SimpleLdapUserUserChangesProfileTestCase extends SimpleLdapUserWebTestCase {
+class SimpleLdapUserUserChangesProfileWebTestCase extends SimpleLdapUserWebTestCase {
 
   public static function getInfo() {
     return array(
@@ -668,6 +673,42 @@ class SimpleLdapUserUserChangesProfileTestCase extends SimpleLdapUserWebTestCase
 
     // Submit user edit form.
     $this->drupalPost('user/' . $drupal_user->uid . '/edit', $edit, 'Save');
+
+  }
+}
+
+class SimpleLdapUserRegisterWebTestCase extends SimpleLdapUserWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Create new account',
+      'description' => 'User can create a new account using the register form.',
+      'group' => 'Simple LDAP User',
+    );
+  }
+
+  /**
+   * #19 Register for Drupal and create new LDAP user.
+   */
+  public function testUserRegister() {
+    // Generate random data.
+    $edit['name'] = $this->randomName();
+    $edit['mail'] = $edit['name'] . '@example.com';
+
+    $map = simple_ldap_user_map();
+    foreach ($map as $attribute) {
+      if ($attribute['required']) {
+        $edit[$attribute['drupal'] . '[und][0][value]'] = $this->randomName();
+      }
+    }
+
+    // Submit registration form.
+    $this->drupalPost('user/register', $edit, 'Create new account');
+
+    // Get the email that was sent.
+    $email = $this->drupalGetMails();
+    debug($email[0]['body']);
+
 
   }
 }
