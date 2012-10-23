@@ -8,7 +8,6 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
 
   public function setUp() {
     parent::setUp(array('simple_ldap', 'simple_ldap_user', 'simple_ldap_test'));
-    simple_ldap_test_setup();
   }
 
   /**
@@ -31,51 +30,6 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
     if (!$pass) {
       $this->loggedInUser = $user;
     }
-  }
-
-  /**
-   * Override DrupalWebTestCase::drupalCreateUser().
-   *
-   * Need to make sure that required fields are set.
-   */
-  public function drupalCreateUser(array $permissions = array(), $status = 1) {
-    // Create a role with the given permission set, if any.
-    $rid = FALSE;
-    if ($permissions) {
-      $rid = $this->drupalCreateRole($permissions);
-      if (!$rid) {
-        return FALSE;
-      }
-    }
-
-    // Create a user assigned to that role.
-    $edit = array();
-    $edit['name']   = $this->randomName();
-    $edit['mail']   = $edit['name'] . '@example.com';
-    $edit['pass']   = user_password();
-    $edit['status'] = $status;
-    if ($rid) {
-      $edit['roles'] = array($rid => $rid);
-    }
-
-    // Add require fields.
-    $map = simple_ldap_user_map();
-    foreach ($map as $attribute) {
-      if ($attribute['required']) {
-        $edit[$attribute['drupal']]['und'][0]['value'] = $this->randomName();
-      }
-    }
-
-    $account = user_save(drupal_anonymous_user(), $edit);
-
-    $this->assertTrue(!empty($account->uid), t('User created with name %name and pass %pass', array('%name' => $edit['name'], '%pass' => $edit['pass'])), t('User login'));
-    if (empty($account->uid)) {
-      return FALSE;
-    }
-
-    // Add the raw password so that we can log in as this user.
-    $account->pass_raw = $edit['pass'];
-    return $account;
   }
 
   /**
