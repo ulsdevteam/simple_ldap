@@ -270,8 +270,20 @@ class SimpleLdapUserUserChangesProfileWebTestCase extends SimpleLdapUserWebTestC
     $drupal_user = user_load_by_name($test_user[$attribute_name]);
 
     $edit['current_pass'] = $test_user['pass'];
-    $edit['mail'] = $drupal_user->mail . 'modified';
-    $edit['field_last_name[und][0][value]'] = 'MyLastname';
+//    $edit['mail'] = $drupal_user->mail . 'modified';
+    $edit['field_last_name[und][0][value]'] = $this->randomName();
+
+    $map = simple_ldap_user_map();
+    foreach ($map as $field) {
+      switch($field['type']) {
+        case 'field':
+          $edit[$field['drupal'] . '[und][0][value]'] = $this->randomName();
+          break;
+        case 'default':
+        default:
+          $edit[$field['drupal']] = $this->randomName();
+      }
+    }
 
     // Submit user edit form.
     $this->drupalPost('user/' . $drupal_user->uid . '/edit', $edit, 'Save');
