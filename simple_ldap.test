@@ -13,7 +13,7 @@ abstract class SimpleLdapWebTestCase extends DrupalWebTestCase {
 
 }
 
-class SimpleLdapServerTestCase extends SimpleLdapWebTestCase {
+class SimpleLdapServerWebTestCase extends SimpleLdapWebTestCase {
 
   public static function getInfo() {
     return array(
@@ -24,9 +24,9 @@ class SimpleLdapServerTestCase extends SimpleLdapWebTestCase {
   }
 
   /**
-   * Test the LDAP server as it is configured.
+   * Test the LDAP server configuration and connectivity.
    */
-  public function testConfiguration() {
+  public function testLdapServer() {
     // Test that simple_ldap is configured.
     $this->assertTrue(simple_ldap_configured(), t('The Simple LDAP module is configured.'));
 
@@ -34,108 +34,8 @@ class SimpleLdapServerTestCase extends SimpleLdapWebTestCase {
     $this->server = SimpleLdapServer::singleton();
 
     // Test connectivity to the configured LDAP server.
-    $this->assertTrue($this->server->bind(), t('Successfully bound to the test LDAP server.'));
-    $this->assertTrue($this->server->unbind(), t('Successfully unbound from the test LDAP server.'));
-  }
-
-}
-
-class SimpleLdapServerPlainTestCase extends SimpleLdapWebTestCase {
-
-  public static function getInfo() {
-    return array(
-      'name' => 'LDAP server plain connection',
-      'description' => 'Tests a Simple LDAP Server connection to port 389 with no encryption.',
-      'group' => 'Simple LDAP',
-    );
-  }
-
-  /**
-   * Test connectivity to the LDAP server on port 389, unencrypted.
-   */
-  public function testUnencrypted() {
-    // Test that simple_ldap is configured.
-    $this->assertTrue(simple_ldap_configured(), t('The Simple LDAP module is configured.'));
-
-    // Initialize the LDAP server.
-    $this->server = SimpleLdapServer::singleton();
-
-    // Alter the server configuration.
-    $host = parse_url($this->server->host);
-    $this->server->host = isset($host['host']) ? $host['host'] : $host['path'];
-    $this->server->port = 389;
-    $this->server->starttls = FALSE;
-
-    // Verify connectivity.
-    $this->assertTrue($this->server->bind(), t('Successfully bound to the test LDAP server.'));
-    $this->assertTrue($this->server->unbind(), t('Successfully unbound from the test LDAP server.'));
-  }
-
-}
-
-class SimpleLdapServerStartTLSTestCase extends SimpleLdapWebTestCase {
-
-  public static function getInfo() {
-    return array(
-      'name' => 'LDAP server startTLS connection',
-      'description' => 'Tests a Simple LDAP Server connection to port 389 using StartTLS.',
-      'group' => 'Simple LDAP',
-    );
-  }
-
-  /**
-   * Test connectivity to the LDAP server on port 389, with startTLS.
-   */
-  public function testStartTLS() {
-    // Test that simple_ldap is configured.
-    $this->assertTrue(simple_ldap_configured(), t('The Simple LDAP module is configured.'));
-
-    // Initialize the LDAP server.
-    $this->server = SimpleLdapServer::singleton();
-
-    // Alter the server configuration.
-    $host = parse_url($this->server->host);
-    $this->server->host = isset($host['host']) ? $host['host'] : $host['path'];
-    $this->server->port = 389;
-    $this->server->starttls = TRUE;
-
-    // Verify connectivity.
-    $this->assertTrue($this->server->bind(), t('Successfully bound to the test LDAP server.'));
-    $this->assertTrue($this->server->unbind(), t('Successfully unbound from the test LDAP server.'));
-  }
-
-}
-
-class SimpleLdapServerSSLTestCase extends SimpleLdapWebTestCase {
-
-  public static function getInfo() {
-    return array(
-      'name' => 'LDAP server SSL connection',
-      'description' => 'Tests a Simple LDAP Server connection to port 636 using SSL.',
-      'group' => 'Simple LDAP',
-    );
-  }
-
-  /**
-   * Test connectivity to the LDAP server on port 636, with SSL.
-   */
-  public function testSSL() {
-    // Test that simple_ldap is configured.
-    $this->assertTrue(simple_ldap_configured(), t('The Simple LDAP module is configured.'));
-
-    // Initialize the LDAP server.
-    $this->server = SimpleLdapServer::singleton();
-
-    // Alter the server configuration.
-    $host = parse_url($this->server->host);
-    $hostname = isset($host['host']) ? $host['host'] : $host['path'];
-    $this->server->host = 'ldaps://' . $hostname;
-    $this->server->port = 636;
-    $this->server->starttls = FALSE;
-
-    // Verify connectivity.
-    $this->assertTrue($this->server->bind(), t('Successfully bound to the test LDAP server.'));
-    $this->assertTrue($this->server->unbind(), t('Successfully unbound from the test LDAP server.'));
+    $this->assertTrue($this->server->bind(), t('Successfully bound to the LDAP server.'));
+    $this->assertTrue($this->server->unbind(), t('Successfully unbound from the LDAP server.'));
   }
 
 }
