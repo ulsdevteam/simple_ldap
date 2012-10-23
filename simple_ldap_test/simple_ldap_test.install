@@ -9,14 +9,34 @@
  * Implements hook_install().
  */
 function simple_ldap_test_install() {
-  module_load_include('module', 'simple_ldap_test');
-  simple_ldap_test_config();
-}
+  // Include the file that contains the server configuration.
+  $path = DRUPAL_ROOT . '/' . drupal_get_path('module', 'simple_ldap_test');
+  $file = $path . "/simple_ldap_test.config.inc";
+  if (is_file($file)) {
+    include $file;
+  }
 
-/**
- * Implements hook_uninstall().
- */
-function simple_ldap_test_uninstall() {
-  module_load_include('module', 'simple_ldap_test');
-  simple_ldap_test_clear();
+  // Add fields to the user entity.
+  if (function_exists('simple_ldap_user_map')) {
+    $map = simple_ldap_user_map();
+    foreach ($map as $attribute) {
+      if ($attribute['type'] == 'field') {
+        field_create_field(array(
+          'field_name' => $attribute['drupal'],
+          'type' => 'text',
+          'cardinality' => 1,
+        ));
+        field_create_instance(array(
+          'field_name' => $attribute['drupal'],
+          'entity_type' => 'user',
+          'label' => $attribute['drupal'],
+          'bundle' => 'user',
+          'required' => $attribute['required'],
+          'settings' => array(
+            'user_register_form' => $attribute['required'],
+            ),
+        ));
+      }
+    }
+  }
 }
