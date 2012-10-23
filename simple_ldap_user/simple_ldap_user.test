@@ -61,7 +61,7 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
    *
    * Need to make sure that required fields are set.
    */
-  function drupalCreateUser(array $permissions = array(), $status = 1) {
+  public function drupalCreateUser(array $permissions = array(), $status = 1) {
     // Create a role with the given permission set, if any.
     $rid = FALSE;
     if ($permissions) {
@@ -99,6 +99,29 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
     // Add the raw password so that we can log in as this user.
     $account->pass_raw = $edit['pass'];
     return $account;
+  }
+
+  /**
+   * Log in with User 1.
+   */
+  public function drupalUser1Login() {
+    // Load password hashing API.
+    require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
+
+    // Generate a random password.
+    $pass = hash('sha256', microtime());
+
+    // Update user-1's password in the database.
+    db_query("UPDATE {users} SET pass = :hash WHERE uid = 1", array(':hash' => user_hash_password($pass)));
+
+    // Load user-1.
+    $admin_user = user_load(1);
+
+    // Set the password.
+    $admin_user->pass_raw = $pass;
+
+    // Log in.
+    $this->drupalLogin($admin_user);
   }
 
 }
@@ -265,25 +288,15 @@ class SimpleLdapUserUserOneLoginWebTestCase extends SimpleLdapUserWebTestCase {
    * #20 - Log into Drupal as User 1 avoids LDAP.
    */
   public function testUserOneLogin() {
-    // Load password hashing API.
-    require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
-
-    // Generate a random password.
-    $pass = hash('sha256', microtime());
-
-    // Update user-1's password in the database.
-    db_query("UPDATE {users} SET pass = :hash WHERE uid = 1", array(':hash' => user_hash_password($pass)));
-
     // Load user-1.
     $admin_user = user_load(1);
-    $admin_user->pass_raw = $pass;
 
     // Verify that user-1 does not exist in LDAP.
     $ldap_user = new SimpleLdapUser($admin_user->name);
     $this->assertFalse($ldap_user->exists, t('User 1 does not exist in LDAP.'));
 
     // Attempt to log in.
-    $this->drupalLogin($admin_user);
+    $this->drupalUser1Login();
 
     // Verify that user-1 does not exist in LDAP.
     $ldap_user = new SimpleLdapUser($admin_user->name);
