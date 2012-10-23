@@ -53,7 +53,7 @@ class SimpleLdapUser {
     }
     else {
       $this->dn = $attribute_name . '=' . $name . ',' . $base_dn;
-      $this->attributes[$attribute_name] = array($name);
+      $this->attributes[$attribute_name] = array('count' => 1, 0 => $name);
     }
   }
 
