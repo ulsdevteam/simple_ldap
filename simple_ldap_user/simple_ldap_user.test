@@ -279,29 +279,22 @@ class SimpleLdapUserUserChangesProfileWebTestCase extends SimpleLdapUserWebTestC
   }
 }
 
-class SimpleLdapUserRegisterWebTestCase extends SimpleLdapUserWebTestCase {
+class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
 
   public static function getInfo() {
     return array(
-      'name' => 'Create new account',
-      'description' => 'User can create a new account using the register form.',
+      'name' => 'User registration',
+      'description' => 'Test registration of user under different configurations.',
       'group' => 'Simple LDAP User',
     );
   }
 
   /**
-   * Register for a new user account.
-   *
-   * #19 Register for Drupal and create new LDAP user.
-   * #27 Ensure email verification creates the user in LDAP
-   * #28 Ensure user is not created without email verification
-   *
-   * @todo finish this.
+   * Generate random data for user registration form.
    */
-  public function testUserRegister() {
-    // Generate random data.
-    $edit['name'] = $this->randomName();
-    $edit['mail'] = $edit['name'] . '@example.com';
+  public function formData(&$name, &$mail) {
+    $edit['name'] = $name = $this->randomName();
+    $edit['mail'] = $mail = $edit['name'] . '@example.com';
 
     $map = simple_ldap_user_map();
     foreach ($map as $attribute) {
@@ -310,21 +303,146 @@ class SimpleLdapUserRegisterWebTestCase extends SimpleLdapUserWebTestCase {
       }
     }
 
-    // Submit registration form.
-    $this->drupalPost('user/register', $edit, 'Create new account');
-
-    // Verify that the Drupal user was created, and that the status == 0.
-    $drupal_user = user_load_by_name($edit['name']);
-    $this->assertNotIdentical($drupal_user, FALSE, t('The user was successfully registered.'));
-    $this->assertFalse($drupal_user->status, t('The user status is "blocked".'));
-
-    // Verify that the user does not yet exist in LDAP.
-    $ldap_user = new SimpleLdapUser($edit['name']);
-    $this->assertFalse($ldap_user->exists, t('The user does not yet exist in LDAP.'));
-
-    // Get the email that was sent.
-    $email = $this->drupalGetMails();
-    debug($email[0]['body']);
-
+    return $edit;
   }
+
+  public function testRegistrationWithEmailVerification() {
+    // Require e-mail verification.
+    variable_set('user_email_verification', TRUE);
+
+    // Set registration to administrator only.
+    variable_set('user_register', USER_REGISTER_ADMINISTRATORS_ONLY);
+    $this->drupalGet('user/register');
+    $this->assertResponse(403, t('Registration page is inaccessible when only administrators can create accounts.'));
+
+    // Allow registration by site visitors without administrator approvial.
+    variable_set('user_register', USER_REGISTER_VISITORS);
+    $edit = $this->formData($name, $mail);
+    $this->drupalPost('user/register', $edit, t('Create new account'));
+    $this->assertText(t('A welcome message with further instructions has been sent to your e-mail address.'), t('User registered successfully.'));
+    $accounts = user_load_multiple(array(), array('name' => $name, 'mail' => $mail));
+    $new_user = reset($accounts);
+    $this->assertTrue($new_user->status, t('New account is active after registration.'));
+    $ldap_user = new SimpleLdapUser($name);
+    $this->assertTrue($ldap_user->exists, t('New account was provisioned to LDAP.'));
+
+    // Allow registration by site visitors, but require administrator approval.
+    variable_set('user_register', USER_REGISTER_VISITORS_ADMINISTRATIVE_APPROVAL);
+    $edit = $this->formData($name, $mail);
+    $this->drupalPost('user/register', $edit, t('Create new account'));
+    $accounts = user_load_multiple(array(), array('name' => $name, 'mail' => $mail));
+    $new_user = reset($accounts);
+    $this->assertFalse($new_user->status, t('New account is blocked until approved by an administrator.'));
+  }
+
+  public function testRegistrationWithoutEmailVerification() {
+    // Don't require e-mail verification.
+    variable_set('user_email_verification', FALSE);
+
+    // Allow registration by site visitors without administrator approval.
+    variable_set('user_register', USER_REGISTER_VISITORS);
+    $edit = $this->formData($name, $mail);
+
+    // Try entering a mismatching password.
+    $edit['pass[pass1]'] = '99999.0';
+    $edit['pass[pass2]'] = '99999';
+    $this->drupalPost('user/register', $edit, t('Create new account'));
+    $this->assertText(t('The specified passwords do not match.'), t('Typing mismatched passwords displays an error message.'));
+
+    // Enter a correct password.
+    $edit['pass[pass1]'] = $new_pass = $this->randomName();
+    $edit['pass[pass2]'] = $new_pass;
+    $this->drupalPost('user/register', $edit, t('Create new account'));
+    $accounts = user_load_multiple(array(), array('name' => $name, 'mail' => $mail));
+    $new_user = reset($accounts);
+    $this->assertText(t('Registration successful. You are now logged in.'), t('Users are logged in after registering.'));
+    $this->drupalLogout();
+
+    // Allow registration by site visitors, but require administrator approval.
+    variable_set('user_register', USER_REGISTER_VISITORS_ADMINISTRATIVE_APPROVAL);
+    $edit = $this->formData($name, $mail);
+    $edit['pass[pass1]'] = $pass = $this->randomName();
+    $edit['pass[pass2]'] = $pass;
+    $this->drupalPost('user/register', $edit, t('Create new account'));
+    $this->assertText(t('Thank you for applying for an account. Your account is currently pending approval by the site administrator.'), t('Users are notified of pending approval'));
+    $ldap_user = new SimpleLdapUser($name);
+    $this->assertFalse($ldap_user->exists, t('New account has not been provisioned to LDAP.'));
+
+    // Try to login before administrator approval.
+    $auth = array(
+      'name' => $name,
+      'pass' => $pass,
+    );
+    $this->drupalPost('user/login', $auth, t('Log in'));
+    $this->assertText(t('The username @name has not been activated or is blocked.', array('@name' => $name)), t('User cannot login yet.'));
+
+    // Activate the new account.
+    $accounts = user_load_multiple(array(), array('name' => $name, 'mail' => $mail));
+    $new_user = reset($accounts);
+    $this->drupalUser1Login();
+    $edit = array(
+      'status' => 1,
+    );
+    $this->drupalPost('user/' . $new_user->uid . '/edit', $edit, t('Save'));
+    $ldap_user = new SimpleLdapUser($new_user->name);
+    $this->assertTrue($ldap_user->exists, t('New account has been provisioned to LDAP.'));
+    $this->drupalLogout();
+
+    // Login after administrator approval.
+    $this->drupalPost('user/login', $auth, t('Log in'));
+    $this->assertText(t('Member for'), t('User can log in after administrator approval.'));
+  }
+
+  public function testRegistrationValues() {
+    // Get simple_ldap_user config.
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+    $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+
+    // Allow registration by site visitors without administrator approval.
+    variable_set('user_register', USER_REGISTER_VISITORS);
+
+    // Don't require e-mail verification.
+    variable_set('user_email_verification', FALSE);
+
+    // Set the default timezone to Brussels.
+    variable_set('configurable_timezones', 1);
+    variable_set('date_default_timezone', 'Europe/Brussels');
+
+    // Verify that the required mapped fields show up on the registration form.
+    $this->drupalGet('user/register');
+    $map = simple_ldap_user_map();
+    foreach ($map as $field) {
+      if ($field['required'] && $field['type'] == 'field') {
+        $this->assertText($field['drupal'], t(':field appears on the user registration form', array(':field' => $field['drupal'])));
+      }
+    }
+
+    // Submit registration form.
+    $edit = $this->formData($name, $mail);
+    $edit['pass[pass1]'] = $new_pass = $this->randomName();
+    $edit['pass[pass2]'] = $new_pass;
+    $this->drupalPost(NULL, $edit, t('Create new account'));
+
+    // Load the Drupal user.
+    $accounts = user_load_multiple(array(), array('name' => $name, 'mail' => $mail));
+    $new_user = reset($accounts);
+
+    // Load the LDAP user.
+    $ldap_user = new SimpleLdapUser($name);
+
+    // Check user fields.
+    $this->assertEqual($new_user->name, $name, t('Drupal username matches.'));
+    $this->assertEqual($ldap_user->{$attribute_name}[0], $name, t('LDAP username matches.'));
+
+    $this->assertEqual($new_user->mail, $mail, t('Drupal e-mail address matches.'));
+    $this->assertEqual($ldap_user->{$attribute_mail}[0], $mail, t('LDAP e-mail address matches.'));
+
+    foreach ($map as $field) {
+      if ($field['required'] && $field['type'] == 'field') {
+        $this->assertEqual($new_user->{$field['drupal']}[LANGUAGE_NONE][0]['value'], $edit[$field['drupal'] . '[und][0][value]'], t('The :field Drupal field value was correctly saved.', array(':field' => $field['drupal'])));
+        $this->assertEqual($ldap_user->{$field['ldap']}[0], $edit[$field['drupal'] . '[und][0][value]'], t('The :field LDAP attribute was correctly saved.', array(':field' => $field['ldap'])));
+      }
+    }
+  }
+
 }
