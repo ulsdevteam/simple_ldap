@@ -177,11 +177,12 @@ function simple_ldap_user_user_update(&$edit, $account, $category) {
   $map = simple_ldap_user_map();
   $sync = variable_get('simple_ldap_user_sync');
 
-  // Only synchronize to LDAP if Drupal is the authoratative data source.
-  if ($sync == 'drupal') {
+  // Get the LDAP user instance.
+  $ldap_user = SimpleLdapUser::singleton($account->name);
 
-    // Get the LDAP user instance.
-    $ldap_user = SimpleLdapUser::singleton($account->name);
+  // Only synchronize to LDAP if Drupal is the authoratative data source, or if
+  // the LDAP user does not already exist.
+  if ($sync == 'drupal' || !$ldap_user->exists) {
 
     // Only make changes if the LDAP account already exists, or if the account
     // status is 1 (this catches new accounts being set to active).
@@ -368,4 +369,29 @@ function simple_ldap_user_map() {
     }
   }
   return $map;
+}
+
+/**
+ * Synchronize user from drupal to ldap.
+ *
+ * @todo simple_ldap_user_sync_to_ldap()
+ *   Move from simple_ldap_user_user_update()
+ */
+function simple_ldap_user_sync_to_ldap(stdClass $drupal_user, SimpleLdapUser $ldap_user = NULL) {
+  if ($ldap_user === NULL) {
+    $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
+  }
+}
+
+/**
+ * Synchronize user from ldap to drupal.
+ *
+ * @todo simple_ldap_user_sync_to_drupal()
+ *   Move from SimpleLdapUserController::syncLdaptoDrupal();
+ */
+function simple_ldap_user_sync_to_drupal(SimpleLdapUser $ldap_user, stdClass $drupal_user = NULL) {
+  if ($drupal_user === NULL) {
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+    $drupal_user = user_load_by_name($ldap_user->{$attribute_name}[0]);
+  }
 }
