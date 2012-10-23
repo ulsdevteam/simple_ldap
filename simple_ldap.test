@@ -4,16 +4,7 @@
  * Tests for Simple LDAP module.
  */
 
-abstract class SimpleLdapWebTestCase extends DrupalWebTestCase {
-
-  public function setUp() {
-    parent::setUp(array('simple_ldap', 'simple_ldap_test'));
-    simple_ldap_test_config();
-  }
-
-}
-
-class SimpleLdapServerWebTestCase extends SimpleLdapWebTestCase {
+class SimpleLdapServerWebTestCase extends DrupalWebTestCase {
 
   public static function getInfo() {
     return array(
@@ -21,6 +12,11 @@ class SimpleLdapServerWebTestCase extends SimpleLdapWebTestCase {
       'description' => 'Tests the Simple LDAP server configuration and connectivity.',
       'group' => 'Simple LDAP',
     );
+  }
+
+  public function setUp() {
+    parent::setUp(array('simple_ldap', 'simple_ldap_test'));
+    simple_ldap_test_setup();
   }
 
   /**

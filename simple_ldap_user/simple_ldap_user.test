@@ -8,30 +8,7 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
 
   public function setUp() {
     parent::setUp(array('simple_ldap', 'simple_ldap_user', 'simple_ldap_test'));
-    simple_ldap_test_config();
-    $this->assertTrue(simple_ldap_configured(), t('The :module module is configured.', array(':module' => 'Simple LDAP')));
-
-    // Add fields to the user entity.
-    $map = simple_ldap_user_map();
-    foreach ($map as $attribute) {
-      if ($attribute['type'] == 'field') {
-        $field = field_create_field(array(
-          'field_name' => $attribute['drupal'],
-          'type' => 'text',
-          'cardinality' => 1,
-        ));
-        $instance = field_create_instance(array(
-          'field_name' => $attribute['drupal'],
-          'entity_type' => 'user',
-          'label' => $attribute['drupal'],
-          'bundle' => 'user',
-          'required' => $attribute['required'],
-          'settings' => array(
-            'user_register_form' => $attribute['required'],
-          ),
-        ));
-      }
-    }
+    simple_ldap_test_setup();
   }
 
   /**
