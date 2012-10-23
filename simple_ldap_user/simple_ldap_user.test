@@ -315,6 +315,15 @@ class SimpleLdapUserUserChangesProfileWebTestCase extends SimpleLdapUserWebTestC
     );
   }
 
+  /**
+   * User edits profile information.
+   *
+   * #18 User can change their email address and LDAP is updated appropriately
+   * #23 User changes last name and it is changed in LDAP
+   * #30 User changes first name and it is changed in ldap
+   *
+   * @todo finish this.
+   */
   public function testUserChangesProfile() {
     // Load configuration variables.
     $test_user = variable_get('simple_ldap_test_user');
@@ -350,7 +359,13 @@ class SimpleLdapUserRegisterWebTestCase extends SimpleLdapUserWebTestCase {
   }
 
   /**
+   * Register for a new user account.
+   *
    * #19 Register for Drupal and create new LDAP user.
+   * #27 Ensure email verification creates the user in LDAP
+   * #28 Ensure user is not created without email verification
+   *
+   * @todo finish this.
    */
   public function testUserRegister() {
     // Generate random data.
@@ -367,10 +382,18 @@ class SimpleLdapUserRegisterWebTestCase extends SimpleLdapUserWebTestCase {
     // Submit registration form.
     $this->drupalPost('user/register', $edit, 'Create new account');
 
+    // Verify that the Drupal user was created, and that the status == 0.
+    $drupal_user = user_load_by_name($edit['name']);
+    $this->assertNotIdentical($drupal_user, FALSE, t('The user was successfully registered.'));
+    $this->assertFalse($drupal_user->status, t('The user status is "blocked".'));
+
+    // Verify that the user does not yet exist in LDAP.
+    $ldap_user = new SimpleLdapUser($edit['name']);
+    $this->assertFalse($ldap_user->exists, t('The user does not yet exist in LDAP.'));
+
     // Get the email that was sent.
     $email = $this->drupalGetMails();
     debug($email[0]['body']);
-
 
   }
 }
