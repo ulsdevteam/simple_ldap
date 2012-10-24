@@ -7,12 +7,12 @@
 class SimpleLdapUser {
 
   // Variables exposed by __get() and __set()
+  protected $attributes = array();
   protected $dn = FALSE;
   protected $exists = FALSE;
-  protected $attributes = array();
+  protected $server;
 
   // Internal variables.
-  protected $server;
   protected $dirty = FALSE;
 
   /**
@@ -72,6 +72,7 @@ class SimpleLdapUser {
       case 'attributes':
       case 'dn':
       case 'exists':
+      case 'server':
         return $this->$name;
       break;
 
