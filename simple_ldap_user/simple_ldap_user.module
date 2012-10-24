@@ -4,6 +4,10 @@
  * Main simple_ldap_user module file.
  */
 
+// Constant definitions.
+define('SIMPLE_LDAP_USER_SYNC_TO_LDAP', 'drupal');
+define('SIMPLE_LDAP_USER_SYNC_TO_DRUPAL', 'ldap');
+
 /**
  * Implements hook_menu().
  */
@@ -150,14 +154,11 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
  *
  * @param array $edit
  *   The form values submitted by the user.
- *
- * @todo simple_ldap_user_user_insert()
  */
 function simple_ldap_user_user_insert(&$edit, $account, $category) {
-  if ($account->status == 1) {
-    // Pass to simple_ldap_user_user_update(), which handles provisioning to
-    // LDAP.
-    simple_ldap_user_user_update($edit, $account, $category);
+  $ldap_user = SimpleLdapUser::singleton($account->name);
+  if (!$ldap_user->server->readonly && ($account->status == 1 || $ldap_user->exists)) {
+    simple_ldap_user_sync_to_ldap($account, $ldap_user);
   }
 }
 
@@ -168,60 +169,11 @@ function simple_ldap_user_user_insert(&$edit, $account, $category) {
  *
  * @param array $edit
  *   The form values submitted by the user.
- *
- * @todo simple_ldap_user_user_update()
  */
 function simple_ldap_user_user_update(&$edit, $account, $category) {
-  // Get the relevant simple_ldap_user configurations.
-  $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
-  $map = simple_ldap_user_map();
-  $sync = variable_get('simple_ldap_user_sync');
-
-  // Get the LDAP user instance.
   $ldap_user = SimpleLdapUser::singleton($account->name);
-
-  // Only synchronize to LDAP if Drupal is the authoratative data source, or if
-  // the LDAP user does not already exist.
-  if ($sync == 'drupal' || !$ldap_user->exists) {
-
-    // Only make changes if the LDAP account already exists, or if the account
-    // status is 1 (this catches new accounts being set to active).
-    if ($ldap_user->exists || $account->status == 1) {
-
-      // Set the mail attribute (mail is a special attribute).
-      $ldap_user->$attribute_mail = $account->mail;
-
-      // Set the remaining attributes.
-      foreach ($map as $attribute) {
-        switch ($attribute['type']) {
-
-          // Get the value using Field API.
-          case 'field':
-            // Get the Drupal field values.
-            $items = field_get_items('user', $account, $attribute['drupal']);
-            $values = array();
-            if (is_array($items)) {
-              foreach ($items as $item) {
-                $values[] = $item['value'];
-              }
-            }
-
-            // Set the LDAP user attribute.
-            $ldap_user->{$attribute['ldap']} = $values;
-            break;
-
-          // Get the value directly from the user object.
-          case 'default':
-          default:
-            if (!empty($account->{$attribute['drupal']})) {
-              $ldap_user->{$attribute['ldap']} = $account->{$attribute['drupal']};
-            }
-        }
-      }
-
-      // Save any changes.
-      $ldap_user->save();
-    }
+  if (!$ldap_user->server->readonly && ($account->status == 1 || $ldap_user->exists)) {
+    simple_ldap_user_sync_to_ldap($account, $ldap_user);
   }
 }
 
@@ -372,26 +324,127 @@ function simple_ldap_user_map() {
 }
 
 /**
- * Synchronize user from drupal to ldap.
+ * Synchronizes Drupal user properties to LDAP.
  *
  * @todo simple_ldap_user_sync_to_ldap()
  *   Move from simple_ldap_user_user_update()
  */
 function simple_ldap_user_sync_to_ldap(stdClass $drupal_user, SimpleLdapUser $ldap_user = NULL) {
+  // simple_ldap_user configuration.
+  $attribute_name = variable_get('simple_ldap_user_attribute_name');
+  $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+  $attribute_map = simple_ldap_user_map();
+
+  // Make sure there is an LDAP user to sync to.
   if ($ldap_user === NULL) {
     $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
   }
+
+  // Mail is a special attribute.
+  $ldap_user->$attribute_mail = $drupal_user->mail;
+
+  // Synchronize the fields in the attribute map.
+  foreach ($attribute_map as $attribute) {
+    switch ($attribute['type']) {
+
+      // Get the value using Field API.
+      case 'field':
+        // Get drupal field values.
+        $items = field_get_items('user', $drupal_user, $attribute['drupal']);
+        $values = array();
+        if (is_array($items)) {
+          foreach ($items as $item) {
+            $values[] = $item['value'];
+          }
+        }
+
+        // Synchronize.
+        $ldap_user->{$attribute['ldap']} = $values;
+        break;
+
+      // Get the value directly from the user object.
+      case 'default':
+      default:
+        $ldap_user->{$attribute['ldap']} = $drupal_user->{$attribute['drupal']};
+    }
+  }
+
+  // Save any changes.
+  $ldap_user->save();
+
+  // Synchronized user.
+  return $ldap_user;
 }
 
 /**
- * Synchronize user from ldap to drupal.
- *
- * @todo simple_ldap_user_sync_to_drupal()
- *   Move from SimpleLdapUserController::syncLdaptoDrupal();
+ * Synchronizes LDAP attributes to Drupal user properties.
  */
 function simple_ldap_user_sync_to_drupal(SimpleLdapUser $ldap_user, stdClass $drupal_user = NULL) {
+  // simple_ldap_user configuration.
+  $attribute_name = variable_get('simple_ldap_user_attribute_name');
+  $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+  $attribute_map = simple_ldap_user_map();
+
+  // Make sure there is a Drupal user to sync to.
   if ($drupal_user === NULL) {
-    $attribute_name = variable_get('simple_ldap_user_attribute_name');
     $drupal_user = user_load_by_name($ldap_user->{$attribute_name}[0]);
   }
+
+  // Initialize array of attribute changes.
+  $edit = array();
+
+  // Mail is a special attribute.
+  if ($drupal_user->mail != $ldap_user->{$attribute_mail}[0]) {
+    $edit['mail'] = $ldap_user->{$attribute_mail}[0];
+  }
+
+  // Synchronize the fields in the attribute map.
+  foreach ($attribute_map as $attribute) {
+    if (isset($drupal_user->{$attribute['drupal']})) {
+      switch ($attribute['type']) {
+
+        // Update the value in drupal using Field API.
+        case 'field':
+          // Get the Drupal field values and metadata.
+          $items = field_get_items('user', $drupal_user, $attribute['drupal']);
+          $info = field_info_field($attribute['drupal']);
+          $language = field_language('user', $drupal_user, $attribute['drupal']);
+
+          // Synchronize.
+          $dirty = FALSE;
+          for ($i = 0; $i < $ldap_user->{$attribute['ldap']}['count']; $i++) {
+            if ($i < $info['cardinality'] || $info['cardinality'] == FIELD_CARDINALITY_UNLIMITED) {
+              $edit[$attribute['drupal']][$language][$i]['value'] = $ldap_user->{$attribute['ldap']}[$i];
+              if ($items[$i]['value'] != $ldap_user->{$attribute['ldap']}[$i]) {
+                $dirty = TRUE;
+              }
+            }
+          }
+
+          // Check if any changes were actually made.
+          if (!$dirty) {
+            unset($edit[$attribute['drupal']]);
+          }
+          break;
+
+        // Update the value directly on the user object.
+        case 'default':
+        default:
+          if (isset($ldap_user->{$attribute['ldap']}[0]) && $drupal_user->{$attribute['drupal']} != $ldap_user->{$attribute['ldap']}[0]) {
+            $edit[$attribute['drupal']] = $ldap_user->{$attribute['ldap']}[0];
+          }
+      }
+    }
+  }
+
+  // Save any changes.
+  if (!empty($edit)) {
+    // Clone $drupal_user into $drupal_user->original in order to avoid an
+    // infinite loop.
+    $drupal_user->original = clone $drupal_user;
+    $drupal_user = user_save($drupal_user, $edit);
+  }
+
+  // Synchronized user.
+  return $drupal_user;
 }
