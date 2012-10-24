@@ -45,7 +45,7 @@ class SimpleLdapUser {
     if ($result['count'] == 1) {
       $this->dn = $result[0]['dn'];
       foreach ($attributes as $attribute) {
-        if (isset($result[0][$attribute]['count']) && $result[0][$attribute]['count'] > 0) {
+        if (isset($result[0][$attribute])) {
           $this->attributes[$attribute] = $result[0][$attribute];
         }
       }

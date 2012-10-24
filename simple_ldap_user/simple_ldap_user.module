@@ -82,14 +82,7 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
         unset($form['links']);
       }
     case 'user_login':
-      $validate = array();
-      foreach ($form['#validate'] as $callback) {
-        if ($callback == 'user_login_final_validate') {
-          $validate[] = 'simple_ldap_user_login_authenticate_validate';
-        }
-        $validate[] = $callback;
-      }
-      $form['#validate'] = $validate;
+      array_unshift($form['#validate'], 'simple_ldap_user_login_name_validate');
       break;
 
     default:
@@ -122,6 +115,14 @@ function simple_ldap_user_menu_alter(&$items) {
  * @todo simple_ldap_user_user_login()
  */
 function simple_ldap_user_user_login(&$edit, $account) {
+  switch (simple_ldap_user_sync()) {
+    case SIMPLE_LDAP_USER_SYNC_TO_DRUPAL:
+      simple_ldap_user_sync_to_drupal($account);
+      break;
+    case SIMPLE_LDAP_USER_SYNC_TO_LDAP:
+      simple_ldap_user_sync_to_ldap($account);
+      break;
+  }
 }
 
 /**
@@ -141,10 +142,11 @@ function simple_ldap_user_user_logout($account) {
  *
  * @param array $edit
  *   The form values submitted by the user.
- *
- * @todo simple_ldap_user_user_presave()
  */
 function simple_ldap_user_user_presave(&$edit, $account, $category) {
+  if ($account->is_new) {
+    // @todo - Get data from LDAP, and add it to $edit.
+  }
 }
 
 /**
@@ -157,8 +159,8 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
  */
 function simple_ldap_user_user_insert(&$edit, $account, $category) {
   $ldap_user = SimpleLdapUser::singleton($account->name);
-  if (!$ldap_user->server->readonly && ($account->status == 1 || $ldap_user->exists)) {
-    simple_ldap_user_sync_to_ldap($account, $ldap_user);
+  if (!$ldap_user->exists) {
+    simple_ldap_user_sync_to_ldap($account);
   }
 }
 
@@ -172,8 +174,8 @@ function simple_ldap_user_user_insert(&$edit, $account, $category) {
  */
 function simple_ldap_user_user_update(&$edit, $account, $category) {
   $ldap_user = SimpleLdapUser::singleton($account->name);
-  if (!$ldap_user->server->readonly && ($account->status == 1 || $ldap_user->exists)) {
-    simple_ldap_user_sync_to_ldap($account, $ldap_user);
+  if ($account->status || $ldap_user->exists) {
+    simple_ldap_user_sync_to_ldap($account);
   }
 }
 
@@ -228,47 +230,33 @@ function simple_ldap_user_user_view($account, $view_mode, $langcode) {
 }
 
 /**
- * Validate a user login form against the LDAP directory.
+ * Validate the username on a login form.
  */
-function simple_ldap_user_login_authenticate_validate($form, &$form_state) {
-  // Check if the user has already been validated as user 1.
-  if (isset($form_state['uid']) && $form_state['uid'] == 1) {
-    return;
-  }
-
-  // Reset validation for all other users.
-  unset($form_state['uid']);
-
-  // Only attempt validation if both a username and password are present.
+function simple_ldap_user_login_name_validate($form, &$form_state) {
+  // Get the username from the form data.
   $name = trim($form_state['values']['name']);
-  $pass = trim($form_state['values']['pass']);
-  if (!empty($name) && !empty($pass)) {
-    // Authenticate the credentials against the LDAP directory.
-    $ldap_user = SimpleLdapUser::singleton($name);
-    if ($ldap_user->authenticate($pass)) {
 
-      // Attempt to load the drupal user, if it exists.
-      $drupal_user = user_load_by_name($name);
+  // Load the LDAP user with the given username.
+  $ldap_user = SimpleLdapUser::singleton($name);
 
-      // Create a new user object if one did not exist.
-      if (empty($drupal_user)) {
-        $attribute_name = variable_get('simple_ldap_user_attribute_name');
-        $account = array(
-          'name' => $ldap_user->{$attribute_name}[0],
-          'status' => 1,
-        );
-        $drupal_user = user_save(NULL, $account);
-      }
-
-      // Set the form uid to indicate that the user is authenticated.
-      $form_state['uid'] = $drupal_user->uid;
+  // If the user exists in LDAP, make sure a matching Drupal account exists.
+  if ($ldap_user->exists) {
+    $drupal_user = user_load_by_name($name);
+    if (empty($drupal_user)) {
+      $attribute_name = variable_get('simple_ldap_user_attribute_name');
+      $account = array(
+        'name' => $ldap_user->{$attribute_name}[0],
+        'status' => 1,
+      );
+      $drupal_user = user_save(NULL, $account);
     }
-
   }
 }
 
 /**
  * Returns whether simple_ldap_user has been configured.
+ *
+ * @todo - Is this used?
  */
 function simple_ldap_user_configured() {
   $configured = TRUE;
@@ -293,11 +281,11 @@ function simple_ldap_user_sync() {
   // If the LDAP server is set to read-only, force ldap->drupal sync.
   $readonly = variable_get('simple_ldap_readonly', FALSE);
   if ($readonly) {
-    return 'ldap';
+    return SIMPLE_LDAP_USER_SYNC_TO_DRUPAL;
   }
 
   // Get the sync config from simple_ldap_user, defaulting to ldap->drupal.
-  $sync = variable_get('simple_ldap_user_sync', 'ldap');
+  $sync = variable_get('simple_ldap_user_sync', SIMPLE_LDAP_USER_SYNC_TO_DRUPAL);
   return $sync;
 }
 
@@ -325,20 +313,15 @@ function simple_ldap_user_map() {
 
 /**
  * Synchronizes Drupal user properties to LDAP.
- *
- * @todo simple_ldap_user_sync_to_ldap()
- *   Move from simple_ldap_user_user_update()
  */
-function simple_ldap_user_sync_to_ldap(stdClass $drupal_user, SimpleLdapUser $ldap_user = NULL) {
+function simple_ldap_user_sync_to_ldap($drupal_user) {
   // simple_ldap_user configuration.
   $attribute_name = variable_get('simple_ldap_user_attribute_name');
   $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
   $attribute_map = simple_ldap_user_map();
 
-  // Make sure there is an LDAP user to sync to.
-  if ($ldap_user === NULL) {
-    $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
-  }
+  // Load the LDAP user.
+  $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
 
   // Mail is a special attribute.
   $ldap_user->$attribute_mail = $drupal_user->mail;
@@ -370,25 +353,21 @@ function simple_ldap_user_sync_to_ldap(stdClass $drupal_user, SimpleLdapUser $ld
   }
 
   // Save any changes.
-  $ldap_user->save();
-
-  // Synchronized user.
-  return $ldap_user;
+  $result = $ldap_user->save();
+  return $result;
 }
 
 /**
  * Synchronizes LDAP attributes to Drupal user properties.
  */
-function simple_ldap_user_sync_to_drupal(SimpleLdapUser $ldap_user, stdClass $drupal_user = NULL) {
+function simple_ldap_user_sync_to_drupal($drupal_user) {
   // simple_ldap_user configuration.
   $attribute_name = variable_get('simple_ldap_user_attribute_name');
   $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
   $attribute_map = simple_ldap_user_map();
 
-  // Make sure there is a Drupal user to sync to.
-  if ($drupal_user === NULL) {
-    $drupal_user = user_load_by_name($ldap_user->{$attribute_name}[0]);
-  }
+  // Load the LDAP user.
+  $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
 
   // Initialize array of attribute changes.
   $edit = array();
@@ -439,10 +418,7 @@ function simple_ldap_user_sync_to_drupal(SimpleLdapUser $ldap_user, stdClass $dr
 
   // Save any changes.
   if (!empty($edit)) {
-    // Clone $drupal_user into $drupal_user->original in order to avoid an
-    // infinite loop.
-    $drupal_user->original = clone $drupal_user;
-    $drupal_user = user_save($drupal_user, $edit);
+   $drupal_user = user_save($drupal_user, $edit);
   }
 
   // Synchronized user.

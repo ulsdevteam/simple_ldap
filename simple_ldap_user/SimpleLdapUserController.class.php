@@ -32,12 +32,6 @@ class SimpleLdapUserController extends UserController {
   public function load($ids = array(), $conditions = array()) {
     $users = parent::load($ids, $conditions);
 
-    // Get LDAP server configurations.
-    $server = SimpleLdapServer::singleton();
-    $search = strtolower(variable_get('simple_ldap_user_attribute_name'));
-    $base_dn = variable_get('simple_ldap_user_basedn');
-    $scope = variable_get('simple_ldap_scope');
-
     // Validate users against LDAP directory.
     foreach ($users as $uid => $drupal_user) {
       // Do not validate user/1, anonymous users, or blocked users.
@@ -48,23 +42,7 @@ class SimpleLdapUserController extends UserController {
       // Try to load the user from LDAP.
       $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
 
-      if ($ldap_user->exists) {
-        // Synchronize attributes.
-        switch (simple_ldap_user_sync()) {
-
-          // Synchronize attributes ldap->drupal.
-          case 'ldap':
-            $users[$uid] = simple_ldap_user_sync_to_drupal($ldap_user, $drupal_user);
-            break;
-
-          // Synchronize attributes drupal->ldap.
-          case 'drupal':
-            simple_ldap_user_sync_to_ldap($drupal_user, $ldap_user);
-            break;
-
-        }
-      }
-      else {
+      if (!$ldap_user->exists) {
         // Block the user if it does not exist in LDAP.
         $users[$uid]->status = 0;
       }

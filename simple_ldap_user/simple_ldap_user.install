@@ -4,6 +4,10 @@
  * simple_ldap_user module installation.
  */
 
+function simple_ldap_user_install() {
+  variable_set('password_inc', drupal_get_path('module', 'simple_ldap_user') . '/simple_ldap_user.password.inc');
+}
+
 /**
  * Implements hook_uninstall().
  */
@@ -14,4 +18,6 @@ function simple_ldap_user_uninstall() {
   variable_del('simple_ldap_user_attribute_mail');
   variable_del('simple_ldap_user_filter');
   variable_del('simple_ldap_user_sync');
+
+  variable_del('password_inc');
 }
