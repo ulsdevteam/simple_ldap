@@ -19,6 +19,9 @@ function simple_ldap_user_admin($form, &$form_state) {
   // Initialize a Simple LDAP Server object. Used for dropdown options.
   $server = SimpleLdapServer::singleton();
 
+  // String to append to items disabled by $server->readonly.
+  $disabled_note = $server->readonly ? ' (' . t('Disabled by LDAP Server configuration.') . ')' : '';
+
   $form['user'] = array(
     '#type' => 'fieldset',
     '#title' => t('LDAP Users'),
@@ -101,7 +104,6 @@ function simple_ldap_user_admin($form, &$form_state) {
   $form['user']['simple_ldap_user_attribute_mail'] = array(
     '#type' => 'select',
     '#title' => t('Email attribute'),
-    '#suffix' => '</div>',
     '#options' => $attributes,
     '#required' => TRUE,
     '#description' => t("Which LDAP attribute should be mapped to a Drupal user's email address.") . ' ' . t('This is commonly "mail".'),
@@ -111,6 +113,25 @@ function simple_ldap_user_admin($form, &$form_state) {
   // value is not set, the empty option is selected.
   if (array_key_exists($attribute_mail_selected, $attributes)) {
     $form['user']['simple_ldap_user_attribute_mail']['#default_value'] = $attribute_mail_selected;
+  }
+
+  // Get the selected password attribute.
+  $attribute_pass_selected = isset($form_state['values']['simple_ldap_user_attribute_pass']) ? $form_state['values']['simple_ldap_user_attribute_pass'] : variable_get('simple_ldap_user_attribute_pass', 'userpassword');
+
+  $form['user']['simple_ldap_user_attribute_pass'] = array(
+    '#type' => 'select',
+    '#title' => t('Password attribute') . $disabled_note,
+    '#suffix' => '</div>',
+    '#options' => $attributes,
+    '#description' => t("Which LDAP attribute should be mapped to a Drupal user's password.") . ' ' . t('This is only used for password resets, not for authentication, and is commonly "userPassword".'),
+    '#disabled' => $server->readonly,
+    '#empty_value' => FALSE,
+  );
+
+  // Set default value if it exists in the list of attributes. If a default
+  // value is not set, the empty option is selected.
+  if (array_key_exists($attribute_pass_selected, $attributes)) {
+    $form['user']['simple_ldap_user_attribute_pass']['#default_value'] = $attribute_pass_selected;
   }
 
   $form['advanced'] = array(
@@ -127,18 +148,15 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#description' => t('This filter will be combined with the normal search filter to find users.') . ' ' . t('This can be used to require a certain attribute be present, for example.'),
   );
 
-  $readonly = variable_get('simple_ldap_readonly', FALSE);
-  $default = $readonly ? 'ldap' : variable_get('simple_ldap_user_sync', 'ldap');
-
   $form['advanced']['simple_ldap_user_sync'] = array(
     '#type' => 'radios',
-    '#title' => t('Authoratative data source'),
+    '#title' => t('Authoratative data source') . $disabled_note,
     '#options' => array(
       'ldap' => t('LDAP'),
       'drupal' => t('Drupal'),
     ),
-    '#default_value' => $default,
-    '#disabled' => $readonly,
+    '#default_value' => simple_ldap_user_sync(),
+    '#disabled' => $server->readonly,
     '#description' => t('This determines the behavior of the data sync in the event of a conflict between LDAP and Drupal.') . ' ' . t('Note, that if the LDAP server is set as read-only, LDAP is always considered to be the authoratative data source.'),
   );
 
@@ -176,5 +194,6 @@ function simple_ldap_user_objectclass_ajax($form, $form_state) {
   return array(
     $form['user']['simple_ldap_user_attribute_name'],
     $form['user']['simple_ldap_user_attribute_mail'],
+    $form['user']['simple_ldap_user_attribute_pass'],
   );
 }
