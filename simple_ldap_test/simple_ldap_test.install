@@ -34,7 +34,7 @@ function simple_ldap_test_install() {
           'required' => $attribute['required'],
           'settings' => array(
             'user_register_form' => $attribute['required'],
-            ),
+          ),
         ));
       }
     }

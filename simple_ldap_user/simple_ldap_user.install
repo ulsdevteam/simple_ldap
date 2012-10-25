@@ -4,6 +4,9 @@
  * simple_ldap_user module installation.
  */
 
+/**
+ * Implements hook_install().
+ */
 function simple_ldap_user_install() {
   variable_set('password_inc', drupal_get_path('module', 'simple_ldap_user') . '/simple_ldap_user.password.inc');
 }

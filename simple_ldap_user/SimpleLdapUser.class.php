@@ -156,7 +156,7 @@ class SimpleLdapUser {
       $result = $this->server->modify($this->dn, $this->attributes);
     }
     else {
-      // create new entry.
+      // Create new entry.
       $this->attributes['objectclass'] = array(variable_get('simple_ldap_user_objectclass'));
       $result = $this->server->add($this->dn, $this->attributes);
     }

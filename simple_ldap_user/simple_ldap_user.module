@@ -119,6 +119,7 @@ function simple_ldap_user_user_login(&$edit, $account) {
     case SIMPLE_LDAP_USER_SYNC_TO_DRUPAL:
       simple_ldap_user_sync_to_drupal($account);
       break;
+
     case SIMPLE_LDAP_USER_SYNC_TO_LDAP:
       simple_ldap_user_sync_to_ldap($account);
       break;
@@ -418,7 +419,7 @@ function simple_ldap_user_sync_to_drupal($drupal_user) {
 
   // Save any changes.
   if (!empty($edit)) {
-   $drupal_user = user_save($drupal_user, $edit);
+    $drupal_user = user_save($drupal_user, $edit);
   }
 
   // Synchronized user.

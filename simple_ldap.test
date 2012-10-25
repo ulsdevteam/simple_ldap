@@ -6,6 +6,9 @@
 
 class SimpleLdapServerWebTestCase extends DrupalWebTestCase {
 
+  /**
+   * Inherited from DrupalWebTestCase::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name' => 'LDAP server connectivity',
@@ -14,6 +17,9 @@ class SimpleLdapServerWebTestCase extends DrupalWebTestCase {
     );
   }
 
+  /**
+   * Inherited from DrupalWebTestCase::setUp().
+   */
   public function setUp() {
     parent::setUp(array('simple_ldap', 'simple_ldap_test'));
   }
