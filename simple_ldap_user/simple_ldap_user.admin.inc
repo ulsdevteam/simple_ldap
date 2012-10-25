@@ -134,6 +134,16 @@ function simple_ldap_user_admin($form, &$form_state) {
     $form['user']['simple_ldap_user_attribute_pass']['#default_value'] = $attribute_pass_selected;
   }
 
+  $form['user']['simple_ldap_user_password_hash'] = array(
+    '#type' => 'select',
+    '#title' => t('Password hashing algorithm') . $disabled_note,
+    '#options' => simple_ldap_user_hash_types(),
+    '#description' => t('Which encryption algorithm should be used to encrypt passwords when writing to LDAP.') . ' ' . t('Note that mhash support is required for SMD5, SHA, and SSHA.'),
+    '#disabled' => $server->readonly,
+    '#default_value' => variable_get('simple_ldap_user_password_hash', 'ssha'),
+    '#empty_value' => 'none',
+  );
+
   $form['advanced'] = array(
     '#type' => 'fieldset',
     '#title' => t('Advanced'),

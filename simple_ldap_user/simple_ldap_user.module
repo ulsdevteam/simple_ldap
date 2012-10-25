@@ -111,8 +111,6 @@ function simple_ldap_user_menu_alter(&$items) {
  * @param array $edit
  *   The form values submitted by the user to log in,
  *   including raw username and password.
- *
- * @todo simple_ldap_user_user_login()
  */
 function simple_ldap_user_user_login(&$edit, $account) {
   switch (simple_ldap_user_sync()) {
@@ -319,6 +317,7 @@ function simple_ldap_user_sync_to_ldap($drupal_user) {
   // simple_ldap_user configuration.
   $attribute_name = variable_get('simple_ldap_user_attribute_name');
   $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+  $attribute_pass = variable_get('simple_ldap_user_attribute_pass');
   $attribute_map = simple_ldap_user_map();
 
   // Load the LDAP user.
@@ -326,6 +325,9 @@ function simple_ldap_user_sync_to_ldap($drupal_user) {
 
   // Mail is a special attribute.
   $ldap_user->$attribute_mail = $drupal_user->mail;
+
+  // Password is a special attribute.
+  $ldap_user->$attribute_pass = $drupal_user->pass;
 
   // Synchronize the fields in the attribute map.
   foreach ($attribute_map as $attribute) {
@@ -424,4 +426,116 @@ function simple_ldap_user_sync_to_drupal($drupal_user) {
 
   // Synchronized user.
   return $drupal_user;
+}
+
+/**
+ * Returns an array of supported hash types.
+ */
+function simple_ldap_user_hash_types() {
+  $types = array();
+
+  // Crypt, and Salted Crypt.
+  $types['crypt'] = t('Crypt');
+  $types['salted crypt'] = t('Salted Crypt');
+
+  // Extended DES.
+  if (defined('CRYPT_EXT_DES') || CRYPT_EXT_DES == 1) {
+    $types['extended des'] = t('Extended DES');
+  }
+
+  // MD5Crypt.
+  if (defined('CRYPT_MD5') || CRYPT_MD5 == 1) {
+    $types['md5crypt'] = t('MD5Crypt');
+  }
+
+  // Blowfish.
+  if (defined('CRYPT_BLOWFISH') || CRYPT_BLOWFISH == 1) {
+    $types['blowfish'] = t('Blowfish');
+  }
+
+  // MD5
+  $types['md5'] = t('MD5');
+
+  // SMD5.
+  if (function_exists('mhash') && function_exists('mhash_keygen_s2k')) {
+    $types['salted md5'] = t('Salted MD5');
+  }
+
+  // SHA.
+  $types['sha'] = t('SHA');
+
+  // SSHA.
+  if (function_exists('mhash') && function_exists('mhash_keygen_s2k')) {
+    $types['salted sha'] = t('Salted SHA');
+  }
+
+  return $types;
+}
+
+function simple_ldap_user_random_salt($length) {
+  $possible = '0123456789' .
+              'abcdefghijklmnopqrstuvwxyz' .
+              'ABCDEFGHIJKLMNOPQRSTUVWXYZ' .
+              './';
+  $str = '';
+
+  mt_srand((double)microtime() * 1000000);
+  while (strlen($str) < $length)
+    $str .= substr($possible, (rand() % strlen($possible)), 1);
+
+  return $str;
+}
+
+function simple_ldap_user_hash($string, $algorithm = NULL) {
+  if ($algorithm === NULL) {
+    $algorithm = variable_get('simple_ldap_user_password_hash');
+  }
+
+  switch ($algorithm) {
+    case 'crypt':
+      $hash = '{CRYPT}' . crypt($string, substr($string, 0, 2));
+      break;
+
+    case 'salted crypt':
+      $hash = '{CRYPT}' . crypt($string, simple_ldap_user_random_salt(2));
+      break;
+
+    case 'extended des':
+      $hash = '{CRYPT}' . crypt($string, '_' . simple_ldap_user_random_salt(8)); 
+      break;
+
+    case 'md5crypt':
+      $hash = '{CRYPT}' . crypt($string, '$1$' . simple_ldap_user_random_salt(9));
+      break;
+
+    case 'blowfish':
+      $hash = '{CRYPT}' . crypt($string, '$2a$12$' . simple_ldap_user_random_salt(13));
+      break;
+
+    case 'md5':
+      $hash = '{MD5}' . base64_encode(pack('H*', md5($string)));
+      break;
+
+    case 'salted md5':
+      mt_srand((double) microtime() * 1000000);
+      $salt = mhash_keygen_s2k(MHASH_MD5, $string, substr(pack('h*',md5(mt_rand())), 0, 8), 4);
+      $hash = '{SMD5}' . base64_encode(mhash(MHASH_MD5, $string . $salt) . $salt);
+      break;
+
+    case 'sha':
+      $hash = '{SHA}' . base64_encode(pack('H*', sha1($string)));
+      break;
+
+    case 'salted sha':
+      mt_srand((double) microtime() * 1000000);
+      $salt = mhash_keygen_s2k(MHASH_SHA1, $string, substr(pack('h*', md5(mt_rand())), 0, 8), 4);
+      $hash = '{SSHA}' . base64_encode(mhash(MHASH_SHA1, $string . $salt) . $salt);
+      break;
+
+    case 'none':
+    default:
+      $hash = $string;
+  }
+
+  return $hash;
 }

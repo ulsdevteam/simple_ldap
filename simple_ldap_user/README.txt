@@ -16,6 +16,10 @@ __set($name, $value)
 authenticate($password)
 save()
 delete()
+encode($password, $encryption = NULL)
 
 // Public static methods
+singleton($name)
 filter()
+reset()
+hash($password, $hash)

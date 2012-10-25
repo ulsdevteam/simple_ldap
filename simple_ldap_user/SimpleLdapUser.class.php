@@ -88,12 +88,26 @@ class SimpleLdapUser {
    * Magic __set() function.
    */
   public function __set($name, $value) {
+    $attribute_pass = variable_get('simple_ldap_user_attribute_pass');
+
     switch ($name) {
       // Read-only values.
       case 'attributes':
       case 'dn':
       case 'exists':
         break;
+
+      // Look up the raw password from the internal reverse hash map. This
+      // intentionally falls through to default:.
+      case $attribute_pass:
+        if (isset(self::$hash[$value])) {
+          $value = simple_ldap_user_hash(self::$hash[$value]);
+        }
+        else {
+          // A plain text copy of the password is not available. Do not
+          // overwrite the existing value.
+          return;
+        }
 
       // Set attributes.
       default:
@@ -209,6 +223,9 @@ class SimpleLdapUser {
 
   protected static $users = array();
 
+  // This is intentionally private because it handles sensitive information.
+  private static $hash = array();
+
   /**
    * Return a SimpleLdapUser object for the given username.
    */
@@ -230,6 +247,18 @@ class SimpleLdapUser {
     else {
       unset(self::$users[$name]);
     }
+  }
+
+  /**
+   * Internal password hash storage.
+   *
+   * This is called by the customized user_hash_password() function in
+   * simple_ldap_user.password.inc to create an internal reverse hash lookup, so
+   * passwords can be updated in LDAP. The hash is not exposed by the class API,
+   * and is cleared after every page load.
+   */
+  public static function hash($key, $value) {
+    self::$hash[$key] = $value;
   }
 
 }

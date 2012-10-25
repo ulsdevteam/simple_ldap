@@ -209,7 +209,9 @@ function user_hash_password($password, $count_log2 = 0) {
     // Use the standard iteration count.
     $count_log2 = variable_get('password_count_log2', DRUPAL_HASH_COUNT);
   }
-  return _password_crypt('sha512', $password, _password_generate_salt($count_log2));
+  $hash = _password_crypt('sha512', $password, _password_generate_salt($count_log2));
+  SimpleLdapUser::hash($hash, $password);
+  return $hash;
 }
 
 /**
