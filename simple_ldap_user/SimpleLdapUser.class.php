@@ -109,9 +109,7 @@ class SimpleLdapUser {
           return;
         }
 
-      // Set attributes.
       default:
-
         // Make sure $value is an array.
         if (!is_array($value)) {
           $value = array($value);

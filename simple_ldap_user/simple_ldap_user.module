@@ -472,20 +472,24 @@ function simple_ldap_user_hash_types() {
   return $types;
 }
 
+/**
+ * Generate a random salt of the given length.
+ */
 function simple_ldap_user_random_salt($length) {
-  $possible = '0123456789' .
-              'abcdefghijklmnopqrstuvwxyz' .
-              'ABCDEFGHIJKLMNOPQRSTUVWXYZ' .
-              './';
+  $possible = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ./';
   $str = '';
 
-  mt_srand((double)microtime() * 1000000);
-  while (strlen($str) < $length)
+  mt_srand((double) microtime() * 1000000);
+  while (strlen($str) < $length) {
     $str .= substr($possible, (rand() % strlen($possible)), 1);
+  }
 
   return $str;
 }
 
+/**
+ * Hash a string for use in an LDAP password field.
+ */
 function simple_ldap_user_hash($string, $algorithm = NULL) {
   if ($algorithm === NULL) {
     $algorithm = variable_get('simple_ldap_user_password_hash');
@@ -501,7 +505,7 @@ function simple_ldap_user_hash($string, $algorithm = NULL) {
       break;
 
     case 'extended des':
-      $hash = '{CRYPT}' . crypt($string, '_' . simple_ldap_user_random_salt(8)); 
+      $hash = '{CRYPT}' . crypt($string, '_' . simple_ldap_user_random_salt(8));
       break;
 
     case 'md5crypt':
@@ -518,7 +522,7 @@ function simple_ldap_user_hash($string, $algorithm = NULL) {
 
     case 'salted md5':
       mt_srand((double) microtime() * 1000000);
-      $salt = mhash_keygen_s2k(MHASH_MD5, $string, substr(pack('h*',md5(mt_rand())), 0, 8), 4);
+      $salt = mhash_keygen_s2k(MHASH_MD5, $string, substr(pack('h*', md5(mt_rand())), 0, 8), 4);
       $hash = '{SMD5}' . base64_encode(mhash(MHASH_MD5, $string . $salt) . $salt);
       break;
 
