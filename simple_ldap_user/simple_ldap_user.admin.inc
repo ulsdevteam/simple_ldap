@@ -180,6 +180,14 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#default_value' => variable_get('simple_ldap_user_sync', 'hook_user_load'),
   );
 
+  $form['advanced']['simple_ldap_user_delete'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Allow Drupal to delete LDAP users.') . $disabled_note,
+    '#default_value' => variable_get('simple_ldap_user_delete', TRUE),
+    '#disabled' => $server->readonly,
+    '#description' => t('Disable this to protect LDAP users from being deleted by Drupal, while still allowing other LDAP write operations.'),
+  );
+
   // Generate a table to display the attribute map if one is configured.
   $table = '';
   $map = simple_ldap_user_map();

@@ -225,10 +225,10 @@ function simple_ldap_user_user_cancel($edit, $account, $method) {
  *
  * Fires when a user account is deleted, before account is
  * deleted.
- *
- * @todo simple_ldap_user_user_delete()
  */
 function simple_ldap_user_user_delete($account) {
+  $ldap_user = SimpleLdapUser::singleton($account->name);
+  $ldap_user->delete();
 }
 
 /**

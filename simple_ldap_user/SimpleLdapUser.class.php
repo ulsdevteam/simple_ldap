@@ -190,7 +190,7 @@ class SimpleLdapUser {
    *   TRUE on success, FALSE on failure.
    */
   public function delete() {
-    if ($this->exists) {
+    if ($this->exists && variable_get('simple_ldap_user_delete', TRUE)) {
       $result = $this->server->delete($this->dn);
       if ($result) {
         $this->exists = FALSE;
