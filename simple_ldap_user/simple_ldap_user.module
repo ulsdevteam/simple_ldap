@@ -142,8 +142,34 @@ function simple_ldap_user_user_logout($account) {
  *   The form values submitted by the user.
  */
 function simple_ldap_user_user_presave(&$edit, $account, $category) {
-  if ($account->is_new) {
-    // @todo - Get data from LDAP, and add it to $edit.
+  if ($account->is_new && isset($edit['name'])) {
+    $ldap_user = SimpleLdapUser::singleton($edit['name']);
+
+    // Force an initial sync from LDAP to drupal.
+    if ($ldap_user->exists && simple_ldap_user_source() == 'drupal') {
+      $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+      $attribute_map = simple_ldap_user_map();
+
+      // Get the user's email address.
+      $edit['mail'] = $ldap_user->{$attribute_mail}[0];
+
+      // Get the remaining mapped attributes.
+      foreach ($attribute_map as $attribute) {
+        switch ($attribute['type']) {
+          // Use Field API.
+          case 'field':
+            for ($i = 0; $i < $ldap_user->{$attribute['ldap']}['count']; $i++) {
+              $edit[$attribute['drupal']][LANGUAGE_NONE][$i]['value'] = $ldap_user->{$attribute['ldap']}[$i];
+            }
+            break;
+
+          // Use the user object directly.
+          case 'default':
+          default:
+            $edit[$attribute['drupal']] = $ldap_user->{$attribute['ldap']}[0];
+        }
+      }
+    }
   }
 }
 
