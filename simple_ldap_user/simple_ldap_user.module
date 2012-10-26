@@ -113,14 +113,16 @@ function simple_ldap_user_menu_alter(&$items) {
  *   including raw username and password.
  */
 function simple_ldap_user_user_login(&$edit, $account) {
-  switch (simple_ldap_user_sync()) {
-    case SIMPLE_LDAP_USER_SYNC_TO_DRUPAL:
-      simple_ldap_user_sync_to_drupal($account);
-      break;
+  if ($account->uid != 1) {
+    switch (simple_ldap_user_sync()) {
+      case SIMPLE_LDAP_USER_SYNC_TO_DRUPAL:
+        simple_ldap_user_sync_to_drupal($account);
+        break;
 
-    case SIMPLE_LDAP_USER_SYNC_TO_LDAP:
-      simple_ldap_user_sync_to_ldap($account);
-      break;
+      case SIMPLE_LDAP_USER_SYNC_TO_LDAP:
+        simple_ldap_user_sync_to_ldap($account);
+        break;
+    }
   }
 }
 
@@ -371,6 +373,11 @@ function simple_ldap_user_sync_to_drupal($drupal_user) {
 
   // Load the LDAP user.
   $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
+
+  // Nothing to sync.
+  if (!$ldap_user->exists) {
+    return;
+  }
 
   // Initialize array of attribute changes.
   $edit = array();
