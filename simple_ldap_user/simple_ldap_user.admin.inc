@@ -158,14 +158,14 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#description' => t('This filter will be combined with the normal search filter to find users.') . ' ' . t('This can be used to require a certain attribute be present, for example.'),
   );
 
-  $form['advanced']['simple_ldap_user_sync'] = array(
+  $form['advanced']['simple_ldap_user_source'] = array(
     '#type' => 'radios',
     '#title' => t('Authoratative data source') . $disabled_note,
     '#options' => array(
       'ldap' => t('LDAP'),
       'drupal' => t('Drupal'),
     ),
-    '#default_value' => simple_ldap_user_sync(),
+    '#default_value' => simple_ldap_user_source(),
     '#disabled' => $server->readonly,
     '#description' => t('This determines the behavior of the data sync in the event of a conflict between LDAP and Drupal.') . ' ' . t('Note, that if the LDAP server is set as read-only, LDAP is always considered to be the authoratative data source.'),
   );

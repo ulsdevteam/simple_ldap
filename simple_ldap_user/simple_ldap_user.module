@@ -4,10 +4,6 @@
  * Main simple_ldap_user module file.
  */
 
-// Constant definitions.
-define('SIMPLE_LDAP_USER_SYNC_TO_LDAP', 'drupal');
-define('SIMPLE_LDAP_USER_SYNC_TO_DRUPAL', 'ldap');
-
 /**
  * Implements hook_menu().
  */
@@ -114,12 +110,12 @@ function simple_ldap_user_menu_alter(&$items) {
  */
 function simple_ldap_user_user_login(&$edit, $account) {
   if ($account->uid != 1) {
-    switch (simple_ldap_user_sync()) {
-      case SIMPLE_LDAP_USER_SYNC_TO_DRUPAL:
+    switch (simple_ldap_user_source()) {
+      case 'ldap':
         simple_ldap_user_sync_to_drupal($account);
         break;
 
-      case SIMPLE_LDAP_USER_SYNC_TO_LDAP:
+      case 'drupal':
         simple_ldap_user_sync_to_ldap($account);
         break;
     }
@@ -278,15 +274,15 @@ function simple_ldap_user_configured() {
  * The sync direction is dependent on both the configurations of simple_ldap and
  * simple_ldap_user.
  */
-function simple_ldap_user_sync() {
+function simple_ldap_user_source() {
   // If the LDAP server is set to read-only, force ldap->drupal sync.
   $readonly = variable_get('simple_ldap_readonly', FALSE);
   if ($readonly) {
-    return SIMPLE_LDAP_USER_SYNC_TO_DRUPAL;
+    return 'ldap';
   }
 
   // Get the sync config from simple_ldap_user, defaulting to ldap->drupal.
-  $sync = variable_get('simple_ldap_user_sync', SIMPLE_LDAP_USER_SYNC_TO_DRUPAL);
+  $sync = variable_get('simple_ldap_user_source', 'ldap');
   return $sync;
 }
 
