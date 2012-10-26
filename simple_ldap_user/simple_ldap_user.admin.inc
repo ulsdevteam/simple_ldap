@@ -170,6 +170,16 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#description' => t('This determines the behavior of the data sync in the event of a conflict between LDAP and Drupal.') . ' ' . t('Note, that if the LDAP server is set as read-only, LDAP is always considered to be the authoratative data source.'),
   );
 
+  $form['advanced']['simple_ldap_user_sync'] = array(
+    '#type' => 'radios',
+    '#title' => t('Synchronization trigger'),
+    '#options' => array(
+      'hook_user_load' => t('Every time a user object is loaded from the database.') . ' (' . t('More real-time, best if there are frequent changes.') . ')',
+      'hook_user_login' => t('Every time a user logs in.') . ' (' . t('Less LDAP traffic, best if changes are rare.') . ')',
+    ),
+    '#default_value' => variable_get('simple_ldap_user_sync', 'hook_user_load'),
+  );
+
   // Generate a table to display the attribute map if one is configured.
   $table = '';
   $map = simple_ldap_user_map();

@@ -109,7 +109,8 @@ function simple_ldap_user_menu_alter(&$items) {
  *   including raw username and password.
  */
 function simple_ldap_user_user_login(&$edit, $account) {
-  if ($account->uid != 1) {
+  $sync = variable_get('simple_ldap_user_sync');
+  if ($sync == 'hook_user_login') {
     switch (simple_ldap_user_source()) {
       case 'ldap':
         simple_ldap_user_sync_to_drupal($account);
@@ -210,10 +211,22 @@ function simple_ldap_user_user_delete($account) {
  * Fires when user information is being loaded from the database.
  * User information is cached, so this does not fire every time
  * a user object is handled.
- *
- * @todo simple_ldap_user_user_load()
  */
 function simple_ldap_user_user_load($users) {
+  $sync = variable_get('simple_ldap_user_sync');
+  if ($sync == 'hook_user_load') {
+    foreach ($users as $user) {
+      switch (simple_ldap_user_source()) {
+        case 'ldap':
+          simple_ldap_user_sync_to_drupal($user);
+          break;
+
+        case 'drupal':
+          simple_ldap_user_sync_to_ldap($user);
+          break;
+      }
+    }
+  }
 }
 
 /**
@@ -371,7 +384,7 @@ function simple_ldap_user_sync_to_drupal($drupal_user) {
   $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
 
   // Nothing to sync.
-  if (!$ldap_user->exists) {
+  if (!$ldap_user->exists || (isset($drupal_user->uid) && $drupal_user->uid == 1)) {
     return;
   }
 
@@ -424,6 +437,10 @@ function simple_ldap_user_sync_to_drupal($drupal_user) {
 
   // Save any changes.
   if (!empty($edit)) {
+    if (!isset($drupal_user->original)) {
+      // This avoids an infinite load/save loop.
+      $drupal_user->original = clone $drupal_user;
+    }
     $drupal_user = user_save($drupal_user, $edit);
   }
 
