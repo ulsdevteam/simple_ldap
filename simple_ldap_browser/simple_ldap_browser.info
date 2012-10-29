@@ -1,5 +1,0 @@
-name = Simple LDAP Browser
-description = Simple LDAP directory browser.
-package = LDAP
-dependencies[] = simple_ldap
-core = 7.x
