@@ -81,6 +81,32 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
       array_unshift($form['#validate'], 'simple_ldap_user_login_name_validate');
       break;
 
+    case 'user_profile_form':
+      // Disable mapped fields if LDAP Server is read-only.
+      $server = SimpleLdapServer::singleton();
+      if ($server->readonly) {
+        $attribute_map = simple_ldap_user_map();
+
+        // Mail and Password are special attributes.
+        $form['account']['mail']['#disabled'] = $server->readonly;
+        $form['account']['pass']['#disabled'] = $server->readonly;
+
+        // Other mapped fields.
+        foreach ($attribute_map as $attribute) {
+          switch ($attribute['type']) {
+            case 'field':
+              $form[$attribute['drupal']]['#disabled'] = $server->readonly;
+              break;
+
+            case 'default':
+            default:
+              $form['account'][$attribute['drupal']]['#disabled'] = $server->readonly;
+          }
+        }
+
+      }
+      break;
+
     default:
   }
 }
