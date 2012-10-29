@@ -171,8 +171,8 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
   if ($account->is_new && isset($edit['name'])) {
     $ldap_user = SimpleLdapUser::singleton($edit['name']);
 
-    // Force an initial sync from LDAP to drupal.
-    if ($ldap_user->exists && simple_ldap_user_source() == 'drupal') {
+    if ($ldap_user->exists) {
+      // Force an initial sync from LDAP to drupal.
       $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
       $attribute_map = simple_ldap_user_map();
 
@@ -224,7 +224,7 @@ function simple_ldap_user_user_insert(&$edit, $account, $category) {
  */
 function simple_ldap_user_user_update(&$edit, $account, $category) {
   $ldap_user = SimpleLdapUser::singleton($account->name);
-  if ($account->status || $ldap_user->exists) {
+  if ((isset($edit['status']) && $edit['status']) || $ldap_user->exists) {
     simple_ldap_user_sync_to_ldap($account);
   }
 }
