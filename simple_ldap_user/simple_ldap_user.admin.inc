@@ -140,7 +140,7 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#options' => simple_ldap_user_hash_types(),
     '#description' => t('Which encryption algorithm should be used to encrypt passwords when writing to LDAP.') . ' ' . t('Note that mhash support is required for SMD5, SHA, and SSHA.'),
     '#disabled' => $server->readonly,
-    '#default_value' => variable_get('simple_ldap_user_password_hash', 'ssha'),
+    '#default_value' => variable_get('simple_ldap_user_password_hash', 'salted sha'),
     '#empty_value' => 'none',
   );
 
