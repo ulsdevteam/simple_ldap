@@ -11,13 +11,16 @@ function simple_ldap_role_admin($form, &$form_state) {
   $form = array();
 
   // Verify that simple_ldap_user has been configured.
-  if (!simple_ldap_user_configured()) {
-    drupal_set_message(t('Please configure Simple LDAP Users first.'), 'warning');
+  if (!simple_ldap_configured()) {
+    drupal_set_message(t('Please configure the Simple LDAP server first.'), 'warning');
     return $form;
   }
 
   // Initialize a Simple LDAP Server object. Used for dropdown options.
   $server = SimpleLdapServer::singleton();
+
+  // String to append to items disabled by $server->readonly.
+  $readonly_note = $server->readonly ? ' (' . t('Disabled by LDAP Server configuration.') . ')' : '';
 
   $form['role'] = array(
     '#type' => 'fieldset',
@@ -103,6 +106,10 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#options' => $attributes,
     '#required' => TRUE,
     '#description' => t('Which LDAP attribute defines the members of the role.') . ' ' . t('This is commonly "member".'),
+    '#ajax' => array(
+      'callback' => 'simple_ldap_role_attribute_member_ajax',
+      'wrapper' => 'simple-ldap-role-attribute-member-default',
+    ),
   );
 
   // Set default value if it exists in the list of attributes. If a default
@@ -111,6 +118,91 @@ function simple_ldap_role_admin($form, &$form_state) {
     $form['role']['simple_ldap_role_attribute_member']['#default_value'] = $attribute_member_selected;
   }
 
+  $form['advanced'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Advanced'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+
+  $form['advanced']['simple_ldap_role_filter'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Search filter'),
+    '#default_value' => variable_get('simple_ldap_role_filter'),
+    '#description' => t('This filter will be combined with the normal search filter to find groups.') . ' ' . t('This can be used to require a certain attribute be present, for example.'),
+  );
+
+  $form['advanced']['simple_ldap_role_source'] = array(
+    '#type' => 'radios',
+    '#title' => t('Authoritative data source') . $readonly_note,
+    '#options' => array(
+      'ldap' => t('LDAP'),
+      'drupal' => t('Drupal'),
+    ),
+    '#default_value' => simple_ldap_role_source(),
+    '#disabled' => $server->readonly,
+    '#description' => t('This determines the behavior of the data sync in the event of a conflict between LDAP and Drupal.'),
+  );
+
+  $form['advanced']['simple_ldap_role_sync'] = array(
+    '#type' => 'radios',
+    '#title' => t('Synchronization trigger'),
+    '#options' => array(
+      'hook_user_load' => t('Every time a user object is loaded from the database.') . ' (' . t('More real-time, best if there are frequent changes.') . ')',
+      'hook_user_login' => t('Every time a user logs in.') . ' (' . t('Less LDAP traffic, best if changes are rare.') . ')',
+    ),
+    '#default_value' => variable_get('simple_ldap_role_sync', 'hook_user_load'),
+  );
+
+  // @todo - Come up with better option names.
+  $form['advanced']['simple_ldap_role_attribute_member_format'] = array(
+    '#type' => 'radios',
+    '#title' => t('Group member format'),
+    '#options' => array(
+      'dn' => t('DN'),
+      'name' => t('Name'),
+    ),
+    '#default_value' => variable_get('simple_ldap_role_attribute_member_format', 'dn'),
+  );
+
+  $must = $server->schema->must($objectclass_selected, TRUE);
+  $disabled = !in_array($attribute_member_selected, $must);
+  $note = $disabled ? ' (' . t('@attribute is not a required attribute of @objectclass', array('@attribute' => $attributes[$attribute_member_selected], '@objectclass' => $objectclasses[$objectclass_selected])) . ')' : '';
+
+  $form['advanced']['simple_ldap_role_attribute_member_default'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Default group member') . $note . $readonly_note,
+    '#default_value' => variable_get('simple_ldap_role_attribute_member_default'),
+    '#disabled' => $disabled || $server->readonly,
+    '#description' => t('If the selected member attribute is a required attribute of the selected objectclass, then every LDAP group must have at least one member.') . ' ' . t('The value here will be used as that default member in the event that the group would otherwise be empty.') . ' ' . t('Leave this blank if the group should be deleted instead.'),
+    '#prefix' => '<div id="simple-ldap-role-attribute-member-default">',
+    '#suffix' => '</div>',
+  );
+
+  // Generate a table to display the attribute map if one is configured.
+  $table = '';
+  $attribute_map = simple_ldap_role_attribute_map();
+  if (!empty($attribute_map)) {
+    $table = '<table>';
+    $table .= '<thead><tr><th>' . t('Drupal field') . '</th><th>' . t('LDAP attribute') . '</th></tr></thead>';
+    $table .= '<tbody>';
+    $class = 'odd';
+    foreach ($attribute_map as $attribute) {
+      $table .= '<tr class="' . $class . '">';
+      $table .= '<td>' . $attribute['drupal'] . '</td>';
+      $table .= '<td>' . $attribute['ldap'] . '</td>';
+      $table .= '</tr>';
+      $class = $class == 'odd' ? 'even' : 'odd';
+    }
+    $table .= '</tbody></table>';
+  }
+
+  $form['advanced']['simple_ldap_role_attribute_map'] = array(
+    '#type' => 'item',
+    '#title' => t('Attribute map'),
+    '#description' => $table . t('Additional attribute maps can be specified in @file using @variable.', array('@file' => 'settings.php', '@variable' => '$conf[\'simple_ldap_role_attribute_map\']')),
+  );
+
   return system_settings_form($form);
 }
 
@@ -118,5 +210,18 @@ function simple_ldap_role_admin($form, &$form_state) {
  * Handle simple_ldap_role_objectclass ajax calls.
  */
 function simple_ldap_role_objectclass_ajax($form, $form_state) {
-  return array($form['role']['simple_ldap_role_attribute_name'], $form['role']['simple_ldap_role_attribute_member']);
+  return array(
+    $form['role']['simple_ldap_role_attribute_name'],
+    $form['role']['simple_ldap_role_attribute_member'],
+  );
 }
+
+/**
+ * Handle simple_ldap_role_attribute_member ajax calls.
+ */
+function simple_ldap_role_attribute_member_ajax($form, $form_state) {
+  return array(
+    $form['advanced']['simple_ldap_role_attribute_member_default'],
+  );
+}
+

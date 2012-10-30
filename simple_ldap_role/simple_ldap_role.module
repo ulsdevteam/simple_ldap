@@ -72,3 +72,43 @@ function simple_ldap_role_user_role_update($role) {
  */
 function simple_ldap_role_user_role_delete($role) {
 }
+
+/**
+ * Returns the configured authoritative data source.
+ *
+ * This value depends on both the configurations of simple_ldap and
+ * simple_ldap_role.
+ */
+function simple_ldap_role_source() {
+  $server = SimpleLdapServer::singleton();
+
+  // If the LDAP server is set to read-only, force ldap as the source.
+  if ($server->readonly) {
+    return 'ldap';
+  }
+
+  // Get the source config from simple_ldap_role.
+  return variable_get('simple_ldap_role_source', 'ldap');
+}
+
+/**
+ * Returns the Simple LDAP Role attribute map, if configured.
+ */
+function simple_ldap_role_attribute_map() {
+  $attribute_map = variable_get('simple_ldap_role_attribute_map', array());
+  foreach ($attribute_map as $key => $attribute) {
+    // LDAP likese lowercase.
+    $attribute_map[$key]['ldap'] = strtolower($attribute_map[$key]['ldap']);
+
+    // Make sure a type is set.
+    if (!isset($attribute['type'])) {
+      $attribute_map[$key]['type'] = 'default';
+    }
+
+    // Make sure "required" is set.
+    if (!isset($attribute['required'])) {
+      $attribute_map[$key]['required'] = FALSE;
+    }
+  }
+  return $attribute_map;
+}
