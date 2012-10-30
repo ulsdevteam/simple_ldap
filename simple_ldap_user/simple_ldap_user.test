@@ -6,14 +6,17 @@
 
 abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
 
-  protected $simple_ldap_user_filter;
+  protected $filter;
 
+  /**
+   * Inherited parent::setUp().
+   */
   public function setUp() {
     parent::setUp(array('simple_ldap', 'simple_ldap_user', 'simple_ldap_test'));
 
     // Setting a filter messes with most of the tests. Clear it here, and save
     // the value for use in tests that need it.
-    $this->simple_ldap_user_filter = variable_get('simple_ldap_user_filter');
+    $this->filter = variable_get('simple_ldap_user_filter');
     variable_del('simple_ldap_user_filter');
   }
 
@@ -66,6 +69,9 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
     $this->drupalLogin($admin_user);
   }
 
+  /**
+   * Verifies that Drupal, LDAP, and the test user values match.
+   */
   public function verifySync($suffix = '') {
     // Load configuration variables.
     $test_user = variable_get('simple_ldap_test_user');
@@ -108,6 +114,9 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
 
 class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserWebTestCase {
 
+  /**
+   * Inherited parent::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name' => 'Authentication',
@@ -165,6 +174,9 @@ class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserWebTestCase 
     $this->drupalNoLogin($account);
   }
 
+  /**
+   * Tests invalid login credentials.
+   */
   public function testBadAuthentication() {
     // Load configuration variables.
     $test_user = variable_get('simple_ldap_test_user');
@@ -243,6 +255,9 @@ class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserWebTestCase 
 
 class SimpleLdapUserFilterWebTestCase extends SimpleLdapUserWebTestCase {
 
+  /**
+   * Inherited parent::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name' => 'Search filter',
@@ -260,7 +275,7 @@ class SimpleLdapUserFilterWebTestCase extends SimpleLdapUserWebTestCase {
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
 
     // Only run the tests if there is a filter configured.
-    if (empty($this->simple_ldap_user_filter)) {
+    if (empty($this->filter)) {
       $this->assertTrue(TRUE, t('There is no search filter configured.'));
     }
     else {
@@ -277,7 +292,7 @@ class SimpleLdapUserFilterWebTestCase extends SimpleLdapUserWebTestCase {
       $this->drupalLogin($account);
 
       // Enable the configured search filter (saved in parent::setUp()).
-      variable_set('simple_ldap_user_filter', $this->simple_ldap_user_filter);
+      variable_set('simple_ldap_user_filter', $this->filter);
 
       // Verify that the user no longer exists, according to the filter.
       $ldap_user = new SimpleLdapUser($account->name);
@@ -292,6 +307,9 @@ class SimpleLdapUserFilterWebTestCase extends SimpleLdapUserWebTestCase {
 
 class SimpleLdapUserUserOneLoginWebTestCase extends SimpleLdapUserWebTestCase {
 
+  /**
+   * Inherited parent::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name' => 'User 1 login',
@@ -323,6 +341,9 @@ class SimpleLdapUserUserOneLoginWebTestCase extends SimpleLdapUserWebTestCase {
 
 class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserWebTestCase {
 
+  /**
+   * Inherited parent::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name' => 'User can modify profile',
@@ -331,6 +352,11 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserWebTestCase {
     );
   }
 
+  /**
+   * Submits the user profile edit form.
+   *
+   * Values are taken from the configured test user, and appended by $suffix.
+   */
   public function postProfileForm($suffix = '') {
     // Load configuration variables.
     $test_user = variable_get('simple_ldap_test_user');
@@ -347,10 +373,11 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserWebTestCase {
     $edit['mail'] = $test_user[$attribute_mail] . $suffix;
 
     foreach ($attribute_map as $attribute) {
-      switch($attribute['type']) {
+      switch ($attribute['type']) {
         case 'field':
           $edit[$attribute['drupal'] . '[und][0][value]'] = $test_user[$attribute['ldap']] . $suffix;
           break;
+
         case 'default':
         default:
           $edit[$attribute['drupal']] = $test_user[$attribute['ldap']] . $suffix;
@@ -377,7 +404,7 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserWebTestCase {
     $account->name = $test_user[$attribute_name];
     $account->pass_raw = $test_user['pass'];
 
-    // Log in user. This should create/sync an LDAP user (tested elsewhere)
+    // Log in user. This should create/sync an LDAP user (tested elsewhere).
     $this->drupalLogin($account);
 
     // Submit the profile edit form, and verify synchronization.
@@ -393,6 +420,9 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserWebTestCase {
 
 class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
 
+  /**
+   * Inherited parent::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name' => 'User registration',
@@ -418,6 +448,9 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     return $edit;
   }
 
+  /**
+   * Tests user registration with email verification.
+   */
   public function testRegistrationWithEmailVerification() {
     // Require e-mail verification.
     variable_set('user_email_verification', TRUE);
@@ -447,6 +480,9 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     $this->assertFalse($new_user->status, t('New account is blocked until approved by an administrator.'));
   }
 
+  /**
+   * Tests user registration without requiring email verification.
+   */
   public function testRegistrationWithoutEmailVerification() {
     // Don't require e-mail verification.
     variable_set('user_email_verification', FALSE);
@@ -503,6 +539,9 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     $this->assertText(t('Member for'), t('The user can log in after administrator approval.'));
   }
 
+  /**
+   * Tests that the values used to register are properly saved.
+   */
   public function testRegistrationValues() {
     // Get simple_ldap_user config.
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
@@ -559,6 +598,9 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
 
 class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
 
+  /**
+   * Inherited parent::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name' => 'User data synchronization',
@@ -567,6 +609,9 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
     );
   }
 
+  /**
+   * Modifies the test user account in LDAP.
+   */
   public function modifyLdap($suffix = '') {
     // Load configuration variables.
     $test_user = variable_get('simple_ldap_test_user');
@@ -588,6 +633,9 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
     }
   }
 
+  /**
+   * Modifies the test user account in Drupal.
+   */
   public function modifyDrupal($suffix = '') {
     // Load configuration variables.
     $test_user = variable_get('simple_ldap_test_user');
@@ -624,6 +672,9 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
     user_save($drupal_user, $edit);
   }
 
+  /**
+   * Tests data synchronization using hook_user_login().
+   */
   public function testSyncOnHookUserLogin() {
     // Set the sync trigger to hook_user_login
     variable_set('simple_ldap_user_sync', 'hook_user_login');
@@ -667,6 +718,9 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
     $this->verifySync();
   }
 
+  /**
+   * Tests synchronization using hook_user_load().
+   */
   public function testSyncOnHookUserLoad() {
     // Set the sync trigger to hook_user_load
     variable_set('simple_ldap_user_sync', 'hook_user_load');
@@ -714,6 +768,9 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
 
 class SimpleLdapUserPasswordResetTestCase extends SimpleLdapUserWebTestCase {
 
+  /**
+   * Inherited parent::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name' => 'User password change',
@@ -722,6 +779,9 @@ class SimpleLdapUserPasswordResetTestCase extends SimpleLdapUserWebTestCase {
     );
   }
 
+  /**
+   * Tests that a user can change thier password.
+   */
   public function testPasswordChange() {
     // Load configuration variables.
     $test_user = variable_get('simple_ldap_test_user');
@@ -732,7 +792,7 @@ class SimpleLdapUserPasswordResetTestCase extends SimpleLdapUserWebTestCase {
     $account->name = $test_user[$attribute_name];
     $account->pass_raw = $test_user['pass'];
 
-    // Log in user. This should create/sync an LDAP user (tested elsewhere)
+    // Log in user. This should create/sync an LDAP user (tested elsewhere).
     $this->drupalLogin($account);
 
     // Get the drupal user.
@@ -771,6 +831,9 @@ class SimpleLdapUserPasswordResetTestCase extends SimpleLdapUserWebTestCase {
 
 class SimpleLdapUserDeleteUserTestCase extends SimpleLdapUserWebTestCase {
 
+  /**
+   * Inherited parent::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name' => 'Delete user',
@@ -779,6 +842,9 @@ class SimpleLdapUserDeleteUserTestCase extends SimpleLdapUserWebTestCase {
     );
   }
 
+  /**
+   * Tests user deletion.
+   */
   public function testDeleteUser() {
     // Disable email verification and admin approval.
     variable_set('user_email_verification', FALSE);
