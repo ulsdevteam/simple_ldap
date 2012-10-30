@@ -43,6 +43,10 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
    * Log in with User 1.
    */
   public function drupalUser1Login() {
+    if ($this->loggedInUser) {
+      $this->drupalLogout();
+    }
+
     // Load password hashing API.
     require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
 
@@ -761,6 +765,61 @@ class SimpleLdapUserPasswordResetTestCase extends SimpleLdapUserWebTestCase {
     // Verify that it was changed back.
     $account->pass_raw = $edit['pass[pass1]'];
     $this->drupalLogin($account);
+  }
+
+}
+
+class SimpleLdapUserDeleteUserTestCase extends SimpleLdapUserWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Delete user',
+      'description' => 'Tests that deleting a user in Drupal also deletes the user from LDAP.',
+      'group' => 'Simple LDAP User',
+    );
+  }
+
+  public function testDeleteUser() {
+    // Disable email verification and admin approval.
+    variable_set('user_email_verification', FALSE);
+    variable_set('user_register', USER_REGISTER_VISITORS);
+
+    // Generate user registration formdata.
+    $edit['name'] = $name = $this->randomName();
+    $edit['mail'] = $mail = $name . '@example.com';
+    $edit['pass[pass1]'] = $pass = $this->randomName();
+    $edit['pass[pass2]'] = $pass;
+
+    $attribute_map = simple_ldap_user_map();
+    foreach ($attribute_map as $attribute) {
+      if ($attribute['required']) {
+        $edit[$attribute['drupal'] . '[und][0][value]'] = $this->randomName();
+      }
+    }
+
+    // Submit the registration form to create the user.
+    $this->drupalPost('user/register', $edit, t('Create new account'));
+    $accounts = user_load_multiple(array(), array('name' => $name, 'mail' => $mail));
+    $drupal_user = reset($accounts);
+    $this->assertText(t('Registration successful. You are now logged in.'), t('Users are logged in after registering.'));
+    $this->drupalLogout();
+
+    // Verify that the user exists in LDAP.
+    $ldap_user = new SimpleLdapUser($name);
+    $this->assertTrue($ldap_user->exists, t('The user was created in LDAP.'));
+
+    // Log in as user1.
+    $this->drupalUser1Login();
+
+    // Submit the delete-user form.
+    $edit = array();
+    $edit['user_cancel_method'] = 'user_cancel_delete';
+    $this->drupalPost('user/' . $drupal_user->uid . '/cancel', $edit, t('Cancel account'));
+    $this->assertText(t('@name has been deleted.', array('@name' => $name)), t('The user was deleted from Drupal.'));
+
+    // Verify that the user was deleted from LDAP.
+    $ldap_user = new SimpleLdapUser($name);
+    $this->assertFalse($ldap_user->exists, t('The user was deleted from LDAP.'));
   }
 
 }
