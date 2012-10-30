@@ -340,15 +340,15 @@ function simple_ldap_user_configured() {
  * simple_ldap_user.
  */
 function simple_ldap_user_source() {
+  $server = SimpleLdapServer::singleton();
+
   // If the LDAP server is set to read-only, force ldap->drupal sync.
-  $readonly = variable_get('simple_ldap_readonly', FALSE);
-  if ($readonly) {
+  if ($server->readonly) {
     return 'ldap';
   }
 
   // Get the sync config from simple_ldap_user, defaulting to ldap->drupal.
-  $sync = variable_get('simple_ldap_user_source', 'ldap');
-  return $sync;
+  return variable_get('simple_ldap_user_source', 'ldap');
 }
 
 /**

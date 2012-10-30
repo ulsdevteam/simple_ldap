@@ -160,14 +160,14 @@ function simple_ldap_user_admin($form, &$form_state) {
 
   $form['advanced']['simple_ldap_user_source'] = array(
     '#type' => 'radios',
-    '#title' => t('Authoratative data source') . $disabled_note,
+    '#title' => t('Authoritative data source') . $disabled_note,
     '#options' => array(
       'ldap' => t('LDAP'),
       'drupal' => t('Drupal'),
     ),
     '#default_value' => simple_ldap_user_source(),
     '#disabled' => $server->readonly,
-    '#description' => t('This determines the behavior of the data sync in the event of a conflict between LDAP and Drupal.') . ' ' . t('Note, that if the LDAP server is set as read-only, LDAP is always considered to be the authoratative data source.'),
+    '#description' => t('This determines the behavior of the data sync in the event of a conflict between LDAP and Drupal.'),
   );
 
   $form['advanced']['simple_ldap_user_sync'] = array(
