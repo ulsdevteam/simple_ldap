@@ -62,6 +62,44 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
     $this->drupalLogin($admin_user);
   }
 
+  public function verifySync($suffix = '') {
+    // Load configuration variables.
+    $test_user = variable_get('simple_ldap_test_user');
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+    $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+
+    // Load the LDAP user.
+    $ldap_user = new SimpleLdapUser($test_user[$attribute_name]);
+
+    // Load the Drupal user.
+    $drupal_user = user_load_multiple(array(), array('name' => $test_user[$attribute_name]), TRUE);
+    $drupal_user = reset($drupal_user);
+
+    // Check the mail attribute explicitly.
+    $this->assertEqual($ldap_user->{$attribute_mail}[0], $drupal_user->mail, t('The @attr LDAP attribute and the Drupal mail field are synchronized.', array('@attr' => $attribute_mail)));
+    // Make sure they match the control.
+    $this->assertEqual($test_user[$attribute_mail] . $suffix, $drupal_user->mail, t(':value matches the control value', array(':value' => $drupal_user->mail)));
+
+    // Check the other mapped fields.
+    $attribute_map = simple_ldap_user_map();
+    foreach ($attribute_map as $attribute) {
+      switch ($attribute['type']) {
+        case 'field':
+          $items = field_get_items('user', $drupal_user, $attribute['drupal']);
+          $drupal = $items[0]['value'];
+          break;
+
+        case 'default':
+        default:
+          $drupal = $drupal_user->{$attribute['drupal']};
+      }
+    }
+    // Make sure drupal and ldap match.
+    $this->assertEqual($ldap_user->{$attribute['ldap']}[0], $drupal, t('The @ldap LDAP attribute and the @drupal Drupal field are synchronized.', array('@ldap' => $attribute['ldap'], '@drupal' => $attribute['drupal'])));
+    // Make sure they match the control.
+    $this->assertEqual($test_user[$attribute['ldap']] . $suffix, $drupal, t(':value matches the control value', array(':value' => $drupal)));
+  }
+
 }
 
 class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserWebTestCase {
@@ -279,7 +317,7 @@ class SimpleLdapUserUserOneLoginWebTestCase extends SimpleLdapUserWebTestCase {
 
 }
 
-class SimpleLdapUserUserChangesProfileWebTestCase extends SimpleLdapUserWebTestCase {
+class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserWebTestCase {
 
   public static function getInfo() {
     return array(
@@ -289,19 +327,46 @@ class SimpleLdapUserUserChangesProfileWebTestCase extends SimpleLdapUserWebTestC
     );
   }
 
+  public function postProfileForm($suffix = '') {
+    // Load configuration variables.
+    $test_user = variable_get('simple_ldap_test_user');
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+    $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+    $attribute_map = simple_ldap_user_map();
+
+    // Get the drupal user.
+    $drupal_user = user_load_by_name($test_user[$attribute_name]);
+
+    // Create the form variable array.
+    $edit = array();
+    $edit['current_pass'] = $test_user['pass'];
+    $edit['mail'] = $test_user[$attribute_mail] . $suffix;
+
+    foreach ($attribute_map as $attribute) {
+      switch($attribute['type']) {
+        case 'field':
+          $edit[$attribute['drupal'] . '[und][0][value]'] = $test_user[$attribute['ldap']] . $suffix;
+          break;
+        case 'default':
+        default:
+          $edit[$attribute['drupal']] = $test_user[$attribute['ldap']] . $suffix;
+      }
+    }
+
+    // Submit user edit form.
+    $this->drupalPost('user/' . $drupal_user->uid . '/edit', $edit, 'Save');
+  }
+
   /**
    * User edits profile information.
-   *
-   * #18 User can change their email address and LDAP is updated appropriately
-   * #23 User changes last name and it is changed in LDAP
-   * #30 User changes first name and it is changed in ldap
-   *
-   * @todo finish this.
    */
   public function testUserChangesProfile() {
     // Load configuration variables.
     $test_user = variable_get('simple_ldap_test_user');
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
+
+    // Generate a random suffix for testing.
+    $suffix = $this->randomName();
 
     // Initialize a user account object.
     $account = new stdClass();
@@ -310,28 +375,16 @@ class SimpleLdapUserUserChangesProfileWebTestCase extends SimpleLdapUserWebTestC
 
     // Log in user. This should create/sync an LDAP user (tested elsewhere)
     $this->drupalLogin($account);
-    $drupal_user = user_load_by_name($test_user[$attribute_name]);
 
-    $edit['current_pass'] = $test_user['pass'];
-//    $edit['mail'] = $drupal_user->mail . 'modified';
-    $edit['field_last_name[und][0][value]'] = $this->randomName();
+    // Submit the profile edit form, and verify synchronization.
+    $this->postProfileForm($suffix);
+    $this->verifySync($suffix);
 
-    $map = simple_ldap_user_map();
-    foreach ($map as $field) {
-      switch($field['type']) {
-        case 'field':
-          $edit[$field['drupal'] . '[und][0][value]'] = $this->randomName();
-          break;
-        case 'default':
-        default:
-          $edit[$field['drupal']] = $this->randomName();
-      }
-    }
-
-    // Submit user edit form.
-    $this->drupalPost('user/' . $drupal_user->uid . '/edit', $edit, 'Save');
-
+    // Reset the values, and verify again.
+    $this->postProfileForm();
+    $this->verifySync();
   }
+
 }
 
 class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
@@ -508,44 +561,6 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
       'description' => 'Test data synchronization between LDAP and Drupal.',
       'group' => 'Simple LDAP User',
     );
-  }
-
-  public function verifySync($suffix = '') {
-    // Load configuration variables.
-    $test_user = variable_get('simple_ldap_test_user');
-    $attribute_name = variable_get('simple_ldap_user_attribute_name');
-    $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
-
-    // Load the LDAP user.
-    $ldap_user = new SimpleLdapUser($test_user[$attribute_name]);
-
-    // Load the Drupal user.
-    $drupal_user = user_load_multiple(array(), array('name' => $test_user[$attribute_name]), TRUE);
-    $drupal_user = reset($drupal_user);
-
-    // Check the mail attribute explicitly.
-    $this->assertEqual($ldap_user->{$attribute_mail}[0], $drupal_user->mail, t('The @attr LDAP attribute and the Drupal mail field are synchronized.', array('@attr' => $attribute_mail)));
-    // Make sure they match the control.
-    $this->assertEqual($test_user[$attribute_mail] . $suffix, $drupal_user->mail, t(':value matches the control value', array(':value' => $drupal_user->mail)));
-
-    // Check the other mapped fields.
-    $attribute_map = simple_ldap_user_map();
-    foreach ($attribute_map as $attribute) {
-      switch ($attribute['type']) {
-        case 'field':
-          $items = field_get_items('user', $drupal_user, $attribute['drupal']);
-          $drupal = $items[0]['value'];
-          break;
-
-        case 'default':
-        default:
-          $drupal = $drupal_user->{$attribute['drupal']};
-      }
-    }
-    // Make sure drupal and ldap match.
-    $this->assertEqual($ldap_user->{$attribute['ldap']}[0], $drupal, t('The @ldap LDAP attribute and the @drupal Drupal field are synchronized.', array('@ldap' => $attribute['ldap'], '@drupal' => $attribute['drupal'])));
-    // Make sure they match the control.
-    $this->assertEqual($test_user[$attribute['ldap']] . $suffix, $drupal, t(':value matches the control value', array(':value' => $drupal)));
   }
 
   public function modifyLdap($suffix = '') {
