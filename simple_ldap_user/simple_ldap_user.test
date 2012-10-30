@@ -707,3 +707,60 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
   }
 
 }
+
+class SimpleLdapUserPasswordResetTestCase extends SimpleLdapUserWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'User password change',
+      'description' => 'Ensure that a user can change their password and that it is updated in LDAP.',
+      'group' => 'Simple LDAP User',
+    );
+  }
+
+  public function testPasswordChange() {
+    // Load configuration variables.
+    $test_user = variable_get('simple_ldap_test_user');
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+
+    // Initialize a user account object.
+    $account = new stdClass();
+    $account->name = $test_user[$attribute_name];
+    $account->pass_raw = $test_user['pass'];
+
+    // Log in user. This should create/sync an LDAP user (tested elsewhere)
+    $this->drupalLogin($account);
+
+    // Get the drupal user.
+    $drupal_user = user_load_by_name($test_user[$attribute_name]);
+
+    // Create the form variable array.
+    $edit = array();
+    $edit['current_pass'] = $test_user['pass'];
+    $edit['pass[pass1]'] = $this->randomName();
+    $edit['pass[pass2]'] = $edit['pass[pass1]'];
+
+    // Submit user edit form.
+    $this->drupalPost('user/' . $drupal_user->uid . '/edit', $edit, 'Save');
+
+    // Verify that the old password no longer works.
+    $this->drupalNoLogin($account);
+
+    // Verify that the new password works.
+    $account->pass_raw = $edit['pass[pass1]'];
+    $this->drupalLogin($account);
+
+    // Reset the password.
+    $edit['current_pass'] = $edit['pass[pass1]'];
+    $edit['pass[pass1]'] = $test_user['pass'];
+    $edit['pass[pass2]'] = $edit['pass[pass1]'];
+
+    // Submit user edit form.
+    $this->drupalPost('user/' . $drupal_user->uid . '/edit', $edit, 'Save');
+
+    // Verify that it was changed back.
+    $account->pass_raw = $edit['pass[pass1]'];
+    $this->drupalLogin($account);
+  }
+
+}
