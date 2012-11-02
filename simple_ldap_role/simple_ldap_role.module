@@ -31,6 +31,47 @@ function simple_ldap_role_menu() {
  * @todo  check for DRUPAL_AUTHENTICATED_RID and DRUPAL_ANONYMOUS_RID.
  */
 function simple_ldap_role_user_load($users) {
+  return;
+  $server = SimpleLdapServer::singleton();
+  $basedn = variable_get('simple_ldap_role_basedn');
+  $scope = variable_get('simple_ldap_role_scope');
+  $objectclass = variable_get('simple_ldap_role_objectclass');
+  $extrafilter = variable_get('simple_ldap_role_filter');
+  $attribute_name = variable_get('simple_ldap_role_attribute_name');
+  $attribute_member = variable_get('simple_ldap_role_attribute_member');
+  $format = variable_get('simple_ldap_role_attribute_member_format');
+
+  $role_filter = '(objectclass=' . $objectclass . ')';
+  if (!empty($extrafilter)) {
+    $role_filter = '(&' . $role_filter . '(' . $extrafilter . '))';
+  }
+
+  // Get a list of groups for each of the users.
+  foreach ($users as $key => $user) {
+
+    // Determine the search string to use (DN or Name).
+    switch ($format) {
+      case 'dn':
+        $ldap_user = SimpleLdapUser::singleton($user->name);
+        $search = $ldap_user->dn;
+        break;
+
+      case 'name':
+      default:
+        $search = $user->name;
+    }
+
+    // Generate the final filter, and do the search.
+    $filter = '(&' . $role_filter . '(' . $attribute_member . '=' . $search . '))';
+    $groups = $server->search($basedn, $filter, $scope);
+
+    // Make sure all of the groups from the search result are in the user role list.
+    for ($i = 0; $i < $groups['count']; $i++) {
+      if (!in_array($groups[$i][$attribute_name][0], $users[$key]->roles)) {
+        $users[$key]->roles[] = $groups[$i][$attribute_name][0];
+      }
+    }
+  }
 }
 
 /**
@@ -111,4 +152,20 @@ function simple_ldap_role_attribute_map() {
     }
   }
   return $attribute_map;
+}
+
+function simple_ldap_role_entity_info_alter(&$entity_info) {
+  if (isset($entity_info['user'])) {
+    // Use the SimpleLdapRoleController class to manage users.
+    $entity_info['user']['controller class'] = 'SimpleLdapRoleController';
+  }
+}
+
+function simple_ldap_role_module_implements_alter(&$implementations, $hook) {
+  // Increase the weight of hook_entity_info_alter().
+  if ($hook == 'entity_info_alter') {
+    $group = $implementations['simple_ldap_role'];
+    unset($implementations['simple_ldap_role']);
+    $implementations['simple_ldap_role'] = $group;
+  }
 }

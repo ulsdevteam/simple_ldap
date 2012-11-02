@@ -4,3 +4,5 @@ package = LDAP
 dependencies[] = simple_ldap
 dependencies[] = simple_ldap_user
 core = 7.x
+files[] = SimpleLdapRole.class.php
+files[] = SimpleLdapRoleController.class.php

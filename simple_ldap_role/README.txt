@@ -1,8 +1,8 @@
-SimpleLdapUser fingerprint
+SimpleLdapRole fingerprint
 ==========================
 
 // Variables exposed by __get() and __set()
-$attributes 
+$attributes
 $dn
 $exists
 $server
@@ -14,12 +14,9 @@ __get($name)
 __set($name, $value)
 
 // Public functions
-authenticate($password)
 save()
 delete()
 
-// Public static methods
+// Public static functions
 singleton($name)
 filter()
-reset()
-hash($key, $value)
