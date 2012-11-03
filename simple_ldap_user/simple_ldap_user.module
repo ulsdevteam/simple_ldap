@@ -210,7 +210,7 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
 function simple_ldap_user_user_insert(&$edit, $account, $category) {
   $ldap_user = SimpleLdapUser::singleton($account->name);
   if (!$ldap_user->exists) {
-    simple_ldap_user_sync_to_ldap($account);
+    module_invoke_all('sync_to_ldap', $account);
   }
 }
 
@@ -225,7 +225,7 @@ function simple_ldap_user_user_insert(&$edit, $account, $category) {
 function simple_ldap_user_user_update(&$edit, $account, $category) {
   $ldap_user = SimpleLdapUser::singleton($account->name);
   if ((isset($edit['status']) && $edit['status']) || $ldap_user->exists) {
-    simple_ldap_user_sync_to_ldap($account);
+    module_invoke_all('sync_to_ldap', $account);
   }
 }
 

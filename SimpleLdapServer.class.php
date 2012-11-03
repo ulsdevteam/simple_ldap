@@ -349,9 +349,9 @@ class SimpleLdapServer {
       return FALSE;
     }
 
-    // Verify that there ar eno empty attributes.
+    // Verify that there are no empty attributes.
     foreach ($attributes as $key => $value) {
-      if (isset($value['count'])) {
+      if (is_array($value) && isset($value['count'])) {
         unset($attributes[$key]['count']);
       }
       if (is_array($value) && count($value) == 0) {

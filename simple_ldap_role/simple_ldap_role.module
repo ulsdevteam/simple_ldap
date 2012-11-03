@@ -25,93 +25,167 @@ function simple_ldap_role_menu() {
 
 /**
  * Implements hook_user_load().
- *
- * Override the roles based on what is in the LDAP directory.
- *
- * @todo  check for DRUPAL_AUTHENTICATED_RID and DRUPAL_ANONYMOUS_RID.
  */
 function simple_ldap_role_user_load($users) {
-  return;
-  $server = SimpleLdapServer::singleton();
-  $basedn = variable_get('simple_ldap_role_basedn');
-  $scope = variable_get('simple_ldap_role_scope');
-  $objectclass = variable_get('simple_ldap_role_objectclass');
-  $extrafilter = variable_get('simple_ldap_role_filter');
-  $attribute_name = variable_get('simple_ldap_role_attribute_name');
-  $attribute_member = variable_get('simple_ldap_role_attribute_member');
-  $format = variable_get('simple_ldap_role_attribute_member_format');
-
-  $role_filter = '(objectclass=' . $objectclass . ')';
-  if (!empty($extrafilter)) {
-    $role_filter = '(&' . $role_filter . '(' . $extrafilter . '))';
-  }
-
-  // Get a list of groups for each of the users.
-  foreach ($users as $key => $user) {
-
-    // Determine the search string to use (DN or Name).
-    switch ($format) {
-      case 'dn':
-        $ldap_user = SimpleLdapUser::singleton($user->name);
-        $search = $ldap_user->dn;
+  $sync = variable_get('simple_ldap_role_sync');
+  if ($sync == 'hook_user_load') {
+    foreach ($users as $user) {
+      switch (simple_ldap_role_source()) {
+      case 'ldap':
+        simple_ldap_role_sync_to_drupal($user);
         break;
 
-      case 'name':
-      default:
-        $search = $user->name;
-    }
-
-    // Generate the final filter, and do the search.
-    $filter = '(&' . $role_filter . '(' . $attribute_member . '=' . $search . '))';
-    $groups = $server->search($basedn, $filter, $scope);
-
-    // Make sure all of the groups from the search result are in the user role list.
-    for ($i = 0; $i < $groups['count']; $i++) {
-      if (!in_array($groups[$i][$attribute_name][0], $users[$key]->roles)) {
-        $users[$key]->roles[] = $groups[$i][$attribute_name][0];
+      case 'drupal':
+        simple_ldap_role_sync_to_ldap($user);
+        break;
       }
     }
   }
 }
 
 /**
+ * Implements hook_user_login().
+ */
+function simple_ldap_role_user_login(&$edit, $account) {
+  $sync = variable_get('simple_ldap_role_sync');
+  if ($sync == 'hook_user_login') {
+    switch (simple_ldap_role_source()) {
+    case 'ldap':
+      simple_ldap_role_sync_to_drupal($account);
+      break;
+
+    case 'drupal':
+      simple_ldap_role_sync_to_ldap($account);
+      break;
+    }
+  }
+}
+
+/**
+ * Implements hook_user_presave().
+ *
+ * @todo simple_ldap_role_user_presave()
+ *    Load the $edit['roles'] array from LDAP.
+ */
+function simple_ldap_role_user_presave(&$edit, $account, $category) {
+}
+
+/**
  * Implements hook_user_role_presave().
- *
- * Fires before a role is added or edited.
- *
- * @todo simple_ldap_role_user_role_presave()
  */
 function simple_ldap_role_user_role_presave($role) {
+  if ($role->op == 'Save role') {
+    // Get the module configurations.
+    $basedn = variable_get('simple_ldap_role_basedn');
+    $objectclass = variable_get('simple_ldap_role_objectclass');
+    $attribute_name = variable_get('simple_ldap_role_attribute_name');
+
+    // Get an LDAP server object.
+    $server = SimpleLdapServer::singleton();
+
+    // Get the original role values.
+    $original = user_role_load($role->rid);
+
+    // Generate the DNs.
+    $dn = $attribute_name . '=' . $original->name . ',' . $basedn;
+    $newdn = $attribute_name . '=' . $role->name . ',' . $basedn;
+
+    // Check if the original is present in LDAP.
+    $result = $server->search($dn, 'objectclass=' . $objectclass, 'base', array());
+
+    // Rename the LDAP group.
+    if ($result['count'] != 0) {
+      $result = $server->move($dn, $newdn);
+    }
+  }
 }
 
 /**
  * Implements hook_user_role_insert().
- *
- * Fires when a role is inserted.
- *
- * @todo simple_ldap_role_user_role_insert()
  */
 function simple_ldap_role_user_role_insert($role) {
-}
+  // Get the first part of the module configuration.
+  $objectclass = variable_get('simple_ldap_role_objectclass');
+  $attribute_member = variable_get('simple_ldap_role_attribute_member');
+  $attribute_member_default = variable_get('simple_ldap_role_attribute_member_default');
 
-/**
- * Implements hook_user_role_update().
- *
- * Fires when a role is updated.
- *
- * @todo simple_ldap_role_user_role_update()
- */
-function simple_ldap_role_user_role_update($role) {
+  // Get an LDAP server object.
+  $server = SimpleLdapServer::singleton();
+
+  // Get a list of required attributes for the configured objectclass.
+  $must = $server->schema->must($objectclass, TRUE);
+
+  // If the member attribute is not required, or a default member has been
+  // configured, continue with creating the LDAP group. Otherwise, that will
+  // have to wait until the first user is added to the role.
+  if (!in_array($attribute_member, $must) || !empty($attribute_member_default)) {
+    // Get the rest of the module configuration.
+    $basedn = variable_get('simple_ldap_role_basedn');
+    $attribute_name = variable_get('simple_ldap_role_attribute_name');
+
+    // Generate the role DN.
+    $dn = $attribute_name . '=' . $role->name . ',' . $basedn;
+
+    // Generate the LDAP entry attributes.
+    $attributes = array(
+      'objectclass' => $objectclass,
+      $attribute_name => $role->name,
+    );
+    if (!empty($attribute_member_default)) {
+      $attributes[$attribute_member] = $attribute_member_default;
+    }
+
+    // Add the LDAP entry.
+    $result = $server->add($dn, $attributes);
+  }
+
 }
 
 /**
  * Implements hook_user_role_delete().
- *
- * Fires when a role is deleted.
- *
- * @todo simple_ldap_role_user_role_delete()
  */
 function simple_ldap_role_user_role_delete($role) {
+  // Get the module configurations.
+  $basedn = variable_get('simple_ldap_role_basedn');
+  $attribute_name = variable_get('simple_ldap_role_attribute_name');
+
+  // Get an LDAP server object.
+  $server = SimpleLdapServer::singleton();
+
+  // Generate the role DN.
+  $dn = $attribute_name . '=' . $role->name . ',' . $basedn;
+
+  // Delete the role.
+  $server->delete($dn);
+}
+
+/**
+ * Implements hook_cron().
+ */
+function simple_ldap_role_cron() {
+  // Get the module configuration.
+  $basedn = variable_get('simple_ldap_role_basedn');
+  $scope = variable_get('simple_ldap_role_scope');
+  $attribute_name = variable_get('simple_ldap_role_attribute_name');
+
+  // Get an LDAP server object.
+  $server = SimpleLdapServer::singleton();
+
+  // Get a list of LDAP groups.
+  $ldap_groups = $server->search($basedn, simple_ldap_role_filter(), $scope, array($attribute_name));
+
+  // Get a list of Drupal roles.
+  $drupal_roles = user_roles(TRUE);
+
+  // Make sure each of the LDAP groups is also a Drupal role.
+  for ($i = 0; $i < $ldap_groups['count']; $i++) {
+    $name = $ldap_groups[$i][$attribute_name][0];
+    if (!in_array($name, $drupal_roles)) {
+      $role = new StdClass();
+      $role->name = $name;
+      user_role_save($role);
+    }
+  }
 }
 
 /**
@@ -154,18 +228,209 @@ function simple_ldap_role_attribute_map() {
   return $attribute_map;
 }
 
-function simple_ldap_role_entity_info_alter(&$entity_info) {
-  if (isset($entity_info['user'])) {
-    // Use the SimpleLdapRoleController class to manage users.
-    $entity_info['user']['controller class'] = 'SimpleLdapRoleController';
+/**
+ * Returns the filter to use in an LDAP search.
+ */
+function simple_ldap_role_filter() {
+  // Get Module configuration.
+  $objectclass = variable_get('simple_ldap_role_objectclass', '*');
+  $extrafilter = variable_get('simple_ldap_role_filter');
+
+  // Construct the filter.
+  $filter = '(objectclass=' . $objectclass . ')';
+  if (!empty($extrafilter)) {
+    $filter = '(&' . $filter . '(' . $extrafilter . '))';
   }
+
+  return $filter;
 }
 
-function simple_ldap_role_module_implements_alter(&$implementations, $hook) {
-  // Increase the weight of hook_entity_info_alter().
-  if ($hook == 'entity_info_alter') {
-    $group = $implementations['simple_ldap_role'];
-    unset($implementations['simple_ldap_role']);
-    $implementations['simple_ldap_role'] = $group;
+/**
+ * Synchronize Drupal roles to LDAP groups.
+ */
+function simple_ldap_role_sync_to_ldap($drupal_user) {
+  // Get module configuration.
+  $basedn = variable_get('simple_ldap_role_basedn');
+  $scope = variable_get('simple_ldap_role_scope');
+  $objectclass = variable_get('simple_ldap_role_objectclass');
+  $attribute_name = variable_get('simple_ldap_role_attribute_name');
+  $attribute_member = variable_get('simple_ldap_role_attribute_member');
+  $attribute_member_format = variable_get('simple_ldap_role_attribute_member_format');
+  $attribute_member_default = variable_get('simple_ldap_role_attribute_member_default');
+
+  // Get an LDAP server object.
+  $server = SimpleLdapServer::singleton();
+
+  // Determine the search string to use.
+  if ($attribute_member_format == 'dn') {
+    $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
+    $search = $ldap_user->dn;
   }
+  else {
+    $search = $user->name;
+  }
+
+  // Generate the LDAP search filter.
+  $filter = '(&(' . $attribute_member . '=' . $search . ')' . simple_ldap_role_filter() . ')';
+
+  // Get a list of LDAP groups for this user.
+  $ldap_groups = $server->search($basedn, $filter, $scope, array($attribute_name, $attribute_member));
+
+  // Get a list of Drupal roles for this user.
+  $drupal_roles = array();
+  foreach (array_keys($drupal_user->roles) as $rid) {
+    // Skip "special" roles.
+    if ($rid == DRUPAL_AUTHENTICATED_RID || $rid == DRUPAL_ANONYMOUS_RID) {
+      continue;
+    }
+
+    $role = user_role_load($rid);
+    $drupal_roles[$rid] = $role->name;
+  }
+
+  foreach ($drupal_roles as $rid => $name) {
+    // Check if the user is a member of the ldap group.
+    $found = FALSE;
+    for ($i = 0; $i < $ldap_groups['count']; $i++) {
+      if (isset($ldap_groups[$i][$attribute_name][0]) && $ldap_groups[$i][$attribute_name][0] == $name) {
+        $found = TRUE;
+      }
+    }
+
+    // Add or modify the LDAP group to make sure the user is a member.
+    if (!$found) {
+      $filter = '(&(' . $attribute_name . '=' . $name . ')' . simple_ldap_role_filter() . ')';
+      $group = $server->search($basedn, $filter, $scope, array($attribute_member));
+
+      // Generate the DN for the group.
+      $dn = $attribute_name . '=' . $name . ',' . $basedn;
+
+      if ($group['count'] == 0) {
+        // The LDAP group does not exist, create it and add the user.
+        $attributes = array(
+          $attribute_member => $search,
+          $attribute_name => $name,
+          'objectclass' => $objectclass,
+        );
+        $result = $server->add($dn, $attributes);
+      }
+      else {
+        // The LDAP group exists, just add the user
+        $attributes = array(
+          $attribute_member => $search,
+        );
+        $result = $server->modify($dn, $attributes, 'add');
+      }
+    }
+  }
+
+  // Check if the member attribute is required
+  $must = $server->schema->must($objectclass, TRUE);
+  $required = in_array($attribute_member, $must);
+
+  // Remove users from LDAP groups
+  for ($i = 0; $i < $ldap_groups['count']; $i++) {
+    $name = $ldap_groups[$i][$attribute_name][0];
+    $dn = $ldap_groups[$i]['dn'];
+    if (!in_array($name, $drupal_roles)) {
+      if ($ldap_groups[$i][$attribute_member]['count'] == 1 && $required) {
+        // This is the last member of the group, and at least one member is
+        // required by the LDAP schema.
+        if (empty($attribute_member_default)) {
+          // There is no default user, so just delete the group.
+          $result = $server->delete($dn);
+          continue;
+        }
+        else {
+          // Change the group to only have the default user as a member.
+          $result = $server->modify($dn, array($attribute_member => $attribute_member_default), 'replace');
+        }
+      }
+      else {
+        // There are more users in the group, just delete the user.
+        $result = $server->modify($dn, array($attribute_member => $search), 'del');
+      }
+    }
+  }
+
+}
+
+/**
+ * Synchronize LDAP groups to Drupal roles.
+ */
+function simple_ldap_role_sync_to_drupal($drupal_user) {
+  // Get module configuration.
+  $basedn = variable_get('simple_ldap_role_basedn');
+  $scope = variable_get('simple_ldap_role_scope');
+  $attribute_name = variable_get('simple_ldap_role_attribute_name');
+  $attribute_member = variable_get('simple_ldap_role_attribute_member');
+  $attribute_member_format = variable_get('simple_ldap_role_attribute_member_format');
+
+  // Get an LDAP server object.
+  $server = SimpleLdapServer::singleton();
+
+  // Determine the search string to use.
+  if ($attribute_member_format == 'dn') {
+    $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
+    $search = $ldap_user->dn;
+  }
+  else {
+    $search = $user->name;
+  }
+
+  // Generate the LDAP search filter.
+  $filter = '(&(' . $attribute_member . '=' . $search . ')' . simple_ldap_role_filter() . ')';
+
+  // Get a list of LDAP groups for this user.
+  $ldap_groups = $server->search($basedn, $filter, $scope);
+
+  // Initialize the $edit array.
+  $edit = array();
+
+  // Check that the groups match between Drupal and LDAP.
+  $dirty = FALSE;
+  for ($i = 0; $i < $ldap_groups['count']; $i++) {
+    $name = $ldap_groups[$i][$attribute_name][0];
+
+    // Try to load the role.
+    $drupal_role = user_role_load_by_name($name);
+
+    // The role does not exist, create it.
+    if ($drupal_role === FALSE) {
+      $role = new stdClass();
+      $role->name = $name;
+      user_role_save($role);
+      $drupal_role = user_role_load_by_name($name);
+    }
+
+    // The role is not currently present in the user. Flag a user_save().
+    if (!in_array($name, $drupal_user->roles)) {
+      $dirty = TRUE;
+    }
+
+    $edit['roles'][$drupal_role->rid] = $drupal_role->name;
+  }
+
+  // Remove Drupal roles that are not set in LDAP.
+  $diff = array_diff($drupal_user->roles, $edit['roles']);
+  foreach ($diff as $rid => $name) {
+    // Account for special groups.
+    if ($rid == DRUPAL_AUTHENTICATED_RID || $rid == DRUPAL_ANONYMOUS_RID) {
+      $edit['roles'][$rid] = $drupal_user->roles[$rid];
+      continue;
+    }
+    $dirty = TRUE;
+  }
+
+  // Save any changes.
+  if ($dirty) {
+    if (!isset($drupal_user->original)) {
+      // This avoids an infinite load/save loop.
+      $drupal_user->original = clone $drupal_user;
+    }
+    $drupal_user = user_save($drupal_user, $edit);
+  }
+
+  // Synchronized user.
+  return $drupal_user;
 }
