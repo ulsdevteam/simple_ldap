@@ -153,16 +153,6 @@ function simple_ldap_user_user_login(&$edit, $account) {
 }
 
 /**
- * Implements hook_user_logout().
- *
- * Fires when the user logs out.
- *
- * @todo simple_ldap_user_user_logout()
- */
-function simple_ldap_user_user_logout($account) {
-}
-
-/**
  * Implements hook_user_presave().
  *
  * Fires before an account is created or changed.
@@ -236,23 +226,6 @@ function simple_ldap_user_user_update(&$edit, $account, $category) {
 }
 
 /**
- * Implements hook_user_cancel().
- *
- * Fires on user account cancellations, before account is
- * cancelled. Operates on all cancellations except delete.
- *
- * @param array $edit
- *   The form values submitted by the user.
- * @param string $method
- *   The type of cancellation,
- *   see http://lb.cm/user_cancel_methods-7
- *
- * @todo simple_ldap_user_user_cancel()
- */
-function simple_ldap_user_user_cancel($edit, $account, $method) {
-}
-
-/**
  * Implements hook_user_delete().
  *
  * Fires when a user account is deleted, before account is
@@ -288,16 +261,6 @@ function simple_ldap_user_user_load($users) {
       }
     }
   }
-}
-
-/**
- * Implements hook_user_view().
- *
- * Fires when user account information is being viewed.
- *
- * @todo simple_ldap_user_user_view()
- */
-function simple_ldap_user_user_view($account, $view_mode, $langcode) {
 }
 
 /**
