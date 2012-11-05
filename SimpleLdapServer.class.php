@@ -306,6 +306,13 @@ class SimpleLdapServer {
 
     } while ($cookie !== NULL && $cookie != '');
 
+    // ldap_get_entries returns NULL if ldap_read does not find anything.
+    // Reformat the result into something consistent with the other search
+    // types.
+    if ($entries === NULL) {
+      $entries = array('count' => 0);
+    }
+
     return $entries;
   }
 
