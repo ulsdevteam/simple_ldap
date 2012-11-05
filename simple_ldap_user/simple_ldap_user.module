@@ -2,6 +2,9 @@
 /**
  * @file
  * Main simple_ldap_user module file.
+ *
+ * @todo Rename the simple_ldap_user_map variable to
+ *   simple_ldap_user_attribute_map.
  */
 
 /**
