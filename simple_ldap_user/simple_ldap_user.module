@@ -135,6 +135,9 @@ function simple_ldap_user_menu_alter(&$items) {
  *   including raw username and password.
  */
 function simple_ldap_user_user_login(&$edit, $account) {
+  if ($account->uid == 1) {
+    return;
+  }
   $sync = variable_get('simple_ldap_user_sync');
   if ($sync == 'hook_user_login') {
     switch (simple_ldap_user_source()) {
@@ -223,6 +226,9 @@ function simple_ldap_user_user_insert(&$edit, $account, $category) {
  *   The form values submitted by the user.
  */
 function simple_ldap_user_user_update(&$edit, $account, $category) {
+  if ($account->uid == 1) {
+    return;
+  }
   $ldap_user = SimpleLdapUser::singleton($account->name);
   if ((isset($edit['status']) && $edit['status']) || $ldap_user->exists) {
     module_invoke_all('sync_to_ldap', $account);
@@ -268,6 +274,9 @@ function simple_ldap_user_user_load($users) {
   $sync = variable_get('simple_ldap_user_sync');
   if ($sync == 'hook_user_load') {
     foreach ($users as $user) {
+      if ($user->uid == 1) {
+        continue;
+      }
       switch (simple_ldap_user_source()) {
         case 'ldap':
           simple_ldap_user_sync_to_drupal($user);

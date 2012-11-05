@@ -30,6 +30,9 @@ function simple_ldap_role_user_load($users) {
   $sync = variable_get('simple_ldap_role_sync');
   if ($sync == 'hook_user_load') {
     foreach ($users as $user) {
+      if ($user->uid == 1) {
+        continue;
+      }
       switch (simple_ldap_role_source()) {
       case 'ldap':
         simple_ldap_role_sync_to_drupal($user);
@@ -47,6 +50,9 @@ function simple_ldap_role_user_load($users) {
  * Implements hook_user_login().
  */
 function simple_ldap_role_user_login(&$edit, $account) {
+  if ($account->uid == 1) {
+    return;
+  }
   $sync = variable_get('simple_ldap_role_sync');
   if ($sync == 'hook_user_login') {
     switch (simple_ldap_role_source()) {
@@ -432,7 +438,7 @@ function simple_ldap_role_sync_to_drupal($drupal_user) {
   $ldap_groups = $server->search($basedn, $filter, $scope);
 
   // Initialize the $edit array.
-  $edit = array();
+  $edit['roles'] = array();
 
   // Check that the groups match between Drupal and LDAP.
   $dirty = FALSE;
