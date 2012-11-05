@@ -4,3 +4,4 @@ package = LDAP
 dependencies[] = simple_ldap
 dependencies[] = simple_ldap_user
 core = 7.x
+files[] = simple_ldap_role.test
