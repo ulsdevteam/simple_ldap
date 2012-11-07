@@ -1,13 +1,13 @@
 Simpletests:
 ============
 
-* Create a role in Drupal
+X Create a role in Drupal
 	- If default user, created in LDAP
 	- If no default user
 		- If member field not required, created in LDAP
 		- If member field required, do nothing
 
-* Edit role in Drupal
+X Edit role in Drupal
 	- Role updated in LDAP
 
 * Delete role in Drupal

@@ -18,9 +18,13 @@ function simple_ldap_test_install() {
 
   // Add fields to the user entity.
   if (function_exists('simple_ldap_user_map')) {
-    $map = simple_ldap_user_map();
-    foreach ($map as $attribute) {
+    $server = SimpleLdapServer::singleton();
+    $objectclass = variable_get('simple_ldap_user_objectclass');
+    $must = $server->schema->must($objectclass, TRUE);
+    $attribute_map = simple_ldap_user_map();
+    foreach ($attribute_map as $attribute) {
       if ($attribute['type'] == 'field') {
+        $required = in_array($attribute['ldap'], $must);
         field_create_field(array(
           'field_name' => $attribute['drupal'],
           'type' => 'text',
@@ -31,9 +35,9 @@ function simple_ldap_test_install() {
           'entity_type' => 'user',
           'label' => $attribute['drupal'],
           'bundle' => 'user',
-          'required' => $attribute['required'],
+          'required' => $required,
           'settings' => array(
-            'user_register_form' => $attribute['required'],
+            'user_register_form' => $required,
           ),
         ));
       }

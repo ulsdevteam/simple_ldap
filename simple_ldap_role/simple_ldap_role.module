@@ -71,9 +71,6 @@ function simple_ldap_role_user_login(&$edit, $account) {
 
 /**
  * Implements hook_user_presave().
- *
- * @todo simple_ldap_role_user_presave()
- *    Load the $edit['roles'] array from LDAP.
  */
 function simple_ldap_role_user_presave(&$edit, $account, $category) {
   if ($account->is_new && isset($edit['name']) && isset($edit['roles'])) {
@@ -440,7 +437,7 @@ function simple_ldap_role_sync_to_drupal($drupal_user) {
     $search = $ldap_user->dn;
   }
   else {
-    $search = $user->name;
+    $search = $drupal_user->name;
   }
 
   // Generate the LDAP search filter.
