@@ -10,14 +10,17 @@ X Create a role in Drupal
 X Edit role in Drupal
 	- Role updated in LDAP
 
-* Delete role in Drupal
+X Delete role in Drupal
 	- Delete LDAP group
 
-* Add role to user in Drupal (Format: dn/name)
+* Cron
+	- Sync LDAP groups to Drupal roles
+
+X Add role to user in Drupal (Format: dn/name)
 	- If group exists, add user
 	- If group does not exist, create and add user
 
-* Remove role from user in Drupal (Format: dn/name)
+X Remove role from user in Drupal (Format: dn/name)
 	- If more members, remove user
 	- If last user
 		- If member field required

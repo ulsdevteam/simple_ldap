@@ -385,7 +385,7 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserWebTestCase {
     }
 
     // Submit user edit form.
-    $this->drupalPost('user/' . $drupal_user->uid . '/edit', $edit, 'Save');
+    $this->drupalPost('user/' . $drupal_user->uid . '/edit', $edit, t('Save'));
   }
 
   /**
