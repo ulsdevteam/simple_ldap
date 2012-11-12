@@ -344,6 +344,19 @@ class SimpleLdapRoleChangeDrupalUserRoleTestCase extends SimpleLdapRoleTestCase 
     $ldap_group = $server->search($test_group['dn'], $filter, 'base');
     $this->assertEqual($ldap_group['count'], 0, t('@user was removed from the @group LDAP group', array('@user' => $search, '@group' => $test_group['dn'])));
 
+    // Repopulate the user edit form again.
+    $edit = array(
+      'roles[' . $drupal_role->rid . ']' => TRUE,
+    );
+
+    // Submit the user edit form.
+    $this->drupalPost('user/' . $drupal_user->uid . '/edit', $edit, t('Save'));
+    $this->assertText(t('The changes have been saved.'), t('The changes have been saved.'));
+
+    // Verify that the LDAP user is a member of the LDAP group again.
+    $ldap_group = $server->search($test_group['dn'], $filter, 'base');
+    $this->assertEqual($ldap_group['count'], 1, t('@user was added to the @group LDAP group', array('@user' => $search, '@group' => $test_group['dn'])));
+
   }
 
 }
