@@ -115,6 +115,10 @@ class SimpleLdapRoleCreateDrupalRoleTestCase extends SimpleLdapRoleTestCase {
       }
     }
 
+    // Cleanup.
+    if ($result['count'] == 1) {
+      $server->delete($result[0]['dn']);
+    }
   }
 
 }
