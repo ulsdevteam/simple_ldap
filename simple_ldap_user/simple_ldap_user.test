@@ -457,6 +457,9 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     $ldap_user = new SimpleLdapUser($name);
     $this->assertTrue($ldap_user->exists, t('New account was provisioned to LDAP.'));
 
+    // Cleanup
+    $ldap_user->delete();
+
     // Allow registration by site visitors, but require administrator approval.
     variable_set('user_register', USER_REGISTER_VISITORS_ADMINISTRATIVE_APPROVAL);
     $edit = $this->formData($name, $mail);
@@ -464,6 +467,12 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     $accounts = user_load_multiple(array(), array('name' => $name, 'mail' => $mail));
     $new_user = reset($accounts);
     $this->assertFalse($new_user->status, t('New account is blocked until approved by an administrator.'));
+    $ldap_user = new SimpleLdapUser($name);
+    $this->assertTrue($ldap_user->exists, t('New account was provisioned to LDAP.'));
+
+    // Cleanup
+    $ldap_user->delete();
+
   }
 
   /**
@@ -491,6 +500,11 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     $new_user = reset($accounts);
     $this->assertText(t('Registration successful. You are now logged in.'), t('Users are logged in after registering.'));
     $this->drupalLogout();
+    $ldap_user = new SimpleLdapUser($name);
+    $this->assertTrue($ldap_user->exists, t('New account has been provisioned to LDAP.'));
+
+    // Cleanup.
+    $ldap_user->delete();
 
     // Allow registration by site visitors, but require administrator approval.
     variable_set('user_register', USER_REGISTER_VISITORS_ADMINISTRATIVE_APPROVAL);
@@ -523,6 +537,9 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     // Login after administrator approval.
     $this->drupalPost('user/login', $auth, t('Log in'));
     $this->assertText(t('Member for'), t('The user can log in after administrator approval.'));
+
+    // Cleanup.
+    $ldap_user->delete();
   }
 
   /**
@@ -578,6 +595,9 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
         $this->assertEqual($ldap_user->{$field['ldap']}[0], $edit[$field['drupal'] . '[und][0][value]'], t('The :field LDAP attribute was correctly saved.', array(':field' => $field['ldap'])));
       }
     }
+
+    // Cleanup
+    $ldap_user->delete();
   }
 
 }
