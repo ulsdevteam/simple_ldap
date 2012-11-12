@@ -10,7 +10,12 @@ abstract class SimpleLdapRoleTestCase extends DrupalWebTestCase {
    * Inherited parent::setUp().
    */
   public function setUp() {
-    parent::setUp(array('simple_ldap', 'simple_ldap_role', 'simple_ldap_test', 'simple_ldap_user'));
+    parent::setUp(array(
+      'simple_ldap',
+      'simple_ldap_role',
+      'simple_ldap_test',
+      'simple_ldap_user',
+    ));
   }
 
   /**
@@ -44,6 +49,9 @@ abstract class SimpleLdapRoleTestCase extends DrupalWebTestCase {
 
 class SimpleLdapRoleCreateDrupalRoleTestCase extends SimpleLdapRoleTestCase {
 
+  /**
+   * Inherited parent::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name' => 'Create Drupal Role',
@@ -52,6 +60,9 @@ class SimpleLdapRoleCreateDrupalRoleTestCase extends SimpleLdapRoleTestCase {
     );
   }
 
+  /**
+   * Creates a drupal role, and verifies LDAP.
+   */
   public function testCreateRole() {
     // Get module configurations.
     $role_objectclass = variable_get('simple_ldap_role_objectclass');
@@ -110,6 +121,9 @@ class SimpleLdapRoleCreateDrupalRoleTestCase extends SimpleLdapRoleTestCase {
 
 class SimpleLdapRoleUpdateDrupalRoleTestCase extends SimpleLdapRoleTestCase {
 
+  /**
+   * Inherited parent::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name' => 'Update Drupal Role',
@@ -118,6 +132,9 @@ class SimpleLdapRoleUpdateDrupalRoleTestCase extends SimpleLdapRoleTestCase {
     );
   }
 
+  /**
+   * Updates a Drupal role, and verifies LDAP.
+   */
   public function testUpdateRole() {
     // Get module configurations.
     $attribute_name = variable_get('simple_ldap_role_attribute_name');
@@ -176,6 +193,9 @@ class SimpleLdapRoleUpdateDrupalRoleTestCase extends SimpleLdapRoleTestCase {
 
 class SimpleLdapRoleDeleteDrupalRoleTestCase extends SimpleLdapRoleTestCase {
 
+  /**
+   * Inherited parent::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name' => 'Delete Drupal Role',
@@ -184,6 +204,9 @@ class SimpleLdapRoleDeleteDrupalRoleTestCase extends SimpleLdapRoleTestCase {
     );
   }
 
+  /**
+   * Deletes a Drupal role, and checks LDAP.
+   */
   public function testDeleteRole() {
     // Get module configurations.
     $attribute_name = variable_get('simple_ldap_role_attribute_name');
@@ -237,6 +260,9 @@ class SimpleLdapRoleDeleteDrupalRoleTestCase extends SimpleLdapRoleTestCase {
 
 class SimpleLdapRoleChangeDrupalUserRoleTestCase extends SimpleLdapRoleTestCase {
 
+  /**
+   * Inherited parent::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name' => 'Change Drupal roles',
@@ -245,6 +271,9 @@ class SimpleLdapRoleChangeDrupalUserRoleTestCase extends SimpleLdapRoleTestCase 
     );
   }
 
+  /**
+   * Changes a user's drupal roles.
+   */
   public function testChangeDrupalUserRole() {
     // Load configuration variables.
     $test_user = variable_get('simple_ldap_test_user');
@@ -319,8 +348,11 @@ class SimpleLdapRoleChangeDrupalUserRoleTestCase extends SimpleLdapRoleTestCase 
 
 }
 
-class SimpleLdapRoleCreateLdapGroup extends SimpleLdapRoleTestCase {
+class SimpleLdapRoleModifyLdapGroup extends SimpleLdapRoleTestCase {
 
+  /**
+   * Inherited public::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name' => 'Modify LDAP Groups',
@@ -329,7 +361,10 @@ class SimpleLdapRoleCreateLdapGroup extends SimpleLdapRoleTestCase {
     );
   }
 
-  public function testCreateLdapGroup() {
+  /**
+   * Tests creating and modifying a group directly in LDAP.
+   */
+  public function testModifyLdapGroup() {
     // Load configuration variables.
     $role_basedn = variable_get('simple_ldap_role_basedn');
     $role_objectclass = variable_get('simple_ldap_role_objectclass');
@@ -363,7 +398,7 @@ class SimpleLdapRoleCreateLdapGroup extends SimpleLdapRoleTestCase {
     $drupal_role = user_role_load_by_name($new_role);
     $this->assertFalse($drupal_role, t('The @group LDAP group does not exist as a Drupal role.', array('@group' => $new_role)));
 
-    // Run cron
+    // Run cron.
     $this->cronRun();
 
     // Verify that the test LDAP group exists in Drupal.
@@ -382,7 +417,7 @@ class SimpleLdapRoleCreateLdapGroup extends SimpleLdapRoleTestCase {
     $ldap_group = $server->search($newdn, simple_ldap_role_filter(), 'base');
     $this->assertEqual($ldap_group['count'], 1, t('@dn exists in LDAP', array('@dn' => $newdn)));
 
-    // Run cron
+    // Run cron.
     $this->cronRun();
 
     // Verify that the test LDAP group exists in Drupal.
@@ -397,6 +432,9 @@ class SimpleLdapRoleCreateLdapGroup extends SimpleLdapRoleTestCase {
 
 class SimpleLdapRoleChangeLdapGroupMembership extends SimpleLdapRoleTestCase {
 
+  /**
+   * Inherited parent::getInfo().
+   */
   public static function getInfo() {
     return array(
       'name' => 'Change LDAP Group Membership',
@@ -405,6 +443,9 @@ class SimpleLdapRoleChangeLdapGroupMembership extends SimpleLdapRoleTestCase {
     );
   }
 
+  /**
+   * Test changing group membership directly in LDAP.
+   */
   public function testChangeLdapGroupMembership() {
     // Load configuration variables.
     $test_user = variable_get('simple_ldap_test_user');
@@ -435,7 +476,7 @@ class SimpleLdapRoleChangeLdapGroupMembership extends SimpleLdapRoleTestCase {
     // Verify that the user is assigned to the test role.
     $this->assertTrue(in_array($test_group[$role_attribute_name], $drupal_user->roles), t('@user is assigned to the @role role.', array('@user' => $drupal_user->name, '@role' => $test_group[$role_attribute_name])));
 
-    // Generate a new member attribute
+    // Generate a new member attribute.
     if ($role_attribute_member_format == 'dn') {
       $ldap_user = SimpleLdapUser::singleton($test_group[$role_attribute_name] . $test_group[$role_attribute_name]);
       $member = $ldap_user->dn;
@@ -448,7 +489,7 @@ class SimpleLdapRoleChangeLdapGroupMembership extends SimpleLdapRoleTestCase {
     $server->modify($test_group['dn'], array($role_attribute_member => $member), 'add');
     $server->modify($test_group['dn'], array($role_attribute_member => $test_user['dn']), 'del');
 
-    // Reload the drupal user
+    // Reload the drupal user.
     $drupal_user = user_load_multiple(array(), array('name' => $test_user[$user_attribute_name]), TRUE);
     $drupal_user = reset($drupal_user);
 
@@ -459,7 +500,7 @@ class SimpleLdapRoleChangeLdapGroupMembership extends SimpleLdapRoleTestCase {
     $server->modify($test_group['dn'], array($role_attribute_member => $test_user['dn']), 'add');
     $server->modify($test_group['dn'], array($role_attribute_member => $member), 'del');
 
-    // Reload the drupal user
+    // Reload the drupal user.
     $drupal_user = user_load_multiple(array(), array('name' => $test_user[$user_attribute_name]), TRUE);
     $drupal_user = reset($drupal_user);
 

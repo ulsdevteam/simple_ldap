@@ -224,4 +224,3 @@ function simple_ldap_role_attribute_member_ajax($form, $form_state) {
     $form['advanced']['simple_ldap_role_attribute_member_default'],
   );
 }
-
