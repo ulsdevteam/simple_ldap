@@ -12,6 +12,13 @@ function simple_ldap_user_install() {
 }
 
 /**
+ * Implements hook_disable().
+ */
+function simple_ldap_user_disable() {
+  variable_del('password_inc');
+}
+
+/**
  * Implements hook_uninstall().
  */
 function simple_ldap_user_uninstall() {
