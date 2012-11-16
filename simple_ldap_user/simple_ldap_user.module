@@ -123,8 +123,8 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
 function simple_ldap_user_menu_alter(&$items) {
   $server = SimpleLdapServer::singleton();
   if ($server->readonly) {
-    unset($items['user/register']);
-    unset($items['user/password']);
+    $items['user/register']['access callback'] = FALSE;
+    $items['user/password']['access callback'] = FALSE;
   }
 }
 
