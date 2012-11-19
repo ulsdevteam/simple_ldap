@@ -44,6 +44,7 @@ class SimpleLdapUserController extends UserController {
 
       if (!$ldap_user->exists) {
         // Block the user if it does not exist in LDAP.
+        $users[$uid]->simple_ldap_user_status = $drupal_user->status;
         $users[$uid]->status = 0;
       }
 
