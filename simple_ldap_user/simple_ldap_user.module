@@ -165,9 +165,7 @@ function simple_ldap_user_user_login(&$edit, $account) {
  */
 function simple_ldap_user_user_presave(&$edit, $account, $category) {
   if (isset($account->simple_ldap_user_status)) {
-    $status = $account->status;
     $account->status = $account->simple_ldap_user_status;
-    $account->simple_ldap_user_status = $status;
   }
 
   if ($account->is_new && isset($edit['name'])) {
