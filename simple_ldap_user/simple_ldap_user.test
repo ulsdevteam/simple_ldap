@@ -457,7 +457,7 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     $ldap_user = new SimpleLdapUser($name);
     $this->assertTrue($ldap_user->exists, t('New account was provisioned to LDAP.'));
 
-    // Cleanup
+    // Cleanup.
     $ldap_user->delete();
 
     // Allow registration by site visitors, but require administrator approval.
@@ -470,7 +470,7 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     $ldap_user = new SimpleLdapUser($name);
     $this->assertTrue($ldap_user->exists, t('New account was provisioned to LDAP.'));
 
-    // Cleanup
+    // Cleanup.
     $ldap_user->delete();
 
   }
@@ -596,7 +596,7 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
       }
     }
 
-    // Cleanup
+    // Cleanup.
     $ldap_user->delete();
   }
 
