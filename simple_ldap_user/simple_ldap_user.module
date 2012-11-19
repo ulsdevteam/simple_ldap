@@ -164,8 +164,12 @@ function simple_ldap_user_user_login(&$edit, $account) {
  *   The form values submitted by the user.
  */
 function simple_ldap_user_user_presave(&$edit, $account, $category) {
+  // Do not overwrite the user status in the database.
   if (isset($account->simple_ldap_user_status)) {
     $account->status = $account->simple_ldap_user_status;
+  }
+  if (isset($account->original) && isset($account->original->simple_ldap_user_status)) {
+    $account->original->status = $account->simple_ldap_user_status;
   }
 
   if ($account->is_new && isset($edit['name'])) {
