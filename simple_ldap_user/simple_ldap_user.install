@@ -5,9 +5,9 @@
  */
 
 /**
- * Implements hook_install().
+ * Implements hook_enable().
  */
-function simple_ldap_user_install() {
+function simple_ldap_user_enable() {
   variable_set('password_inc', drupal_get_path('module', 'simple_ldap_user') . '/simple_ldap_user.password.inc');
 }
 
@@ -15,7 +15,10 @@ function simple_ldap_user_install() {
  * Implements hook_disable().
  */
 function simple_ldap_user_disable() {
-  variable_del('password_inc');
+  $password_inc = drupal_get_path('module', 'simple_ldap_user') . '/simple_ldap_user.password.inc';
+  if (variable_get('password_inc') == $password_inc) {
+    variable_del('password_inc');
+  }
 }
 
 /**
@@ -32,6 +35,4 @@ function simple_ldap_user_uninstall() {
   variable_del('simple_ldap_user_source');
   variable_del('simple_ldap_user_sync');
   variable_del('simple_ldap_user_delete');
-
-  variable_del('password_inc');
 }
