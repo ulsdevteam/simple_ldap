@@ -94,11 +94,9 @@ class SimpleLdapServer {
         // Load the schema.
         $this->schema();
         return $this->schema;
-      break;
 
       case 'error':
         return ldap_errno($this->resource);
-      break;
 
       // Handle PHP ldap options.
       case 'LDAP_OPT_DEREF':
@@ -120,7 +118,6 @@ class SimpleLdapServer {
           return $value;
         }
         return FALSE;
-      break;
     }
 
     return $this->$name;
@@ -166,7 +163,6 @@ class SimpleLdapServer {
       // LDAPv3 is required, do not allow it to be changed.
       case 'LDAP_OPT_PROTOCOL_VERSION':
         return FALSE;
-      break;
 
       default:
     }

@@ -74,7 +74,6 @@ class SimpleLdapUser {
       case 'exists':
       case 'server':
         return $this->$name;
-      break;
 
       default:
         if (isset($this->attributes[$name])) {
