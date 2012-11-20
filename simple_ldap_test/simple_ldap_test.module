@@ -4,5 +4,9 @@
  * @file
  * Test module for the Simple LDAP module.
  *
- * To be used if custom module hooks need to be tested.
+ * This file is intentionally empty. simple_ldap_test is a helper module for the
+ * other simple_ldap_* modules, and provides a working configuration for running
+ * SimpleTests against a real LDAP server.
+ *
+ * @see simple_ldap_test.config.inc
  */
