@@ -71,13 +71,13 @@ class SimpleLdapSchema {
     $this->load($attribute);
 
     // Check to see if the requested schema entry exists.
-    $attribute = strtolower($attribute);
+    $attribute = drupal_strtolower($attribute);
     if (isset($this->schema[$attribute])) {
       if ($name === NULL) {
         return (count($this->schema[$attribute]) > 0);
       }
       else {
-        if (isset($this->schema[$attribute][strtolower($name)])) {
+        if (isset($this->schema[$attribute][drupal_strtolower($name)])) {
           // An attribute of the given name exists.
           return TRUE;
         }
@@ -103,12 +103,12 @@ class SimpleLdapSchema {
    */
   public function get($attribute, $name = NULL) {
     if ($this->exists($attribute, $name)) {
-      $attribute = strtolower($attribute);
+      $attribute = drupal_strtolower($attribute);
       if ($name === NULL) {
         return $this->schema[$attribute];
       }
       else {
-        $name = strtolower($name);
+        $name = drupal_strtolower($name);
         if (isset($this->schema[$attribute][$name])) {
           // Return a named attribute.
           return $this->schema[$attribute][$name];
@@ -225,7 +225,7 @@ class SimpleLdapSchema {
     // Determine which attributes need to be loaded.
     $load = array();
     foreach ($attributes as $attribute) {
-      $attribute = strtolower($attribute);
+      $attribute = drupal_strtolower($attribute);
       if (!isset($this->schema[$attribute])) {
         $load[] = $attribute;
       }
@@ -238,14 +238,14 @@ class SimpleLdapSchema {
       if ($result !== FALSE) {
         // Parse the schema.
         foreach ($load as $attribute) {
-          $attribute = strtolower($attribute);
+          $attribute = drupal_strtolower($attribute);
           $this->schema[$attribute] = array();
 
           // Get the values for each attribute.
           if (isset($result[$this->dn][$attribute])) {
             foreach ($result[$this->dn][$attribute] as $value) {
               $parsed = $this->parse($value);
-              $this->schema[$attribute][strtolower($parsed['name'])] = $parsed;
+              $this->schema[$attribute][drupal_strtolower($parsed['name'])] = $parsed;
             }
           }
         }
@@ -300,7 +300,7 @@ class SimpleLdapSchema {
 
     // Loop through the tokens until there are none left.
     while (count($tokens) > 0) {
-      $token = strtolower(array_shift($tokens));
+      $token = drupal_strtolower(array_shift($tokens));
       if (in_array($token, $novalue)) {
         // Single value token.
         $schema_entry[$token] = 1;

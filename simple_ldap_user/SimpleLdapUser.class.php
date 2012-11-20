@@ -24,13 +24,13 @@ class SimpleLdapUser {
 
     // List of attributes to fetch from the LDAP server.
     $attributes = array(
-      strtolower(variable_get('simple_ldap_user_attribute_name')),
-      strtolower(variable_get('simple_ldap_user_attribute_mail')),
+      drupal_strtolower(variable_get('simple_ldap_user_attribute_name', 'cn')),
+      drupal_strtolower(variable_get('simple_ldap_user_attribute_mail', 'mail')),
     );
     $map = simple_ldap_user_map();
     foreach ($map as $attribute) {
       if (isset($attribute['ldap'])) {
-        $attributes[] = strtolower($attribute['ldap']);
+        $attributes[] = $attribute['ldap'];
       }
     }
 
