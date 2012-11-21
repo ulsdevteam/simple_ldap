@@ -36,3 +36,25 @@ function simple_ldap_user_uninstall() {
   variable_del('simple_ldap_user_sync');
   variable_del('simple_ldap_user_delete');
 }
+
+/**
+ * Implements hook_requirements().
+ */
+function simple_ldap_user_requirements($phase) {
+  $requirements = array();
+  // Ensure translations don't break during installation.
+  $t = get_t();
+
+  if ($phase == 'runtime') {
+    $expected = drupal_get_path('module', 'simple_ldap_user') . '/simple_ldap_user.password.inc';
+    $password_inc = variable_get('password_inc');
+    $requirements['password_inc'] = array(
+      'title' => 'password_inc',
+      'value' => $password_inc,
+      'severity' => $password_inc == $expected ? REQUIREMENT_OK : REQUIREMENT_ERROR,
+      'description' => $t('Simple LDAP User requires overrides to some of the Drupal password hashing functions.') . ' ' . $t('If the password_inc variable is not set to the file provided by Simple LDAP User, LDAP authentication will not work.'),
+    );
+  }
+
+  return $requirements;
+}
