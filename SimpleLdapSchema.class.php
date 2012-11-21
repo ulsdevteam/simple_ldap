@@ -128,7 +128,7 @@ class SimpleLdapSchema {
   }
 
   /**
-   * Return a lis tof attributes defined for the objectclass.
+   * Return a list of attributes defined for the objectclass.
    */
   public function attributes($objectclass, $recursive = FALSE) {
     $may = $this->may($objectclass, $recursive);
