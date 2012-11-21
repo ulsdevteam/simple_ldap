@@ -145,11 +145,11 @@ function simple_ldap_user_user_login(&$edit, $account) {
   if ($sync == 'hook_user_login') {
     switch (simple_ldap_user_source()) {
       case 'ldap':
-        simple_ldap_user_sync_to_drupal($account);
+        simple_ldap_user_sync_user_to_drupal($account);
         break;
 
       case 'drupal':
-        simple_ldap_user_sync_to_ldap($account);
+        simple_ldap_user_sync_user_to_ldap($account);
         break;
     }
   }
@@ -214,7 +214,7 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
 function simple_ldap_user_user_insert(&$edit, $account, $category) {
   $ldap_user = SimpleLdapUser::singleton($account->name);
   if (!$ldap_user->exists) {
-    module_invoke_all('sync_to_ldap', $account);
+    module_invoke_all('sync_user_to_ldap', $account);
   }
 }
 
@@ -232,7 +232,7 @@ function simple_ldap_user_user_update(&$edit, $account, $category) {
   }
   $ldap_user = SimpleLdapUser::singleton($account->name);
   if ((isset($edit['status']) && $edit['status']) || $ldap_user->exists) {
-    module_invoke_all('sync_to_ldap', $account);
+    module_invoke_all('sync_user_to_ldap', $account);
   }
 }
 
@@ -263,11 +263,11 @@ function simple_ldap_user_user_load($users) {
       }
       switch (simple_ldap_user_source()) {
         case 'ldap':
-          simple_ldap_user_sync_to_drupal($user);
+          simple_ldap_user_sync_user_to_drupal($user);
           break;
 
         case 'drupal':
-          simple_ldap_user_sync_to_ldap($user);
+          simple_ldap_user_sync_user_to_ldap($user);
           break;
       }
     }
@@ -359,7 +359,7 @@ function simple_ldap_user_map() {
 /**
  * Synchronizes Drupal user properties to LDAP.
  */
-function simple_ldap_user_sync_to_ldap($drupal_user) {
+function simple_ldap_user_sync_user_to_ldap($drupal_user) {
   // simple_ldap_user configuration.
   $attribute_name = variable_get('simple_ldap_user_attribute_name');
   $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
@@ -409,7 +409,7 @@ function simple_ldap_user_sync_to_ldap($drupal_user) {
 /**
  * Synchronizes LDAP attributes to Drupal user properties.
  */
-function simple_ldap_user_sync_to_drupal($drupal_user) {
+function simple_ldap_user_sync_user_to_drupal($drupal_user) {
   // simple_ldap_user configuration.
   $attribute_name = variable_get('simple_ldap_user_attribute_name');
   $attribute_mail = variable_get('simple_ldap_user_attribute_mail');

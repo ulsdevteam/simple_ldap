@@ -37,11 +37,11 @@ function simple_ldap_role_user_load($users) {
       }
       switch (simple_ldap_role_source()) {
         case 'ldap':
-          simple_ldap_role_sync_to_drupal($user);
+          simple_ldap_role_sync_user_to_drupal($user);
           break;
 
         case 'drupal':
-          simple_ldap_role_sync_to_ldap($user);
+          simple_ldap_role_sync_user_to_ldap($user);
           break;
       }
     }
@@ -59,11 +59,11 @@ function simple_ldap_role_user_login(&$edit, $account) {
   if ($sync == 'hook_user_login') {
     switch (simple_ldap_role_source()) {
       case 'ldap':
-        simple_ldap_role_sync_to_drupal($account);
+        simple_ldap_role_sync_user_to_drupal($account);
         break;
 
       case 'drupal':
-        simple_ldap_role_sync_to_ldap($account);
+        simple_ldap_role_sync_user_to_ldap($account);
         break;
     }
   }
@@ -308,9 +308,10 @@ function simple_ldap_role_dn($name) {
 }
 
 /**
+ * Implements hook_sync_user_to_ldap().
  * Synchronize Drupal roles to LDAP groups.
  */
-function simple_ldap_role_sync_to_ldap($drupal_user) {
+function simple_ldap_role_sync_user_to_ldap($drupal_user) {
   // Get module configuration.
   $basedn = variable_get('simple_ldap_role_basedn');
   $scope = variable_get('simple_ldap_role_scope');
@@ -420,7 +421,7 @@ function simple_ldap_role_sync_to_ldap($drupal_user) {
 /**
  * Synchronize LDAP groups to Drupal roles.
  */
-function simple_ldap_role_sync_to_drupal($drupal_user) {
+function simple_ldap_role_sync_user_to_drupal($drupal_user) {
   // Get module configuration.
   $basedn = variable_get('simple_ldap_role_basedn');
   $scope = variable_get('simple_ldap_role_scope');
