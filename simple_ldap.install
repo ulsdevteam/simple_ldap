@@ -16,3 +16,47 @@ function simple_ldap_uninstall() {
   variable_del('simple_ldap_readonly');
   variable_del('simple_ldap_pagesize');
 }
+
+/**
+ * Implements hook_requirements().
+ */
+function simple_ldap_requirements($phase) {
+  $requirements = array();
+  // Ensure translations don't break during installation.
+  $t = get_t();
+
+  // Make sure the PHP LDAP extension is loaded.
+  $requirements['php.ldap'] = array(
+    'title' => $t('PHP LDAP extension'),
+    'value' => extension_loaded('ldap') ? $t('Enabled') : $t('Disabled'),
+    'severity' => extension_loaded('ldap') ? REQUIREMENT_OK : REQUIREMENT_ERROR,
+  );
+
+  // Make sure an LDAP server is configured, and Drupal can connect to it.
+  if ($phase == 'runtime') {
+    if (simple_ldap_configured()) {
+      $server = SimpleLdapServer::singleton();
+      $bind = $server->bind();
+      if ($bind) {
+        $value = $t('Successfully bound to @host', array('@host' => $server->host));
+        $severity = REQUIREMENT_OK;
+      }
+      else {
+        $value = $t('Failed to bind to @host', array('@host' => $server->host));
+        $severity = REQUIREMENT_ERROR;
+      }
+    }
+    else {
+      $value = $t('Simple LDAP Server is not configured');
+      $severity = REQUIREMENT_WARNING;
+    }
+
+    $requirements['ldap.server'] = array(
+      'title' => $t('Simple LDAP Server'),
+      'value' => $value,
+      'severity' => $severity,
+    );
+  }
+
+  return $requirements;
+}
