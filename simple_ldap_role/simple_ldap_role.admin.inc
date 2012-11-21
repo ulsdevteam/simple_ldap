@@ -154,7 +154,6 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#default_value' => variable_get('simple_ldap_role_sync', 'hook_user_load'),
   );
 
-  // @todo - Come up with better option names.
   $form['advanced']['simple_ldap_role_attribute_member_format'] = array(
     '#type' => 'radios',
     '#title' => t('Group member format'),

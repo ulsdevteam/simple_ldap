@@ -6,8 +6,6 @@
 
 /**
  * LDAP server configuration form.
- *
- * @todo Require that simple_ldap_pagesize is an integer or empty.
  */
 function simple_ldap_admin() {
   $form = array();

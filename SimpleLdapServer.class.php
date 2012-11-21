@@ -6,9 +6,6 @@
 
 /**
  * Simple LDAP server class.
- *
- * @todo throw exceptions when errors occur.
- *   This includes trying to do a write operation when $this->readonly == TRUE.
  */
 class SimpleLdapServer {
 

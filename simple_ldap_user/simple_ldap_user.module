@@ -296,24 +296,6 @@ function simple_ldap_user_login_name_validate($form, &$form_state) {
 }
 
 /**
- * Returns whether simple_ldap_user has been configured.
- *
- * @todo - Is this used?
- */
-function simple_ldap_user_configured() {
-  $configured = TRUE;
-
-  // Check each of the required configuration items.
-  $configured = $configured && variable_get('simple_ldap_user_basedn') !== NULL;
-  $configured = $configured && variable_get('simple_ldap_user_scope') !== NULL;
-  $configured = $configured && variable_get('simple_ldap_user_objectclass') !== NULL;
-  $configured = $configured && variable_get('simple_ldap_user_attribute_name') !== NULL;
-  $configured = $configured && variable_get('simple_ldap_user_attribute_mail') !== NULL;
-
-  return $configured;
-}
-
-/**
  * Returns the configured data sync direction.
  *
  * The sync direction is dependent on both the configurations of simple_ldap and

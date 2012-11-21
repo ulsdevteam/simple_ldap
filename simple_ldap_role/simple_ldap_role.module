@@ -231,7 +231,7 @@ function simple_ldap_role_cron() {
   for ($i = 0; $i < $ldap_groups['count']; $i++) {
     $name = $ldap_groups[$i][$attribute_name][0];
     if (!in_array($name, $drupal_roles)) {
-      $role = new StdClass();
+      $role = new stdClass();
       $role->name = $name;
       user_role_save($role);
     }
