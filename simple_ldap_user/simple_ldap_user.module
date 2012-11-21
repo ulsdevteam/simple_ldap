@@ -2,9 +2,6 @@
 /**
  * @file
  * Main simple_ldap_user module file.
- *
- * @todo Rename the simple_ldap_user_map variable to
- *   simple_ldap_user_attribute_map.
  */
 
 /**
@@ -88,7 +85,7 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
       // Disable mapped fields if LDAP Server is read-only.
       $server = SimpleLdapServer::singleton();
       if ($server->readonly) {
-        $attribute_map = simple_ldap_user_map();
+        $attribute_map = simple_ldap_user_attribute_map();
 
         // Mail and Password are special attributes.
         $form['account']['mail']['#disabled'] = $server->readonly;
@@ -178,7 +175,7 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
     if ($ldap_user->exists) {
       // Force an initial sync from LDAP to drupal.
       $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
-      $attribute_map = simple_ldap_user_map();
+      $attribute_map = simple_ldap_user_attribute_map();
 
       // Get the user's email address.
       $edit['mail'] = $ldap_user->{$attribute_mail}[0];
@@ -337,8 +334,8 @@ function simple_ldap_user_source() {
 /**
  * Returns the attribute map, if configured.
  */
-function simple_ldap_user_map() {
-  $map = variable_get('simple_ldap_user_map', array());
+function simple_ldap_user_attribute_map() {
+  $map = variable_get('simple_ldap_user_attribute_map', array());
   foreach ($map as $key => $value) {
     // LDAP likes lowercase.
     $map[$key]['ldap'] = strtolower($map[$key]['ldap']);
@@ -364,7 +361,7 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
   $attribute_name = variable_get('simple_ldap_user_attribute_name');
   $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
   $attribute_pass = variable_get('simple_ldap_user_attribute_pass');
-  $attribute_map = simple_ldap_user_map();
+  $attribute_map = simple_ldap_user_attribute_map();
 
   // Load the LDAP user.
   $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
@@ -413,7 +410,7 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
   // simple_ldap_user configuration.
   $attribute_name = variable_get('simple_ldap_user_attribute_name');
   $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
-  $attribute_map = simple_ldap_user_map();
+  $attribute_map = simple_ldap_user_attribute_map();
 
   // Load the LDAP user.
   $ldap_user = SimpleLdapUser::singleton($drupal_user->name);

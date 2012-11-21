@@ -179,30 +179,6 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#suffix' => '</div>',
   );
 
-  // Generate a table to display the attribute map if one is configured.
-  $table = '';
-  $attribute_map = simple_ldap_role_attribute_map();
-  if (!empty($attribute_map)) {
-    $table = '<table>';
-    $table .= '<thead><tr><th>' . t('Drupal field') . '</th><th>' . t('LDAP attribute') . '</th></tr></thead>';
-    $table .= '<tbody>';
-    $class = 'odd';
-    foreach ($attribute_map as $attribute) {
-      $table .= '<tr class="' . $class . '">';
-      $table .= '<td>' . $attribute['drupal'] . '</td>';
-      $table .= '<td>' . $attribute['ldap'] . '</td>';
-      $table .= '</tr>';
-      $class = $class == 'odd' ? 'even' : 'odd';
-    }
-    $table .= '</tbody></table>';
-  }
-
-  $form['advanced']['simple_ldap_role_attribute_map'] = array(
-    '#type' => 'item',
-    '#title' => t('Attribute map'),
-    '#description' => $table . t('Additional attribute maps can be specified in @file using @variable.', array('@file' => 'settings.php', '@variable' => '$conf[\'simple_ldap_role_attribute_map\']')),
-  );
-
   return system_settings_form($form);
 }
 

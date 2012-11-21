@@ -27,8 +27,8 @@ class SimpleLdapUser {
       drupal_strtolower(variable_get('simple_ldap_user_attribute_name', 'cn')),
       drupal_strtolower(variable_get('simple_ldap_user_attribute_mail', 'mail')),
     );
-    $map = simple_ldap_user_map();
-    foreach ($map as $attribute) {
+    $attribute_map = simple_ldap_user_attribute_map();
+    foreach ($attribute_map as $attribute) {
       if (isset($attribute['ldap'])) {
         $attributes[] = $attribute['ldap'];
       }

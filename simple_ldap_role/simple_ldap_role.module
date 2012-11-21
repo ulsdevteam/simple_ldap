@@ -2,8 +2,6 @@
 /**
  * @file
  * Main simple_ldap_role module file.
- *
- * @todo Implement (and simpletest) the simple_ldap_role_attribute_map variable.
  */
 
 /**
@@ -256,28 +254,6 @@ function simple_ldap_role_source() {
 
   // Get the source config from simple_ldap_role.
   return variable_get('simple_ldap_role_source', 'ldap');
-}
-
-/**
- * Returns the Simple LDAP Role attribute map, if configured.
- */
-function simple_ldap_role_attribute_map() {
-  $attribute_map = variable_get('simple_ldap_role_attribute_map', array());
-  foreach ($attribute_map as $key => $attribute) {
-    // LDAP likese lowercase.
-    $attribute_map[$key]['ldap'] = strtolower($attribute_map[$key]['ldap']);
-
-    // Make sure a type is set.
-    if (!isset($attribute['type'])) {
-      $attribute_map[$key]['type'] = 'default';
-    }
-
-    // Make sure "required" is set.
-    if (!isset($attribute['required'])) {
-      $attribute_map[$key]['required'] = FALSE;
-    }
-  }
-  return $attribute_map;
 }
 
 /**
