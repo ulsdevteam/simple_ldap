@@ -421,12 +421,17 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
    * Generate random data for user registration form.
    */
   public function formData(&$name, &$mail) {
+    // Generate form data.
     $edit['name'] = $name = $this->randomName();
     $edit['mail'] = $mail = $edit['name'] . '@example.com';
 
+    // Fill in required fields from the user attribute map.
+    $server = SimpleLdapServer::singleton();
+    $objectclass = variable_get('simple_ldap_user_objectclass');
+    $must = $server->schema->must($objectclass, TRUE);
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
-      if ($attribute['required']) {
+      if (in_array($attribute['ldap'], $must)) {
         $edit[$attribute['drupal'] . '[und][0][value]'] = $this->randomName();
       }
     }
@@ -547,8 +552,14 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
    */
   public function testRegistrationValues() {
     // Get simple_ldap_user config.
+    $objectclass = variable_get('simple_ldap_user_objectclass');
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+    $attribute_map = simple_ldap_user_attribute_map();
+
+    // Get a list of required LDAP attributes for the user objectclass.
+    $server = SimpleLdapServer::singleton();
+    $must = $server->schema->must($objectclass, TRUE);
 
     // Allow registration by site visitors without administrator approval.
     variable_set('user_register', USER_REGISTER_VISITORS);
@@ -562,9 +573,8 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
 
     // Verify that the required mapped fields show up on the registration form.
     $this->drupalGet('user/register');
-    $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $field) {
-      if ($field['required'] && $field['type'] == 'field') {
+      if (in_array($field['ldap'], $must) && $field['type'] == 'field') {
         $this->assertText($field['drupal'], t(':field appears on the user registration form', array(':field' => $field['drupal'])));
       }
     }
@@ -589,8 +599,8 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     $this->assertEqual($new_user->mail, $mail, t('Drupal e-mail address matches.'));
     $this->assertEqual($ldap_user->{$attribute_mail}[0], $mail, t('LDAP e-mail address matches.'));
 
-    foreach ($map as $field) {
-      if ($field['required'] && $field['type'] == 'field') {
+    foreach ($attribute_map as $field) {
+      if (in_array($field['ldap'], $must) && $field['type'] == 'field') {
         $this->assertEqual($new_user->{$field['drupal']}[LANGUAGE_NONE][0]['value'], $edit[$field['drupal'] . '[und][0][value]'], t('The :field Drupal field value was correctly saved.', array(':field' => $field['drupal'])));
         $this->assertEqual($ldap_user->{$field['ldap']}[0], $edit[$field['drupal'] . '[und][0][value]'], t('The :field LDAP attribute was correctly saved.', array(':field' => $field['ldap'])));
       }
@@ -862,9 +872,13 @@ class SimpleLdapUserDeleteUserTestCase extends SimpleLdapUserWebTestCase {
     $edit['pass[pass1]'] = $pass = $this->randomName();
     $edit['pass[pass2]'] = $pass;
 
+    // Fill in required fields from the user attribute map.
+    $server = SimpleLdapServer::singleton();
+    $objectclass = variable_get('simple_ldap_user_objectclass');
+    $must = $server->schema->must($objectclass, TRUE);
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
-      if ($attribute['required']) {
+      if (in_array($attribute['ldap'], $must)) {
         $edit[$attribute['drupal'] . '[und][0][value]'] = $this->randomName();
       }
     }

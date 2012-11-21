@@ -335,22 +335,17 @@ function simple_ldap_user_source() {
  * Returns the attribute map, if configured.
  */
 function simple_ldap_user_attribute_map() {
-  $map = variable_get('simple_ldap_user_attribute_map', array());
-  foreach ($map as $key => $value) {
+  $attribute_map = variable_get('simple_ldap_user_attribute_map', array());
+  foreach ($attribute_map as $key => $value) {
     // LDAP likes lowercase.
-    $map[$key]['ldap'] = strtolower($map[$key]['ldap']);
+    $attribute_map[$key]['ldap'] = strtolower($attribute_map[$key]['ldap']);
 
     // Make sure a type is set.
     if (!isset($value['type'])) {
-      $map[$key]['type'] = 'default';
-    }
-
-    // Make sure "required" is set.
-    if (!isset($value['required'])) {
-      $map[$key]['required'] = FALSE;
+      $attribute_map[$key]['type'] = 'default';
     }
   }
-  return $map;
+  return $attribute_map;
 }
 
 /**
