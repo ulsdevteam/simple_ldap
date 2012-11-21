@@ -1,93 +1,42 @@
-README.txt
-==========
+The Simple LDAP project is a set of modules to provide Drupal integration with
+an LDAPv3 server. It is an alternative to the Lightweight Directory Access
+Protocol (LDAP) module, with a much narrower set of features. The goal of the
+project is to provide very basic LDAP functionality which should cover most
+common use cases. Any edge case functionality or site-specific requirements
+should be implemented using a helper module.
 
-TODO:
-- Use LDAP schema to determine required fields in simpletests.
+The current implementation was developed against OpenLDAP, with some testing
+against Active Directory. Most functionality should work with any LDAPv3
+compliant server, but this is largely untested.
 
-SimpleLdapServer Fingerprint
-============================
+The project consists of one main module, and three submodules.
 
-// Variables exposed by __get() and __set()
-$host
-$port
-$starttls
-$version
-$binddn
-$bindpw
-$pagesize
-$readonly
+Simple LDAP
+===========
 
-// Dynamically loaded in __get()
-$error
-$rootdse
-$[sub]schema
+This is the main module, on which all of the other modules are based. It
+provides an interface to the configured LDAP directory with basic low-level
+LDAP functions and no bells or whistles. It does not provide anything to
+Drupal on its own.
 
-// Static functions
-SimpleLdapServer::singleton($reset = FALSE)
+Simple LDAP User
+================
 
-// Magic functions
-__construct()
-__destruct()
-__get($name)
-__set($name, $value)
+This module allows authentication to the LDAP directory configured in the
+Simple LDAP module. It also provides synchronization services both to and from
+LDAP and Drupal. It supports mapping LDAP attributes to Drupal user object
+fields (both native, and using Field API).
 
-// Control functions
-bind($binddn = null, $bindpw = null)
-unbind()
+Simple LDAP Role
+================
 
-// Read functions
-search($base_dn, $filter, $scope = 'sub', $attributes = array(),
-       $attrsonly = 0, $sizelimit = 0, $timelimit = 0,
-       $deref = LDAP_DEREF_NEVER)
-exists($dn)
-entry($dn)
-compare($dn, $attribute, $value)
+This module allows Drupal roles to be derived from LDAP groups, and
+vice-versa. It is dependent on the Simple LDAP User module.
 
-// Write functions
-add($dn, $attributes)
-delete($dn, $recursive = false)
-modify($dn, $attributes, $type = FALSE)
-move($dn, $newdn)
-copy($dn, $newdn)
+Simple LDAP Test
+================
 
-// Utility functions
-utf8encode($attributes)
-utf8decode($attributes)
-
-// Private functions
-clean($entry)
-connect()
-disconnect()
-rootdse()
-schema()
-
-
-SimpleLdapSchema Fingerprint
-============================
-
-// Variables exposed by __get() and __set()
-$attributes
-$dn
-
-// Dynamically loaded in __get()
-$[sub]entry
-
-// Magic functions
-__construct(SimpleLdapServer $server)
-__get($name)
-__set($name, $value)
-
-// Query functions
-exists($attribute, $name = NULL)
-get($attribute = NULL, $name = NULL)
-
-// ObjectClass functions
-attributes($objectclass, $recursive = FALSE)
-may($objectclass, $recursive = FALSE)
-must($objectclass, $recursive = FALSE)
-superclass($objectclass, $recursive = FALSE)
-
-// Potential candidates for future implementation
-isBinary($attribute)
-getAssignedOCL($attribute)
-checkAttribute($attribute, $objectclasses)
+This is a hidden module, which provides the glue to allow SimpleTest
+integration to the other modules. In order to perform the other modules'
+simpletests, there is a configuration file at
+simple_ldap_test/simple_ldap_test.config.inc which needs to be edited.
