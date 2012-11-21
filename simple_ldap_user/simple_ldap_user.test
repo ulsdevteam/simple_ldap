@@ -91,7 +91,7 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
     $this->assertEqual($test_user[$attribute_mail] . $suffix, $drupal_user->mail, t(':value matches the control value', array(':value' => $drupal_user->mail)));
 
     // Check the other mapped fields.
-    $attribute_map = simple_ldap_user_atttribute_map();
+    $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
       switch ($attribute['type']) {
         case 'field':
@@ -348,7 +348,7 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserWebTestCase {
     $test_user = variable_get('simple_ldap_test_user');
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
-    $attribute_map = simple_ldap_user_atttribute_map();
+    $attribute_map = simple_ldap_user_attribute_map();
 
     // Get the drupal user.
     $drupal_user = user_load_by_name($test_user[$attribute_name]);
@@ -424,8 +424,8 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     $edit['name'] = $name = $this->randomName();
     $edit['mail'] = $mail = $edit['name'] . '@example.com';
 
-    $atttribute_map = simple_ldap_user_atttribute_map();
-    foreach ($atttribute_map as $attribute) {
+    $attribute_map = simple_ldap_user_attribute_map();
+    foreach ($attribute_map as $attribute) {
       if ($attribute['required']) {
         $edit[$attribute['drupal'] . '[und][0][value]'] = $this->randomName();
       }
@@ -562,8 +562,8 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
 
     // Verify that the required mapped fields show up on the registration form.
     $this->drupalGet('user/register');
-    $atttribute_map = simple_ldap_user_atttribute_map();
-    foreach ($atttribute_map as $field) {
+    $attribute_map = simple_ldap_user_attribute_map();
+    foreach ($attribute_map as $field) {
       if ($field['required'] && $field['type'] == 'field') {
         $this->assertText($field['drupal'], t(':field appears on the user registration form', array(':field' => $field['drupal'])));
       }
@@ -632,7 +632,7 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
     $this->assertNotIdentical($result, FALSE, t('Modified @attr attribute in LDAP.', array('@attr' => $attribute_mail)));
 
     // Modify the other mapped attributes.
-    $attribute_map = simple_ldap_user_atttribute_map();
+    $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
       $result = $server->modify($test_user['dn'], array($attribute['ldap'] => $test_user[$attribute['ldap']] . $suffix), 'replace');
       $this->assertNotIdentical($result, FALSE, t('Modified @attr attribute in LDAP.', array('@attr' => $attribute['ldap'])));
@@ -659,7 +659,7 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
     $edit['mail'] = $test_user[$attribute_mail];
 
     // Update the other mapped attributes.
-    $attribute_map = simple_ldap_user_atttribute_map();
+    $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
       switch ($attribute['type']) {
         case 'field':
@@ -862,7 +862,7 @@ class SimpleLdapUserDeleteUserTestCase extends SimpleLdapUserWebTestCase {
     $edit['pass[pass1]'] = $pass = $this->randomName();
     $edit['pass[pass2]'] = $pass;
 
-    $attribute_map = simple_ldap_user_atttribute_map();
+    $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
       if ($attribute['required']) {
         $edit[$attribute['drupal'] . '[und][0][value]'] = $this->randomName();
