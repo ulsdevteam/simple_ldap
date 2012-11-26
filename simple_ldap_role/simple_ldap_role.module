@@ -205,8 +205,12 @@ function simple_ldap_role_user_role_delete($role) {
   // Generate the role DN.
   $dn = simple_ldap_role_dn($role->name);
 
-  // Delete the role.
-  $server->delete($dn);
+  // Verify that the LDAP group exists.
+  $ldap_group = $server->search($dn, simple_ldap_role_filter(), 'base', array($attribute_name));
+  if ($ldap_group['count'] == 1) {
+    // Delete the role.
+    $server->delete($dn);
+  }
 }
 
 /**
