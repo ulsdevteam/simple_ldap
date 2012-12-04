@@ -30,7 +30,7 @@ function simple_ldap_role_admin($form, &$form_state) {
   $form['role']['simple_ldap_role_basedn'] = array(
     '#type' => 'textfield',
     '#title' => t('Base DN'),
-    '#default_value' => variable_get('simple_ldap_role_basedn', ''),
+    '#default_value' => variable_get('simple_ldap_role_basedn', $server->basedn),
     '#required' => TRUE,
     '#description' => t('The Base DN that will be searched for roles.'),
   );

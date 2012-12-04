@@ -19,6 +19,13 @@ function simple_ldap_user_admin($form, &$form_state) {
   // Initialize a Simple LDAP Server object. Used for dropdown options.
   $server = SimpleLdapServer::singleton();
 
+  // Generate a list of object classes supported by the server.
+  $objectclasses = $server->schema->get('objectclasses');
+  foreach ($objectclasses as $key => $objectclass) {
+    $objectclasses[$key] = $objectclass['name'];
+  }
+  asort($objectclasses);
+
   // String to append to items disabled by $server->readonly.
   $disabled_note = $server->readonly ? ' (' . t('Disabled by LDAP Server configuration.') . ')' : '';
 
@@ -30,7 +37,7 @@ function simple_ldap_user_admin($form, &$form_state) {
   $form['user']['simple_ldap_user_basedn'] = array(
     '#type' => 'textfield',
     '#title' => t('Base DN'),
-    '#default_value' => variable_get('simple_ldap_user_basedn'),
+    '#default_value' => variable_get('simple_ldap_user_basedn', $server->basedn),
     '#required' => TRUE,
     '#description' => t('The Base DN that will be searched for user accounts.'),
   );
@@ -45,13 +52,6 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#required' => TRUE,
     '#default_value' => variable_get('simple_ldap_user_scope', 'sub'),
   );
-
-  // Generate a list of object classes supported by the server.
-  $objectclasses = $server->schema->get('objectclasses');
-  foreach ($objectclasses as $key => $objectclass) {
-    $objectclasses[$key] = $objectclass['name'];
-  }
-  asort($objectclasses);
 
   // Get the selected objectclass.
   $objectclass_selected = isset($form_state['values']['simple_ldap_user_objectclass']) ? $form_state['values']['simple_ldap_user_objectclass'] : variable_get('simple_ldap_user_objectclass', 'inetorgperson');

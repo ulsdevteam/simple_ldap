@@ -63,6 +63,13 @@ function simple_ldap_admin() {
     '#attributes' => array('value' => array(variable_get('simple_ldap_bindpw', ''))),
   );
 
+  $form['directory']['simple_ldap_basedn'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Base DN'),
+    '#default_value' => variable_get('simple_ldap_basedn', ''),
+    '#description' => t('Leave this blank to attempt to detect the base DN.'),
+  );
+
   $form['directory']['simple_ldap_pagesize'] = array(
     '#type' => 'textfield',
     '#title' => t('Search result page size'),

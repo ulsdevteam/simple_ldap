@@ -23,6 +23,7 @@ class SimpleLdapServer {
   // LDAP directory parameters.
   protected $binddn;
   protected $bindpw;
+  protected $basedn;
 
   // LDAP resource link.
   protected $resource = FALSE;
@@ -84,6 +85,11 @@ class SimpleLdapServer {
       case 'rootdse':
         // Load the rootDSE.
         $this->rootdse();
+        break;
+
+      case 'basedn':
+        // Load the baseDN.
+        $this->basedn();
         break;
 
       case 'schema':
@@ -619,6 +625,33 @@ class SimpleLdapServer {
     if (!isset($this->schema)) {
       $this->schema = new SimpleLdapSchema($this);
     }
+  }
+
+  /**
+   * Attempts to determine the server's baseDN.
+   */
+  protected function basedn() {
+    // If the baseDN has already been checked, just return it.
+    if (isset($this->basedn)) {
+      return $this->basedn;
+    }
+
+    // Check if the basedn is specified in the module configuration.
+    $basedn = variable_get('simple_ldap_basedn');
+    if (!empty($basedn)) {
+      $this->basedn = $basedn;
+      return $this->basedn;
+    }
+
+    // The basedn is not specified, so attempt to detect it from the rootDSE.
+    $this->rootdse();
+    if (isset($this->rootdse['namingcontexts'])) {
+      $this->basedn = $this->rootdse['namingcontexts'][0];
+      return $this->basedn;
+    }
+
+    // Unable to determine the baseDN.
+    return FALSE;
   }
 
   /**
