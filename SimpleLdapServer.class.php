@@ -602,6 +602,8 @@ class SimpleLdapServer {
         'supportedSASLMechanisms',
         'supportedLDAPVersion',
         'subschemaSubentry',
+        'objectClass',
+        'rootDomainNamingContext',
       );
 
       $result = $this->clean($this->search('', 'objectclass=*', 'base', $attributes));
@@ -638,6 +640,29 @@ class SimpleLdapServer {
     }
 
     return FALSE;
+  }
+
+  /**
+   * Attempts to detect the directory type using the rootDSE.
+   */
+  public function directoryType() {
+    // Load the rootDSE.
+    $this->rootdse();
+
+    // Check for OpenLDAP.
+    if (isset($this->rootdse['objectclass']) && is_array($this->rootdse['objectclass'])) {
+      if (in_array('OpenLDAProotDSE', $this->rootdse['objectclass'])) {
+        return 'OpenLDAP';
+      }
+    }
+
+    // Check for Active Directory.
+    if (isset($this->rootdse['rootdomainnamingcontext'])) {
+      return 'Active Directory';
+    }
+
+    // Default to generic LDAPv3.
+    return 'LDAPv3';
   }
 
 }
