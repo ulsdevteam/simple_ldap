@@ -498,6 +498,9 @@ function simple_ldap_user_hash_types() {
     $types['salted sha'] = t('Salted SHA');
   }
 
+  // Unicode (used by Active Directory).
+  $types['unicode'] = t('Unicode');
+
   return $types;
 }
 
@@ -563,6 +566,15 @@ function simple_ldap_user_hash($string, $algorithm = NULL) {
       mt_srand((double) microtime() * 1000000);
       $salt = mhash_keygen_s2k(MHASH_SHA1, $string, substr(pack('h*', md5(mt_rand())), 0, 8), 4);
       $hash = '{SSHA}' . base64_encode(mhash(MHASH_SHA1, $string . $salt) . $salt);
+      break;
+
+    case 'unicode':
+      $string = '"' . $string . '"';
+      $length = drupal_strlen($string);
+      $hash = '';
+      for ($i = 0; $i < $length; $i++) {
+        $hash .= "{$string{$i}}\000";
+      }
       break;
 
     case 'none':
