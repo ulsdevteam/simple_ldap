@@ -98,6 +98,9 @@ function simple_ldap_user_admin($form, &$form_state) {
   return system_settings_form($form);
 }
 
+/**
+ * Generate Simple Ldap User admin form for Active Directory.
+ */
 function simple_ldap_user_admin_active_directory($form, &$form_state) {
   $form = array();
 
@@ -170,6 +173,9 @@ function simple_ldap_user_admin_active_directory($form, &$form_state) {
   return $form;
 }
 
+/**
+ * Generate Simple Ldap User admin form for generic LDAP servers.
+ */
 function simple_ldap_user_admin_ldap($form, &$form_state) {
   $form = array();
 
