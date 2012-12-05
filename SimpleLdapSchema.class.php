@@ -132,7 +132,15 @@ class SimpleLdapSchema {
    */
   public function attributes($objectclass, $recursive = FALSE) {
     $may = $this->may($objectclass, $recursive);
+    if (!is_array($may)) {
+      $may = array();
+    }
+
     $must = $this->must($objectclass, $recursive);
+    if (!is_array($must)) {
+      $must = array();
+    }
+
     $attributes = array_merge($may, $must);
     return $attributes;
   }
