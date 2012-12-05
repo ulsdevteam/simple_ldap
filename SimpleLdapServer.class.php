@@ -25,6 +25,9 @@ class SimpleLdapServer {
   protected $bindpw;
   protected $basedn;
 
+  // LDAP server type (OpenLDAP, Active Directory, etc.).
+  protected $type;
+
   // LDAP resource link.
   protected $resource = FALSE;
   protected $bound = FALSE;
@@ -90,6 +93,11 @@ class SimpleLdapServer {
       case 'basedn':
         // Load the baseDN.
         $this->basedn();
+        break;
+
+      case 'type':
+        // Determine the directory type.
+        $this->type();
         break;
 
       case 'schema':
@@ -678,24 +686,32 @@ class SimpleLdapServer {
   /**
    * Attempts to detect the directory type using the rootDSE.
    */
-  public function directoryType() {
+  protected function type() {
+    // If the type has already been determined, return it.
+    if (isset($this->type)) {
+      return $this->type;
+    }
+
     // Load the rootDSE.
     $this->rootdse();
 
     // Check for OpenLDAP.
     if (isset($this->rootdse['objectclass']) && is_array($this->rootdse['objectclass'])) {
       if (in_array('OpenLDAProotDSE', $this->rootdse['objectclass'])) {
-        return 'OpenLDAP';
+        $this->type = 'OpenLDAP';
+        return $this->type;
       }
     }
 
     // Check for Active Directory.
     if (isset($this->rootdse['rootdomainnamingcontext'])) {
-      return 'Active Directory';
+      $this->type = 'Active Directory';
+      return $this->type;
     }
 
     // Default to generic LDAPv3.
-    return 'LDAPv3';
+    $this->type = 'LDAP';
+    return $this->type;
   }
 
 }
