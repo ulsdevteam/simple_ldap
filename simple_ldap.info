@@ -2,6 +2,7 @@ name = Simple LDAP
 description = Simple LDAP server configuration
 package = LDAP
 core = 7.x
+files[] = SimpleLdap.class.php
 files[] = SimpleLdapSchema.class.php
 files[] = SimpleLdapServer.class.php
 files[] = simple_ldap.test
