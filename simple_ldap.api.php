@@ -24,10 +24,6 @@
  * $rootdse
  * $[sub]schema
  *
- * Static functions
- * ----------------
- * SimpleLdapServer::singleton($reset = FALSE)
- *
  * Magic functions
  * ---------------
  * __construct()
@@ -59,8 +55,6 @@
  *
  * Utility functions
  * -----------------
- * utf8encode($attributes)
- * utf8decode($attributes)
  * clean($entry)
  *
  * Private functions
@@ -69,6 +63,15 @@
  * disconnect()
  * rootdse()
  * schema()
+ *
+ * Public static functions
+ * ----------------
+ * singleton($reset = FALSE)
+ * hash($string, $algorithm = NULL)
+ * salt($length)
+ * utf8encode($attributes)
+ * utf8decode($attributes)
+ *
  */
 
 /**
