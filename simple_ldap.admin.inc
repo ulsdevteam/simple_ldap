@@ -84,5 +84,20 @@ function simple_ldap_admin() {
     $form['directory']['simple_ldap_pagesize']['#description'] = t('Paged queries are not supported by this PHP installation.') . ' ' . t('Support was added in PHP version 5.4.');
   }
 
+  // Advanced settings.
+  $form['advanced'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Advanced'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+
+  $form['advanced']['simple_ldap_debug'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable debug logging.'),
+    '#default_value' => variable_get('simple_ldap_debug', FALSE),
+    '#description' => t('Outputs debug logging to watchdog.'),
+  );
+
   return system_settings_form($form);
 }

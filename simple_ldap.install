@@ -15,6 +15,7 @@ function simple_ldap_uninstall() {
   variable_del('simple_ldap_bindpw');
   variable_del('simple_ldap_readonly');
   variable_del('simple_ldap_pagesize');
+  variable_del('simple_ldap_debug');
 }
 
 /**
