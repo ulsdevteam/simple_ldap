@@ -459,7 +459,7 @@ class SimpleLdap {
     $return = @ldap_delete($link_identifier, $dn);
 
     // Debugging.
-    if (variable_get('simple_ldap_debug', ERROR)) {
+    if (variable_get('simple_ldap_debug', FALSE)) {
       $message = __FUNCTION__ . '($link_identifier = @link_identifier, $dn = @dn) returns @return';
       $variables = array(
         '@link_identifier' => print_r($link_identifier, TRUE),
