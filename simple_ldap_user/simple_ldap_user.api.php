@@ -17,7 +17,6 @@
  * Magic methods
  * -------------
  * __construct($name)
- * __destruct()
  * __get($name)
  * __set($name, $value)
  *

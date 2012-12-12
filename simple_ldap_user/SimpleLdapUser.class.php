@@ -58,13 +58,6 @@ class SimpleLdapUser {
   }
 
   /**
-   * Destructor.
-   */
-  public function __destruct() {
-    $this->save();
-  }
-
-  /**
    * Magic __get() function.
    */
   public function __get($name) {
