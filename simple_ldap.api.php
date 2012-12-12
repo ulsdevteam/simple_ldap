@@ -14,6 +14,31 @@
  * salt($length)
  * utf8encode($attributes)
  * utf8decode($attributes)
+ *
+ * Public static functions (wrappers)
+ * ----------------------------------
+ * ldap_add($link_identifier, $dn, $entry)
+ * ldap_bind($link_identifier, $bind_rdn = NULL, $bind_password = NULL)
+ * ldap_compare($link_identifier, $dn, $attribute, $value)
+ * ldap_connect($hostname = NULL, $port = 389)
+ * ldap_control_paged_result($link, $pagesize, $iscritical, $cookie)
+ * ldap_control_paged_result_response($link, $result, &$cookie, &$estimated)
+ * ldap_delete($link_identifier, $dn);
+ * ldap_free_result($result_identifier)
+ * ldap_get_entries($link_identifier, $result_identifier)
+ * ldap_get_option($link_identifier, $option, &$retval)
+ * ldap_list($link_identifier, $base_dn, $filter, $attributes, $attrsonly,
+ *     $sizelimit, $timelimit, $deref)
+ * ldap_mod_add($link_identifier, $dn, $entry)
+ * ldap_mod_del($link_identifier, $dn, $entry)
+ * ldap_mod_replace($link_identifier, $dn, $entry)
+ * ldap_modify($link_identifier, $dn, $entry)
+ * ldap_read($link_identifier, $base_dn, $filter, $attributes, $attrsonly,
+ *     $sizelimit, $timelimit, $deref)
+ * ldap_search($link_identifier, $base_dn, $filter, $attributes, $attrsonly,
+ *     $sizelimit, $timelimit, $deref)
+ * ldap_set_option($link_identifier, $option, $newval)
+ * ldap_start_tls($link)
  */
 
 /**
@@ -89,31 +114,6 @@
  * Public static functions
  * -----------------------
  * singleton($reset = FALSE)
- *
- * Protected static functions (wrappers)
- * -------------------------------------
- * ldap_add($link_identifier, $dn, $entry)
- * ldap_bind($link_identifier, $bind_rdn = NULL, $bind_password = NULL)
- * ldap_compare($link_identifier, $dn, $attribute, $value)
- * ldap_connect($hostname = NULL, $port = 389)
- * ldap_control_paged_result($link, $pagesize, $iscritical, $cookie)
- * ldap_control_paged_result_response($link, $result, &$cookie, &$estimated)
- * ldap_delete($link_identifier, $dn);
- * ldap_free_result($result_identifier)
- * ldap_get_entries($link_identifier, $result_identifier)
- * ldap_get_option($link_identifier, $option, &$retval)
- * ldap_list($link_identifier, $base_dn, $filter, $attributes, $attrsonly,
- *     $sizelimit, $timelimit, $deref)
- * ldap_mod_add($link_identifier, $dn, $entry)
- * ldap_mod_del($link_identifier, $dn, $entry)
- * ldap_mod_replace($link_identifier, $dn, $entry)
- * ldap_modify($link_identifier, $dn, $entry)
- * ldap_read($link_identifier, $base_dn, $filter, $attributes, $attrsonly,
- *     $sizelimit, $timelimit, $deref)
- * ldap_search($link_identifier, $base_dn, $filter, $attributes, $attrsonly,
- *     $sizelimit, $timelimit, $deref)
- * ldap_set_option($link_identifier, $option, $newval)
- * ldap_start_tls($link)
  */
 
 /**
