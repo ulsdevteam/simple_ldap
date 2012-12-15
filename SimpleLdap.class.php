@@ -219,6 +219,15 @@ class SimpleLdap {
    * @throw SimpleLdapException
    */
   public static function ldap_add($link_identifier, $dn, $entry) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$dn' => $dn,
+        '$entry' => $entry
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_add($link_identifier, $dn, $entry);
 
@@ -256,6 +265,15 @@ class SimpleLdap {
    *   Returns TRUE on success or FALSE on failure.
    */
   public static function ldap_bind($link_identifier, $bind_rdn = NULL, $bind_password = NULL) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$bind_rdn' => $bind_rdn,
+        '$bind_password' => $bind_password,
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_bind($link_identifier, $bind_rdn, $bind_password);
 
@@ -292,6 +310,16 @@ class SimpleLdap {
    * @throw SimpleLdapException
    */
   public static function ldap_compare($link_identifier, $dn, $attribute, $value) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$dn' => $dn,
+        '$attribute' => $attribute,
+        '$value' => $value,
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_compare($link_identifier, $dn, $attribute, $value);
 
@@ -332,6 +360,15 @@ class SimpleLdap {
    * @throw SimpleLdapException
    */
   public static function ldap_connect($hostname = NULL, $port = 389) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$hostname' => $hostname,
+        '$port' => $port,
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_connect($hostname, $port);
 
@@ -375,6 +412,16 @@ class SimpleLdap {
    * @todo Default values for $pagesize, $iscritical, $cookie.
    */
   public static function ldap_control_paged_result($link, $pagesize, $iscritical, $cookie) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$pagesize' => $pagesize,
+        '$iscritical' => $iscritical,
+        '$cookie' => $cookie,
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_control_paged_result($link, $pagesize, $iscritical, $cookie);
 
@@ -417,6 +464,16 @@ class SimpleLdap {
    * @throw SimpleLdapException
    */
   public static function ldap_control_paged_result_response($link, $result, &$cookie, &$estimated) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$result' => $result,
+        '$cookie' => $cookie,
+        '$estimated' => $estimated,
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_control_paged_result_response($link, $result, $cookie, $estimated);
 
@@ -455,6 +512,14 @@ class SimpleLdap {
    * @throw SimpleLdapException
    */
   public static function ldap_delete($link_identifier, $dn) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$dn' => $dn,
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_delete($link_identifier, $dn);
 
@@ -489,6 +554,11 @@ class SimpleLdap {
    * @throw SimpleLdapException
    */
   public static function ldap_free_result($result_identifier) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+    }
+
     // Wrapped function call.
     $return = @ldap_free_result($result_identifier);
 
@@ -523,6 +593,11 @@ class SimpleLdap {
    * @throw SimpleLdapException
    */
   public static function ldap_get_entries($link_identifier, $result_identifier) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+    }
+
     // Wrapped function call.
     $return = @ldap_get_entries($link_identifier, $result_identifier);
 
@@ -562,6 +637,15 @@ class SimpleLdap {
    * @throw SimpleLdapException
    */
   public static function ldap_get_option($link_identifier, $option, &$retval) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$option' => $option,
+        '$retval' => $retval,
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_get_option($link_identifier, $option, $retval);
 
@@ -617,6 +701,20 @@ class SimpleLdap {
    * @todo debug $result
    */
   public static function ldap_list($link_identifier, $base_dn, $filter, $attributes = array(), $attrsonly = 0, $sizelimit = 0, $timelimit = 0, $deref) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$base_dn' => $base_dn,
+        '$filter' => $filter,
+        '$attributes' => $attributes,
+        '$attrsonly' => $attrsonly,
+        '$sizelimit' => $sizelimit,
+        '$timelimit' => $timelimit,
+        '$deref' => $deref,
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_list($link_identifier, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
 
@@ -663,6 +761,15 @@ class SimpleLdap {
    * @throw SimpleLdapException
    */
   public static function ldap_mod_add($link_identifier, $dn, $entry) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$dn' => $dn,
+        '$entry' => $entry,
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_mod_add($link_identifier, $dn, $entry);
 
@@ -704,6 +811,15 @@ class SimpleLdap {
    * @throw SimpleLdapException
    */
   public static function ldap_mod_del($link_identifier, $dn, $entry) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$dn' => $dn,
+        '$entry' => $entry,
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_mod_del($link_identifier, $dn, $entry);
 
@@ -745,6 +861,15 @@ class SimpleLdap {
    * @throw SimpleLdapException
    */
   public static function ldap_mod_replace($link_identifier, $dn, $entry) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$dn' => $dn,
+        '$entry' => $entry,
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_mod_replace($link_identifier, $dn, $entry);
 
@@ -786,6 +911,15 @@ class SimpleLdap {
    * @throw SimpleLdapException
    */
   public static function ldap_modify($link_identifier, $dn, $entry) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$dn' => $dn,
+        '$entry' => $entry
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_modify($link_identifier, $dn, $entry);
 
@@ -841,6 +975,20 @@ class SimpleLdap {
    * @todo debug $result
    */
   public static function ldap_read($link_identifier, $base_dn, $filter, $attributes = array(), $attrsonly = 0, $sizelimit = 0, $timelimit = 0, $deref = LDAP_DEREF_NEVER) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$base_dn' => $base_dn,
+        '$filter' => $filter,
+        '$attributes' => $attributes,
+        '$attrsonly' => $attrsonly,
+        '$sizelimit' => $sizelimit,
+        '$timelimit' => $timelimit,
+        '$deref' => $deref,
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_read($link_identifier, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
 
@@ -901,6 +1049,20 @@ class SimpleLdap {
    * @todo debug $result
    */
   public static function ldap_search($link_identifier, $base_dn, $filter, $attributes = array(), $attrsonly = 0, $sizelimit = 0, $timelimit = 0, $deref = LDAP_DEREF_NEVER) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$base_dn' => $base_dn,
+        '$filter' => $filter,
+        '$attributes' => $attributes,
+        '$attrsonly' => $attrsonly,
+        '$sizelimit' => $sizelimit,
+        '$timelimit' => $timelimit,
+        '$deref' => $deref,
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_search($link_identifier, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
 
@@ -946,6 +1108,15 @@ class SimpleLdap {
    * @throw SimpleLdapException
    */
   public static function ldap_set_option($link_identifier, $option, $newval) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$option' => $option,
+        '$newval' => $newval,
+      ));
+    }
+
     // Wrapped function call.
     $return = @ldap_set_option($link_identifier, $option, $newval);
 
@@ -981,6 +1152,11 @@ class SimpleLdap {
    * @throw SimpleLdapException
    */
   public static function ldap_start_tls($link) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+    }
+
     // Wrapped function call.
     $return = @ldap_start_tls($link);
 
