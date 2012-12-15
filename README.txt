@@ -40,3 +40,13 @@ This is a hidden module, which provides the glue to allow SimpleTest
 integration to the other modules. In order to perform the other modules'
 simpletests, there is a configuration file at
 simple_ldap_test/simple_ldap_test.config.inc which needs to be edited.
+
+===============================================================================
+
+DEVELOPERS:
+
+Enable debugging using devel module by adding the following setting to
+settings.php
+
+$conf['simple_ldap_devel'] = TRUE;
+
