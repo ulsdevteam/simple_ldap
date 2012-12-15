@@ -224,13 +224,21 @@ function simple_ldap_user_user_insert(&$edit, $account, $category) {
  *   The form values submitted by the user.
  */
 function simple_ldap_user_user_update(&$edit, $account, $category) {
+  // Don't do anything for uid 1.
   if ($account->uid == 1) {
     return;
   }
-  $ldap_user = SimpleLdapUser::singleton($account->name);
-  if ((isset($edit['status']) && $edit['status']) || $ldap_user->exists) {
-    module_invoke_all('sync_user_to_ldap', $account);
+
+  // Don't do anything if the hook was called via hook_sync_user_to_drupal().
+  if (empty($account->hook_sync_user_to_drupal)) {
+    $ldap_user = SimpleLdapUser::singleton($account->name);
+    if ((isset($edit['status']) && $edit['status']) || $ldap_user->exists) {
+      module_invoke_all('sync_user_to_ldap', $account);
+    }
   }
+  else {
+    unset($account->hook_sync_user_to_drupal);
+   }
 }
 
 /**
@@ -450,6 +458,7 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
       // This avoids an infinite load/save loop.
       $drupal_user->original = clone $drupal_user;
     }
+    $drupal_user->hook_sync_user_to_drupal = TRUE;
     $drupal_user = user_save($drupal_user, $edit);
   }
 
