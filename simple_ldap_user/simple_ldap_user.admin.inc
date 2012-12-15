@@ -76,13 +76,14 @@ function simple_ldap_user_admin($form, &$form_state) {
   $attribute_map = simple_ldap_user_attribute_map();
   if (!empty($attribute_map)) {
     $table = '<table>';
-    $table .= '<thead><tr><th>' . t('Drupal field') . '</th><th>' . t('LDAP attribute') . '</th></tr></thead>';
+    $table .= '<thead><tr><th>' . t('LDAP attribute') . '</th><th>' . t('Drupal attribute') . '</th><th>' . t('Drupal attribute type') . '</th></tr></thead>';
     $table .= '<tbody>';
     $class = 'odd';
     foreach ($attribute_map as $item) {
       $table .= '<tr class="' . $class . '">';
-      $table .= '<td>' . $item['drupal'] . '</td>';
       $table .= '<td>' . $item['ldap'] . '</td>';
+      $table .= '<td>' . $item['drupal'] . '</td>';
+      $table .= '<td>' . $item['type'] . '</td>';
       $table .= '</tr>';
       $class = $class == 'odd' ? 'even' : 'odd';
     }
