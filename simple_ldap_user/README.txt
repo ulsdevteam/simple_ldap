@@ -16,36 +16,54 @@ $conf['simple_ldap_user_attribute_map'].
 This variable is an array of arrays, where each of the arrays have the
 following items:
 
-* type - This is the field type. Currently, the only supported types are
-         'field' and 'default'. 'default' is implied if no type is specified.
-	 'field' should be specified for custom fields added to the user
-	 object via the Field API.
-
 * drupal - The field name on the Drupal user. This must be the machine name of
 	   the field.
+
+	   This can also be a space-separated list of drupal fields. If this
+	   is the case, synchronization only works in the drupal->ldap
+	   direction.
+
+           A field type can be specified by prefixing the field name. If no
+	   prefix is given, it is assumed that the field is a direct user
+	   object attribute, such as uid, name, or pass.
+
+	   # - Custom fields added to the user object via the Field API.
 
 * ldap - The LDAP attribute on the LDAP user.
 
 Example:
 --------
 $conf['simple_ldap_user_attribute_map'] = array(
+
   // Generic example.
   array(
-    'type' => 'field',
-    'drupal' => 'drupal-user-field-machine-name',
+    'drupal' => '#drupal-user-field-machine-name',
     'ldap' => 'ldap-attribute',
   ),
+
   // First name example.
   array(
-    'type' => 'field',
-    'drupal' => 'field_first_name',
+    'drupal' => '#field_first_name',
     'ldap' => 'givenName',
   ),
+
   // Last name example.
   array(
-    'type' => 'field',
-    'drupal' => 'field_last_name',
+    'drupal' => '#field_last_name',
     'ldap' => 'sn',
   ),
+
+  // Timezone example (saved directly to users table, note there is no '#').
+  array(
+    'drupal' => 'timezone',
+    'ldap' => 'l',
+  ),
+
+  // Combined fields example.
+  array(
+    'drupal' => '#field_first_name #field_last_name',
+    'ldap' => 'displayName',
+  ),
+
 );
 

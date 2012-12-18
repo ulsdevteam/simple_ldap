@@ -93,14 +93,24 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
 
         // Other mapped fields.
         foreach ($attribute_map as $attribute) {
-          switch ($attribute['type']) {
-            case 'field':
-              $form[$attribute['drupal']]['#disabled'] = $server->readonly;
-              break;
 
-            case 'default':
-            default:
-              $form['account'][$attribute['drupal']]['#disabled'] = $server->readonly;
+          // Parse the drupal attribute name.
+          $drupal_attributes = explode(' ', $attribute['drupal']);
+          foreach ($drupal_attributes as $drupal_attribute) {
+
+            // Get the field type.
+            $type = substr($drupal_attribute, 0, 1);
+
+            switch ($type) {
+              case '#':
+                // Use Field API.
+                $form[substr($drupal_attribute, 1)]['#disabled'] = $server->readonly;
+                break;
+
+              default:
+                // Use the user object directly.
+                $form['account'][$drupal_attribute]['#disabled'] = $server->readonly;
+            }
           }
         }
 
@@ -182,18 +192,31 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
 
       // Get the remaining mapped attributes.
       foreach ($attribute_map as $attribute) {
-        switch ($attribute['type']) {
-          // Use Field API.
-          case 'field':
+
+        // Parse the drupal attribute name.
+        $drupal_attributes = explode(' ', $attribute['drupal']);
+
+        // Skip drupal-to-ldap many-to-one mappings.
+        if (count($drupal_attributes) > 1) {
+          break;
+        }
+
+        // Get the field name and type
+        $drupal_attribute = reset($drupal_attributes);
+        $type = substr($drupal_attributes, 0, 1);
+
+        switch ($type) {
+          case '#':
+            // Use Field API.
+            $drupal_attribute = substr($drupal_attribute, 1);
             for ($i = 0; $i < $ldap_user->{$attribute['ldap']}['count']; $i++) {
-              $edit[$attribute['drupal']][LANGUAGE_NONE][$i]['value'] = $ldap_user->{$attribute['ldap']}[$i];
+              $edit[$drupal_attribute][LANGUAGE_NONE][$i]['value'] = $ldap_user->{$attribute['ldap']}[$i];
             }
             break;
 
-          // Use the user object directly.
-          case 'default':
           default:
-            $edit[$attribute['drupal']] = $ldap_user->{$attribute['ldap']}[0];
+            // Use the user object directly.
+            $edit[$drupal_attribute] = $ldap_user->{$attribute['ldap']}[0];
         }
       }
     }
@@ -329,11 +352,6 @@ function simple_ldap_user_attribute_map() {
   foreach ($attribute_map as $key => $value) {
     // LDAP likes lowercase.
     $attribute_map[$key]['ldap'] = strtolower($attribute_map[$key]['ldap']);
-
-    // Make sure a type is set.
-    if (!isset($value['type'])) {
-      $attribute_map[$key]['type'] = 'default';
-    }
   }
   return $attribute_map;
 }
@@ -359,28 +377,63 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
 
   // Synchronize the fields in the attribute map.
   foreach ($attribute_map as $attribute) {
-    switch ($attribute['type']) {
 
-      // Get the value using Field API.
-      case 'field':
-        // Get drupal field values.
-        $items = field_get_items('user', $drupal_user, $attribute['drupal']);
-        $values = array();
-        if (is_array($items)) {
-          foreach ($items as $item) {
-            $values[] = $item['value'];
+    // Initialize the Drupal value array.
+    $drupal_values = array();
+
+    // Parse the drupal attribute name.
+    $drupal_attributes = explode(' ', $attribute['drupal']);
+    foreach ($drupal_attributes as $drupal_attribute) {
+
+      // Get the field type.
+      $type = substr($drupal_attribute, 0, 1);
+
+      // Get the Drupal value(s) based on the field type.
+      switch ($type) {
+        case '#':
+          // Get the value using Field API.
+          $drupal_attribute = substr($drupal_attribute, 1);
+          $items = field_get_items('user', $drupal_user, $drupal_attribute);
+          $value = array();
+          if (is_array($items)) {
+            foreach ($items as $item) {
+              $value[] = $item['value'];
+            }
           }
-        }
+          $drupal_values[] = $value;
+          break;
 
-        // Synchronize.
-        $ldap_user->{$attribute['ldap']} = $values;
-        break;
-
-      // Get the value directly from the user object.
-      case 'default':
-      default:
-        $ldap_user->{$attribute['ldap']} = $drupal_user->{$attribute['drupal']};
+        default:
+          // Get the value directly from the user object.
+          $drupal_values[] = array($drupal_user->$drupal_attribute);
+      }
     }
+
+    // Merge the $drupal_values array into uniform values for the LDAP server.
+    // This is needed to account for drupal attributes of mixed types.
+    // First, find the largest value array.
+    $size = 0;
+    foreach ($drupal_values as $drupal_value) {
+      $count = count($drupal_value);
+      if ($count > $size) {
+        $size = $count;
+      }
+    }
+
+    // Then, generate the ldap array.
+    $ldap_values = array();
+    for ($i = 0; $i < $size; $i++) {
+      $ldap_values[$i] = '';
+      foreach ($drupal_values as $values) {
+        if (isset($values[$i])) {
+          $ldap_values[$i] .= ' ' . $values[$i];
+        }
+      }
+      $ldap_values[$i] = trim($ldap_values[$i]);
+    }
+
+    // Finally, add the values to the LDAP user.
+    $ldap_user->{$attribute['ldap']} = $ldap_values;
   }
 
   // Save any changes.
@@ -415,21 +468,36 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
 
   // Synchronize the fields in the attribute map.
   foreach ($attribute_map as $attribute) {
-    if (isset($drupal_user->{$attribute['drupal']})) {
-      switch ($attribute['type']) {
+
+    // Parse the drupal attribute name.
+    $drupal_attributes = explode(' ', $attribute['drupal']);
+
+    // Skip drupal-to-ldap many-to-one mappings.
+    if (count($drupal_attributes) > 1) {
+      break;
+    }
+
+    // Get the drupal field name and type.
+    $drupal_attribute = reset($drupal_attributes);
+    $drupal_attribute_trimmed = substr($drupal_attribute, 1);
+    $type = substr($drupal_attribute, 0, 1);
+
+    if (isset($drupal_user->$drupal_attribute) || isset($drupal_user->$drupal_attribute_trimmed)) {
+      switch ($type) {
 
         // Update the value in drupal using Field API.
-        case 'field':
+        case '#':
           // Get the Drupal field values and metadata.
-          $items = field_get_items('user', $drupal_user, $attribute['drupal']);
-          $info = field_info_field($attribute['drupal']);
-          $language = field_language('user', $drupal_user, $attribute['drupal']);
+          $drupal_attribute = substr($drupal_attribute, 1);
+          $items = field_get_items('user', $drupal_user, $drupal_attribute);
+          $info = field_info_field($drupal_attribute);
+          $language = field_language('user', $drupal_user, $drupal_attribute);
 
           // Synchronize.
           $dirty = FALSE;
           for ($i = 0; $i < $ldap_user->{$attribute['ldap']}['count']; $i++) {
             if ($i < $info['cardinality'] || $info['cardinality'] == FIELD_CARDINALITY_UNLIMITED) {
-              $edit[$attribute['drupal']][$language][$i]['value'] = $ldap_user->{$attribute['ldap']}[$i];
+              $edit[$drupal_attribute][$language][$i]['value'] = $ldap_user->{$attribute['ldap']}[$i];
               if ($items[$i]['value'] != $ldap_user->{$attribute['ldap']}[$i]) {
                 $dirty = TRUE;
               }
@@ -438,15 +506,15 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
 
           // Check if any changes were actually made.
           if (!$dirty) {
-            unset($edit[$attribute['drupal']]);
+            unset($edit[$drupal_attribute]);
           }
           break;
 
         // Update the value directly on the user object.
         case 'default':
         default:
-          if (isset($ldap_user->{$attribute['ldap']}[0]) && $drupal_user->{$attribute['drupal']} != $ldap_user->{$attribute['ldap']}[0]) {
-            $edit[$attribute['drupal']] = $ldap_user->{$attribute['ldap']}[0];
+          if (isset($ldap_user->{$attribute['ldap']}[0]) && $drupal_user->$drupal_attribute != $ldap_user->{$attribute['ldap']}[0]) {
+            $edit[$drupal_attribute] = $ldap_user->{$attribute['ldap']}[0];
           }
       }
     }

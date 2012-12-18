@@ -23,17 +23,27 @@ function simple_ldap_test_install() {
     $must = $server->schema->must($objectclass, TRUE);
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
-      if ($attribute['type'] == 'field') {
+
+      // Parse the drupal attribute name.
+      $drupal_attributes = explode(' ', $attribute['drupal']);
+
+      // Skip drupal-to-ldap many-to-one mappings.
+      if (count($drupal_attribute) > 1) {
+        break;
+      }
+
+      if (substr($drupal_attribute, 0, 1) == '#') {
+        $drupal_attribute = substr($drupal_attribute, 1);
         $required = in_array($attribute['ldap'], $must);
         field_create_field(array(
-          'field_name' => $attribute['drupal'],
+          'field_name' => $drupal_attribute,
           'type' => 'text',
           'cardinality' => 1,
         ));
         field_create_instance(array(
-          'field_name' => $attribute['drupal'],
+          'field_name' => $drupal_attribute,
           'entity_type' => 'user',
-          'label' => $attribute['drupal'],
+          'label' => $drupal_attribute,
           'bundle' => 'user',
           'required' => $required,
           'settings' => array(

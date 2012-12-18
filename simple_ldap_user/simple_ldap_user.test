@@ -105,21 +105,31 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
     // Check the other mapped fields.
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
-      switch ($attribute['type']) {
-        case 'field':
-          $items = field_get_items('user', $drupal_user, $attribute['drupal']);
-          $drupal = $items[0]['value'];
-          break;
 
-        case 'default':
-        default:
-          $drupal = $drupal_user->{$attribute['drupal']};
-      }
+      // Parse the drupal attribute name.
+      $drupal_attributes = explode(' ', $attribute['drupal']);
+      foreach ($drupal_attributes as $drupal_attribute) {
+        $type = substr($drupal_attribute, 0, 1);
+        $drupal = '';
+        switch ($type) {
+          case '#':
+            $drupal_attribute = substr($drupal_attribute, 1);
+            $items = field_get_items('user', $drupal_user, $drupal_attribute);
+            $drupal .= ' ' . $items[0]['value'];
+            break;
+
+          default:
+            $drupal .= ' ' . $drupal_user->$drupal_attribute;
+        }
+      } 
+
+      $drupal = trim($drupal);
+
+      // Make sure drupal and ldap match.
+      $this->assertEqual($ldap_user->{$attribute['ldap']}[0], $drupal, t('The @ldap LDAP attribute :ldap and the @drupal Drupal field :drupal are synchronized.', array('@ldap' => $attribute['ldap'], '@drupal' => $attribute['drupal'], ':ldap' => $ldap_user->{$attribute['ldap']}[0], ':drupal' => $drupal)));
+      // Make sure they match the control.
+      $this->assertEqual($test_user[$attribute['ldap']] . $suffix, $drupal, t(':value matches the control value :control', array(':value' => $drupal, ':control' => $test_user[$attribute['ldap']] . $suffix)));
     }
-    // Make sure drupal and ldap match.
-    $this->assertEqual($ldap_user->{$attribute['ldap']}[0], $drupal, t('The @ldap LDAP attribute :ldap and the @drupal Drupal field :drupal are synchronized.', array('@ldap' => $attribute['ldap'], '@drupal' => $attribute['drupal'], ':ldap' => $ldap_user->{$attribute['ldap']}[0], ':drupal' => $drupal)));
-    // Make sure they match the control.
-    $this->assertEqual($test_user[$attribute['ldap']] . $suffix, $drupal, t(':value matches the control value :control', array(':value' => $drupal, ':control' => $test_user[$attribute['ldap']] . $suffix)));
   }
 
 }
@@ -371,15 +381,28 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserWebTestCase {
     $edit['mail'] = $test_user[$attribute_mail] . $suffix;
 
     foreach ($attribute_map as $attribute) {
-      switch ($attribute['type']) {
-        case 'field':
-          $edit[$attribute['drupal'] . '[und][0][value]'] = $test_user[$attribute['ldap']] . $suffix;
+      // Parse the drupal attribute name.
+      $drupal_attributes = explode(' ', $attribute['drupal']);
+
+      // Skip drupal-to-ldap many-to-one mappings.
+      if (count($drupal_attributes) > 1) {
+        break;
+      }
+
+      // Get the field name and type
+      $drupal_attribute = reset($drupal_attributes);
+      $type = substr($drupal_attributes, 0, 1);
+
+      switch ($type) {
+        case '#':
+          $drupal_attribute = substr($drupal_attribute, 1);
+          $edit[$drupal_attribute . '[und][0][value]'] = $test_user[$attribute['ldap']] . $suffix;
           break;
 
-        case 'default':
         default:
-          $edit[$attribute['drupal']] = $test_user[$attribute['ldap']] . $suffix;
+          $edit[$drupal_attribute] = $test_user[$attribute['ldap']] . $suffix;
       }
+
     }
 
     // Submit user edit form.
@@ -586,7 +609,7 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     // Verify that the required mapped fields show up on the registration form.
     $this->drupalGet('user/register');
     foreach ($attribute_map as $field) {
-      if (in_array($field['ldap'], $must) && $field['type'] == 'field') {
+      if (in_array($field['ldap'], $must) && substr($field['drupal'], 0, 1) == '#') {
         $this->assertText($field['drupal'], t(':field appears on the user registration form', array(':field' => $field['drupal'])));
       }
     }
@@ -612,7 +635,7 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     $this->assertEqual($ldap_user->{$attribute_mail}[0], $mail, t('LDAP e-mail address matches.'));
 
     foreach ($attribute_map as $field) {
-      if (in_array($field['ldap'], $must) && $field['type'] == 'field') {
+      if (in_array($field['ldap'], $must) && substr($field['drupal'], 0, 1) == '#') {
         $this->assertEqual($new_user->{$field['drupal']}[LANGUAGE_NONE][0]['value'], $edit[$field['drupal'] . '[und][0][value]'], t('The :field Drupal field value was correctly saved.', array(':field' => $field['drupal'])));
         $this->assertEqual($ldap_user->{$field['ldap']}[0], $edit[$field['drupal'] . '[und][0][value]'], t('The :field LDAP attribute was correctly saved.', array(':field' => $field['ldap'])));
       }
@@ -683,16 +706,22 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
     // Update the other mapped attributes.
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
-      switch ($attribute['type']) {
-        case 'field':
-          $items = field_get_items('user', $drupal_user, $attribute['drupal']);
-          $language = field_language('user', $drupal_user, $attribute['drupal']);
-          $edit[$attribute['drupal']][$language][0]['value'] = $test_user[$attribute['ldap']];
-          break;
 
-        case 'default':
-        default:
-          $edit[$attribute['drupal']] = $test_user[$attribute['ldap']];
+      // Parse the drupal attribute name.
+      $drupal_attributes = explode(' ', $attribute['drupal']);
+      foreach ($drupal_attributes as $drupal_attribute) {
+        $type = substr($drupal_attribute, 0, 1);
+        switch ($type) {
+          case '#':
+            $drupal_attribute = substr($drupal_attribute, 1);
+            $items = field_get_items('user', $drupal_user, $drupal_attribute);
+            $language = field_language('user', $drupal_user, $drupal_attribute);
+            $edit[$drupal_attribute][$language][0]['value'] = $test_user[$attribute['ldap']];
+            break;
+
+          default:
+            $edit[$drupal_attribute] = $test_user[$attribute['ldap']];
+        }
       }
     }
 

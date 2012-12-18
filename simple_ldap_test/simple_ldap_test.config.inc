@@ -58,15 +58,12 @@ variable_set('simple_ldap_user_delete', TRUE);
 
 $map = array(
   array(
-    'type' => 'field',
-    'drupal' => 'field_first_name',
+    'drupal' => '#field_first_name',
     'ldap' => 'givenname',
   ),
   array(
-    'type' => 'field',
-    'drupal' => 'field_last_name',
+    'drupal' => '#field_last_name',
     'ldap' => 'sn',
-    'required' => TRUE,
   ),
 );
 
