@@ -1,5 +1,6 @@
 <?php
 /**
+ * @file
  * Class to handle Simple LDAP exceptions.
  */
 
@@ -20,7 +21,7 @@ class SimpleLdapException extends Exception {
       parent::__construct($message, $error);
     }
 
-    // Log the exception
+    // Log the exception.
     watchdog_exception('simple_ldap', $this);
   }
 }

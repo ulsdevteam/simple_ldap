@@ -197,7 +197,7 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
           break;
         }
 
-        // Get the field type
+        // Get the field type.
         $drupal_attribute = reset($attribute['drupal']);
         $type = substr($drupal_attribute, 0, 1);
 
@@ -259,7 +259,7 @@ function simple_ldap_user_user_update(&$edit, $account, $category) {
   }
   else {
     unset($account->hook_sync_user_to_drupal);
-   }
+  }
 }
 
 /**

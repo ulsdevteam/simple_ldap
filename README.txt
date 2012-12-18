@@ -49,4 +49,3 @@ Enable debugging using devel module by adding the following setting to
 settings.php
 
 $conf['simple_ldap_devel'] = TRUE;
-

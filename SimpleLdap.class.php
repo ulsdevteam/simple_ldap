@@ -224,7 +224,7 @@ class SimpleLdap {
       dpm(__FUNCTION__);
       dpm(array(
         '$dn' => $dn,
-        '$entry' => $entry
+        '$entry' => $entry,
       ));
     }
 
@@ -394,7 +394,7 @@ class SimpleLdap {
   /**
    * Wrapper function for ldap_control_paged_result().
    *
-   * @param resource $link_identifier
+   * @param resource $link
    *   An LDAP link identifier.
    * @param int $pagesize
    *   The number of entries by page.
@@ -589,6 +589,7 @@ class SimpleLdap {
    *   An LDAP search result identifier.
    *
    * @return array
+   *   An array of LDAP entries.
    *
    * @throw SimpleLdapException
    */
@@ -674,7 +675,7 @@ class SimpleLdap {
    *
    * @param resource $link_identifier
    *   An LDAP link identifier.
-   * @param string $basedn
+   * @param string $base_dn
    *   The base DN for the directory.
    * @param string $filter
    *   The LDAP filter to apply.
@@ -700,7 +701,7 @@ class SimpleLdap {
    *
    * @todo debug $result
    */
-  public static function ldap_list($link_identifier, $base_dn, $filter, $attributes = array(), $attrsonly = 0, $sizelimit = 0, $timelimit = 0, $deref) {
+  public static function ldap_list($link_identifier, $base_dn, $filter, $attributes = array(), $attrsonly = 0, $sizelimit = 0, $timelimit = 0, $deref = LDAP_DEREF_NEVER) {
     // Devel debugging.
     if (variable_get('simple_ldap_devel', FALSE)) {
       dpm(__FUNCTION__);
@@ -916,7 +917,7 @@ class SimpleLdap {
       dpm(__FUNCTION__);
       dpm(array(
         '$dn' => $dn,
-        '$entry' => $entry
+        '$entry' => $entry,
       ));
     }
 
@@ -948,7 +949,7 @@ class SimpleLdap {
    *
    * @param resource $link_identifier
    *   An LDAP link identifier.
-   * @param string $basedn
+   * @param string $base_dn
    *   The base DN for the directory.
    * @param string $filter
    *   The LDAP filter to apply.
@@ -1022,7 +1023,7 @@ class SimpleLdap {
    *
    * @param resource $link_identifier
    *   An LDAP link identifier.
-   * @param string $basedn
+   * @param string $base_dn
    *   The base DN for the directory.
    * @param string $filter
    *   The LDAP filter to apply.

@@ -98,9 +98,21 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
     $drupal_user = reset($drupal_user);
 
     // Check the mail attribute explicitly.
-    $this->assertEqual($ldap_user->{$attribute_mail}[0], $drupal_user->mail, t('The @attr LDAP attribute :ldap and the Drupal mail field :drupal are synchronized.', array('@attr' => $attribute_mail, ':ldap' => $ldap_user->{$attribute_mail}[0], ':drupal' => $drupal_user->mail)));
+    $this->assertEqual($ldap_user->{$attribute_mail}[0], $drupal_user->mail, t('The @attr LDAP attribute :ldap and the Drupal mail field :drupal are synchronized.',
+      array(
+        '@attr' => $attribute_mail,
+        ':ldap' => $ldap_user->{$attribute_mail}[0],
+        ':drupal' => $drupal_user->mail,
+      )
+    ));
+
     // Make sure they match the control.
-    $this->assertEqual($test_user[$attribute_mail] . $suffix, $drupal_user->mail, t(':value matches the control value :control', array(':value' => $drupal_user->mail, ':control' => $test_user[$attribute_mail] . $suffix)));
+    $this->assertEqual($test_user[$attribute_mail] . $suffix, $drupal_user->mail, t(':value matches the control value :control',
+      array(
+        ':value' => $drupal_user->mail,
+        ':control' => $test_user[$attribute_mail] . $suffix,
+      )
+    ));
 
     // Check the other mapped fields.
     $attribute_map = simple_ldap_user_attribute_map();
@@ -125,9 +137,23 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
       $drupal = trim($drupal);
 
       // Make sure drupal and ldap match.
-      $this->assertEqual($ldap_user->{$attribute['ldap']}[0], $drupal, t('The @ldap LDAP attribute :ldap and the @drupal Drupal field :drupal are synchronized.', array('@ldap' => $attribute['ldap'], '@drupal' => $drupal_attribute, ':ldap' => $ldap_user->{$attribute['ldap']}[0], ':drupal' => $drupal)));
+      $this->assertEqual($ldap_user->{$attribute['ldap']}[0], $drupal, t('The @ldap LDAP attribute :ldap and the @drupal Drupal field :drupal are synchronized.',
+        array(
+          '@ldap' => $attribute['ldap'],
+          '@drupal' => $drupal_attribute,
+          ':ldap' => $ldap_user->{$attribute['ldap']}[0],
+          ':drupal' => $drupal,
+        )
+      ));
+
       // Make sure they match the control.
-      $this->assertEqual($test_user[$attribute['ldap']] . $suffix, $drupal, t(':value matches the control value :control', array(':value' => $drupal, ':control' => $test_user[$attribute['ldap']] . $suffix)));
+      $this->assertEqual($test_user[$attribute['ldap']] . $suffix, $drupal, t(':value matches the control value :control',
+        array(
+          ':value' => $drupal,
+          ':control' => $test_user[$attribute['ldap']] . $suffix,
+        )
+      ));
+
     }
   }
 
@@ -386,7 +412,7 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserWebTestCase {
         break;
       }
 
-      // Get the field name and type
+      // Get the field name and type.
       $drupal_attribute = reset($attribute['drupal']);
       $type = substr($drupal_attribute, 0, 1);
 

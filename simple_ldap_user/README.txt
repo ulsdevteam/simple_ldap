@@ -70,4 +70,3 @@ $conf['simple_ldap_user_attribute_map'] = array(
   ),
 
 );
-
