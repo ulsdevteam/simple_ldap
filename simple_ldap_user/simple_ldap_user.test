@@ -695,14 +695,16 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
     $server = SimpleLdapServer::singleton();
 
     // Mail is special, change it explicitly.
-    $result = $server->modify($test_user['dn'], array($attribute_mail => $test_user[$attribute_mail] . $suffix), 'replace');
-    $this->assertNotIdentical($result, FALSE, t('Modified @attr attribute in LDAP.', array('@attr' => $attribute_mail)));
+    $value = $test_user[$attribute_mail] . $suffix;
+    $result = $server->modify($test_user['dn'], array($attribute_mail => $value), 'replace');
+    $this->assertNotIdentical($result, FALSE, t('Modified @attr LDAP attribute to :value.', array('@attr' => $attribute_mail, ':value' => $value)));
 
     // Modify the other mapped attributes.
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
-      $result = $server->modify($test_user['dn'], array($attribute['ldap'] => $test_user[$attribute['ldap']] . $suffix), 'replace');
-      $this->assertNotIdentical($result, FALSE, t('Modified @attr attribute in LDAP.', array('@attr' => $attribute['ldap'])));
+      $value = $test_user[$attribute['ldap']] . $suffix;
+      $result = $server->modify($test_user['dn'], array($attribute['ldap'] => $value), 'replace');
+      $this->assertNotIdentical($result, FALSE, t('Modified @attr LDAP attribute to :value.', array('@attr' => $attribute['ldap'], ':value' => $value)));
     }
   }
 
@@ -788,10 +790,6 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
     variable_set('simple_ldap_user_source', 'drupal');
     $this->modifyDrupal();
 
-    // Change LDAP again, because modifyDrupal needs to call user_save() which
-    // in turn calls hook_user_update() which also syncs.
-    $this->modifyLdap($suffix);
-
     // Log in, and verify synchronization.
     $this->drupalLogin($account);
     $this->verifySync();
@@ -833,10 +831,6 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
     // there.
     variable_set('simple_ldap_user_source', 'drupal');
     $this->modifyDrupal();
-
-    // Change LDAP again, because modifyDrupal needs to call user_save() which
-    // in turn calls hook_user_update() which also syncs.
-    $this->modifyLdap($suffix);
 
     // Load the user, and verify synchronization.
     $drupal_user = user_load_multiple(array(), array('name' => $test_user[$attribute_name]), TRUE);

@@ -450,8 +450,8 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
   $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
   $attribute_map = simple_ldap_user_attribute_map();
 
-  // Load the LDAP user.
-  $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
+  // Load the LDAP user, force a cache reset.
+  $ldap_user = SimpleLdapUser::singleton($drupal_user->name, TRUE);
 
   // Nothing to sync.
   if (!$ldap_user->exists || (isset($drupal_user->uid) && $drupal_user->uid == 1)) {

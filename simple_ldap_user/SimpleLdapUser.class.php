@@ -225,8 +225,8 @@ class SimpleLdapUser {
   /**
    * Return a SimpleLdapUser object for the given username.
    */
-  public static function singleton($name) {
-    if (!isset(self::$users[$name])) {
+  public static function singleton($name, $reset = FALSE) {
+    if ($reset || !isset(self::$users[$name])) {
       self::$users[$name] = new SimpleLdapUser($name);
     }
 
