@@ -82,7 +82,7 @@ function simple_ldap_user_admin($form, &$form_state) {
     foreach ($attribute_map as $item) {
       $table .= '<tr class="' . $class . '">';
       $table .= '<td>' . $item['ldap'] . '</td>';
-      $table .= '<td>' . $item['drupal'] . '</td>';
+      $table .= '<td>' . implode(' ', $item['drupal']) . '</td>';
       $table .= '</tr>';
       $class = $class == 'odd' ? 'even' : 'odd';
     }

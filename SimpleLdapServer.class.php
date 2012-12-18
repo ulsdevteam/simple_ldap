@@ -265,53 +265,64 @@ class SimpleLdapServer {
       return FALSE;
     }
 
-    // Use a post-test loop (do/while) because this will always be done once. It
-    // will only loop if paged queries are supported/enabled, and more than one
-    // page is available.
-    $entries = array('count' => 0);
-    $cookie = '';
-    do {
+    try {
+      // Use a post-test loop (do/while) because this will always be done once.
+      // It will only loop if paged queries are supported/enabled, and more than
+      // one page is available.
+      $entries = array('count' => 0);
+      $cookie = '';
+      do {
 
-      if ($this->pagesize) {
-        // Set the paged query cookie.
-        SimpleLdap::ldap_control_paged_result($this->resource, $this->pagesize, FALSE, $cookie);
-      }
-
-      // Perform the search based on the scope provided.
-      switch ($scope) {
-        case 'base':
-          $result = SimpleLdap::ldap_read($this->resource, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
-          break;
-
-        case 'one':
-          $result = SimpleLdap::ldap_list($this->resource, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
-          break;
-
-        case 'sub':
-        default:
-          $result = SimpleLdap::ldap_search($this->resource, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
-          break;
-      }
-
-      if ($this->pagesize) {
-        // Merge page into $entries.
-        $e = SimpleLdap::ldap_get_entries($this->resource, $result);
-        $entries['count'] += $e['count'];
-        for ($i = 0; $i < $e['count']; $i++) {
-          $entries[] = $e[$i];
+        if ($this->pagesize) {
+          // Set the paged query cookie.
+          SimpleLdap::ldap_control_paged_result($this->resource, $this->pagesize, FALSE, $cookie);
         }
 
-        // Get the paged query response cookie.
-        SimpleLdap::ldap_control_paged_result_response($this->resource, $result, $cookie);
+        // Perform the search based on the scope provided.
+        switch ($scope) {
+          case 'base':
+            $result = SimpleLdap::ldap_read($this->resource, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
+            break;
+
+          case 'one':
+            $result = SimpleLdap::ldap_list($this->resource, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
+            break;
+
+          case 'sub':
+          default:
+            $result = SimpleLdap::ldap_search($this->resource, $base_dn, $filter, $attributes, $attrsonly, $sizelimit, $timelimit, $deref);
+            break;
+        }
+
+        if ($this->pagesize) {
+          // Merge page into $entries.
+          $e = SimpleLdap::ldap_get_entries($this->resource, $result);
+          $entries['count'] += $e['count'];
+          for ($i = 0; $i < $e['count']; $i++) {
+            $entries[] = $e[$i];
+          }
+
+          // Get the paged query response cookie.
+          SimpleLdap::ldap_control_paged_result_response($this->resource, $result, $cookie);
+        }
+        else {
+          $entries = SimpleLdap::ldap_get_entries($this->resource, $result);
+        }
+
+        // Free the query result memory.
+        SimpleLdap::ldap_free_result($result);
+
+      } while ($cookie !== NULL && $cookie != '');
+
+    } catch (SimpleLdapException $e) {
+      // Error code 32 means there were no matching search results.
+      if ($e->getCode() == 32) {
+        $entries = array('count' => 0);
       }
       else {
-        $entries = SimpleLdap::ldap_get_entries($this->resource, $result);
+        throw $e;
       }
-
-      // Free the query result memory.
-      SimpleLdap::ldap_free_result($result);
-
-    } while ($cookie !== NULL && $cookie != '');
+    }
 
     // ldap_get_entries returns NULL if ldap_read does not find anything.
     // Reformat the result into something consistent with the other search

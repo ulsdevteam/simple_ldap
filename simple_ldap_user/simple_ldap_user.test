@@ -107,8 +107,7 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
     foreach ($attribute_map as $attribute) {
 
       // Parse the drupal attribute name.
-      $drupal_attributes = explode(' ', $attribute['drupal']);
-      foreach ($drupal_attributes as $drupal_attribute) {
+      foreach ($attribute['drupal'] as $drupal_attribute) {
         $type = substr($drupal_attribute, 0, 1);
         $drupal = '';
         switch ($type) {
@@ -121,7 +120,7 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
           default:
             $drupal .= ' ' . $drupal_user->$drupal_attribute;
         }
-      } 
+      }
 
       $drupal = trim($drupal);
 
@@ -381,16 +380,14 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserWebTestCase {
     $edit['mail'] = $test_user[$attribute_mail] . $suffix;
 
     foreach ($attribute_map as $attribute) {
-      // Parse the drupal attribute name.
-      $drupal_attributes = explode(' ', $attribute['drupal']);
 
       // Skip drupal-to-ldap many-to-one mappings.
-      if (count($drupal_attributes) > 1) {
+      if (count($attribute['drupal']) > 1) {
         break;
       }
 
       // Get the field name and type
-      $drupal_attribute = reset($drupal_attributes);
+      $drupal_attribute = reset($attribute['drupal']);
       $type = substr($drupal_attribute, 0, 1);
 
       switch ($type) {
@@ -467,11 +464,10 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
       if (in_array($attribute['ldap'], $must)) {
-        $drupal_attributes = explode(' ', $attribute['drupal']);
-        if (count($drupal_attributes) > 1) {
+        if (count($attribute['drupal']) > 1) {
           break;
         }
-        $drupal_attribute = reset($drupal_attributes);
+        $drupal_attribute = reset($attribute['drupal']);
         if (substr($drupal_attribute, 0, 1) == '#') {
           $drupal_attribute = substr($drupal_attribute, 1);
         }
@@ -617,11 +613,10 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     // Verify that the required mapped fields show up on the registration form.
     $this->drupalGet('user/register');
     foreach ($attribute_map as $field) {
-      $drupal_attributes = explode(' ', $field['drupal']);
-      if (count($drupal_attributes) > 1) {
+      if (count($field['drupal']) > 1) {
         break;
       }
-      $drupal_attribute = reset($drupal_attributes);
+      $drupal_attribute = reset($field['drupal']);
       $type = substr($drupal_attribute, 0, 1);
       if (in_array($field['ldap'], $must) && $type == '#') {
         $drupal_attribute = substr($drupal_attribute, 1);
@@ -650,11 +645,10 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     $this->assertEqual($ldap_user->{$attribute_mail}[0], $mail, t('LDAP e-mail address matches.'));
 
     foreach ($attribute_map as $field) {
-      $drupal_attributes = explode(' ', $field['drupal']);
-      if (count($drupal_attributes) > 1) {
+      if (count($field['drupal']) > 1) {
         break;
       }
-      $drupal_attribute = reset($drupal_attributes);
+      $drupal_attribute = reset($field['drupal']);
       $type = substr($drupal_attribute, 0, 1);
       if (in_array($field['ldap'], $must) && $type == '#') {
         $drupal_attribute = substr($drupal_attribute, 1);
@@ -732,8 +726,7 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
     foreach ($attribute_map as $attribute) {
 
       // Parse the drupal attribute name.
-      $drupal_attributes = explode(' ', $attribute['drupal']);
-      foreach ($drupal_attributes as $drupal_attribute) {
+      foreach ($attribute['drupal'] as $drupal_attribute) {
         $type = substr($drupal_attribute, 0, 1);
         switch ($type) {
           case '#':
@@ -936,11 +929,10 @@ class SimpleLdapUserDeleteUserTestCase extends SimpleLdapUserWebTestCase {
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
       if (in_array($attribute['ldap'], $must)) {
-        $drupal_attributes = explode(' ', $attribute['drupal']);
-        if (count($drupal_attributes) > 1) {
+        if (count($attribute['drupal']) > 1) {
           break;
         }
-        $drupal_attribute = reset($drupal_attributes);
+        $drupal_attribute = reset($attribute['drupal']);
         if (substr($drupal_attribute, 0, 1) == '#') {
           $drupal_attribute = substr($drupal_attribute, 1);
         }

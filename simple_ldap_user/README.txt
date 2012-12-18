@@ -19,9 +19,10 @@ following items:
 * drupal - The field name on the Drupal user. This must be the machine name of
 	   the field.
 
-	   This can also be a space-separated list of drupal fields. If this
-	   is the case, synchronization only works in the drupal->ldap
-	   direction.
+	   This can also be an array of drupal fields. If the array contains
+	   more than one entry, synchronization for that map only works in the
+	   drupal->ldap direction, and the fields are concatenated with a
+	   space separator.
 
            A field type can be specified by prefixing the field name. If no
 	   prefix is given, it is assumed that the field is a direct user
@@ -61,7 +62,10 @@ $conf['simple_ldap_user_attribute_map'] = array(
 
   // Combined fields example.
   array(
-    'drupal' => '#field_first_name #field_last_name',
+    'drupal' => array(
+      '#field_first_name',
+      '#field_last_name',
+    ),
     'ldap' => 'displayName',
   ),
 

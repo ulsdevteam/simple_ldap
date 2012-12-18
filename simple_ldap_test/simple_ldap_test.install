@@ -24,16 +24,13 @@ function simple_ldap_test_install() {
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
 
-      // Parse the drupal attribute name.
-      $drupal_attributes = explode(' ', $attribute['drupal']);
-
       // Skip drupal-to-ldap many-to-one mappings.
-      if (count($drupal_attributes) > 1) {
+      if (count($attribute['drupal']) > 1) {
         break;
       }
 
       // Get the drupal name and type.
-      $drupal_attribute = reset($drupal_attributes);
+      $drupal_attribute = reset($attribute['drupal']);
       $type = substr($drupal_attribute, 0, 1);
 
       // Create user fields.
