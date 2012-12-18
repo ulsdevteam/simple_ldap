@@ -203,7 +203,7 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
 
         // Get the field name and type
         $drupal_attribute = reset($drupal_attributes);
-        $type = substr($drupal_attributes, 0, 1);
+        $type = substr($drupal_attribute, 0, 1);
 
         switch ($type) {
           case '#':

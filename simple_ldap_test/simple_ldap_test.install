@@ -28,11 +28,16 @@ function simple_ldap_test_install() {
       $drupal_attributes = explode(' ', $attribute['drupal']);
 
       // Skip drupal-to-ldap many-to-one mappings.
-      if (count($drupal_attribute) > 1) {
+      if (count($drupal_attributes) > 1) {
         break;
       }
 
-      if (substr($drupal_attribute, 0, 1) == '#') {
+      // Get the drupal name and type.
+      $drupal_attribute = reset($drupal_attributes);
+      $type = substr($drupal_attribute, 0, 1);
+
+      // Create user fields.
+      if ($type == '#') {
         $drupal_attribute = substr($drupal_attribute, 1);
         $required = in_array($attribute['ldap'], $must);
         field_create_field(array(

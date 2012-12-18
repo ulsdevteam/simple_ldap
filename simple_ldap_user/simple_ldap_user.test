@@ -126,7 +126,7 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
       $drupal = trim($drupal);
 
       // Make sure drupal and ldap match.
-      $this->assertEqual($ldap_user->{$attribute['ldap']}[0], $drupal, t('The @ldap LDAP attribute :ldap and the @drupal Drupal field :drupal are synchronized.', array('@ldap' => $attribute['ldap'], '@drupal' => $attribute['drupal'], ':ldap' => $ldap_user->{$attribute['ldap']}[0], ':drupal' => $drupal)));
+      $this->assertEqual($ldap_user->{$attribute['ldap']}[0], $drupal, t('The @ldap LDAP attribute :ldap and the @drupal Drupal field :drupal are synchronized.', array('@ldap' => $attribute['ldap'], '@drupal' => $drupal_attribute, ':ldap' => $ldap_user->{$attribute['ldap']}[0], ':drupal' => $drupal)));
       // Make sure they match the control.
       $this->assertEqual($test_user[$attribute['ldap']] . $suffix, $drupal, t(':value matches the control value :control', array(':value' => $drupal, ':control' => $test_user[$attribute['ldap']] . $suffix)));
     }
@@ -391,7 +391,7 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserWebTestCase {
 
       // Get the field name and type
       $drupal_attribute = reset($drupal_attributes);
-      $type = substr($drupal_attributes, 0, 1);
+      $type = substr($drupal_attribute, 0, 1);
 
       switch ($type) {
         case '#':
@@ -467,7 +467,15 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
       if (in_array($attribute['ldap'], $must)) {
-        $edit[$attribute['drupal'] . '[und][0][value]'] = $this->randomName();
+        $drupal_attributes = explode(' ', $attribute['drupal']);
+        if (count($drupal_attributes) > 1) {
+          break;
+        }
+        $drupal_attribute = reset($drupal_attributes);
+        if (substr($drupal_attribute, 0, 1) == '#') {
+          $drupal_attribute = substr($drupal_attribute, 1);
+        }
+        $edit[$drupal_attribute . '[und][0][value]'] = $this->randomName();
       }
     }
 
@@ -609,8 +617,15 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     // Verify that the required mapped fields show up on the registration form.
     $this->drupalGet('user/register');
     foreach ($attribute_map as $field) {
-      if (in_array($field['ldap'], $must) && substr($field['drupal'], 0, 1) == '#') {
-        $this->assertText($field['drupal'], t(':field appears on the user registration form', array(':field' => $field['drupal'])));
+      $drupal_attributes = explode(' ', $field['drupal']);
+      if (count($drupal_attributes) > 1) {
+        break;
+      }
+      $drupal_attribute = reset($drupal_attributes);
+      $type = substr($drupal_attribute, 0, 1);
+      if (in_array($field['ldap'], $must) && $type == '#') {
+        $drupal_attribute = substr($drupal_attribute, 1);
+        $this->assertText($drupal_attribute, t(':field appears on the user registration form', array(':field' => $drupal_attribute)));
       }
     }
 
@@ -635,9 +650,16 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     $this->assertEqual($ldap_user->{$attribute_mail}[0], $mail, t('LDAP e-mail address matches.'));
 
     foreach ($attribute_map as $field) {
-      if (in_array($field['ldap'], $must) && substr($field['drupal'], 0, 1) == '#') {
-        $this->assertEqual($new_user->{$field['drupal']}[LANGUAGE_NONE][0]['value'], $edit[$field['drupal'] . '[und][0][value]'], t('The :field Drupal field value was correctly saved.', array(':field' => $field['drupal'])));
-        $this->assertEqual($ldap_user->{$field['ldap']}[0], $edit[$field['drupal'] . '[und][0][value]'], t('The :field LDAP attribute was correctly saved.', array(':field' => $field['ldap'])));
+      $drupal_attributes = explode(' ', $field['drupal']);
+      if (count($drupal_attributes) > 1) {
+        break;
+      }
+      $drupal_attribute = reset($drupal_attributes);
+      $type = substr($drupal_attribute, 0, 1);
+      if (in_array($field['ldap'], $must) && $type == '#') {
+        $drupal_attribute = substr($drupal_attribute, 1);
+        $this->assertEqual($new_user->{$drupal_attribute}[LANGUAGE_NONE][0]['value'], $edit[$drupal_attribute . '[und][0][value]'], t('The :field Drupal field value was correctly saved.', array(':field' => $drupal_attribute)));
+        $this->assertEqual($ldap_user->{$field['ldap']}[0], $edit[$drupal_attribute . '[und][0][value]'], t('The :field LDAP attribute was correctly saved.', array(':field' => $field['ldap'])));
       }
     }
 
@@ -920,7 +942,15 @@ class SimpleLdapUserDeleteUserTestCase extends SimpleLdapUserWebTestCase {
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
       if (in_array($attribute['ldap'], $must)) {
-        $edit[$attribute['drupal'] . '[und][0][value]'] = $this->randomName();
+        $drupal_attributes = explode(' ', $attribute['drupal']);
+        if (count($drupal_attributes) > 1) {
+          break;
+        }
+        $drupal_attribute = reset($drupal_attributes);
+        if (substr($drupal_attribute, 0, 1) == '#') {
+          $drupal_attribute = substr($drupal_attribute, 1);
+        }
+        $edit[$drupal_attribute . '[und][0][value]'] = $this->randomName();
       }
     }
 
