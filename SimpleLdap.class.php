@@ -293,6 +293,44 @@ class SimpleLdap {
   }
 
   /**
+   * Wrapper function for ldap_unbind().
+   *
+   * @param resource $link_identifier
+   *   An LDAP link identifier.
+   *
+   * @return boolean
+   *   TRUE on success
+   *
+   * @throw SimpleLdapException
+   */
+  public static function ldap_unbind($link_identifier) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+    }
+
+    // Wrapped function call.
+    $return = @ldap_unbind($link_identifier);
+
+    // Debugging.
+    if (variable_get('simple_ldap_debug', FALSE)) {
+      $message = __FUNCTION__ . '($link_identifier = @link_identifier) returns @return';
+      $variables = array(
+        '@link_identifier' => print_r($link_identifier, TRUE),
+        '@return' => print_r($return, TRUE),
+      );
+      watchdog('simple_ldap', $message, $variables, WATCHDOG_DEBUG);
+    }
+
+    // Error handling.
+    if (!$return) {
+      throw new SimpleLdapException($link_identifier);
+    }
+
+    return $return;
+  }
+
+  /**
    * Wrapper function for ldap_compare().
    *
    * @param resource $link_identifier
@@ -1174,6 +1212,113 @@ class SimpleLdap {
     // Error handling.
     if ($return === FALSE) {
       throw new SimpleLdapException($link);
+    }
+
+    return $return;
+  }
+
+  /**
+   * Wrapper function for ldap_rename().
+   *
+   * @param resource $link_identifier
+   *   An LDAP link identifier.
+   * @param string $dn
+   *   The distinguished name of an LDAP entity.
+   * @param string $newrdn
+   *   The new RDN.
+   * @param string $newparent
+   *   The new parent/superior entry.
+   * @param boolean $deleteoldrdn
+   *   If TRUE the old RDN value(s) is removed, else the old RDN value(s) is
+   *   retained as non-distinguished values of the entry.
+   *
+   * @return boolean
+   *   TRUE on success.
+   *
+   * @throw SimpleLdapException
+   */
+  public static function ldap_rename($link_identifier, $dn, $newrdn, $newparent, $deleteoldrdn) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$dn' => $dn,
+        '$newrdn' => $newrdn,
+        '$newparent' => $newparent,
+        '$deleteoldrdn' => $deleteoldrdn,
+      ));
+    }
+
+    // Wrapped function call.
+    $return = @ldap_rename($link_identifier, $dn, $newrdn, $newparent, $deleteoldrdn);
+
+    // Debugging.
+    if (variable_get('simple_ldap_debug', FALSE)) {
+      $message = __FUNCTION__ . '($link_identifier = @link_identifier, $dn = @dn, $newrdn = @newrdn, $newparent = @newparent, $deleteoldrdn = @deleteoldrdn) returns @return';
+      $variables = array(
+        '@link_identifier' => print_r($link_identifier, TRUE),
+        '@dn' => print_r($dn, TRUE),
+        '@newrdn' => print_r($newrdn, TRUE),
+        '@newparent' => print_r($newparent, TRUE),
+        '@deleteoldrdn' => print_r($deleteoldrdn, TRUE),
+        '@return' => print_r($return, TRUE),
+      );
+      watchdog('simple_ldap', $message, $variables, WATCHDOG_DEBUG);
+    }
+
+    // Error handling.
+    if ($return === FALSE) {
+      throw new SimpleLdapException($link);
+    }
+
+    return $return;
+  }
+
+  /**
+   * Wrapper function for ldap_explode_dn().
+   *
+   * @param string $dn
+   *   The distinguished name of an LDAP entity.
+   * @param int $with_attrib
+   *   Used to request if the RDNs are returned with only values or their
+   *   attributes as well. To get RDNs with the attributes (i.e. in
+   *   attribute=value format) set with_attrib to 0 and to get only values set
+   *   it to 1.
+   *
+   * @return array
+   *   Returns an array of all DN components. The first element in this array
+   *   has count key and represents the number of returned values, next elements
+   *   are numerically indexed DN components.
+   *
+   * @throw SimpleLdapException
+   */
+  public static function ldap_explode_dn($dn, $with_attrib) {
+    // Devel debugging.
+    if (variable_get('simple_ldap_devel', FALSE)) {
+      dpm(__FUNCTION__);
+      dpm(array(
+        '$dn' => $dn,
+        '$with_attrib' => $with_attrib,
+      ));
+    }
+
+    // Wrapped function call.
+    $return = @ldap_explode_dn($dn, $with_attrib);
+
+    // Debugging.
+    if (variable_get('simple_ldap_debug', FALSE)) {
+      $message = __FUNCTION__ . '($dn = @dn, $with_attrib = @with_attrib) returns @return';
+      $variables = array(
+        '@dn' => print_r($dn, TRUE),
+        '@with_attrib' => print_r($with_attrib, TRUE),
+        '@return' => print_r($return, TRUE),
+      );
+      watchdog('simple_ldap', $message, $variables, WATCHDOG_DEBUG);
+    }
+
+    // Error handling.
+    if ($return === FALSE) {
+      throw new SimpleLdapException('Invalid parameters were passed to ldap_explode_dn');
     }
 
     return $return;

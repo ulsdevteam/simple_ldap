@@ -42,6 +42,14 @@ class SimpleLdapServer {
 
   /**
    * Singleton constructor.
+   *
+   * This method should be used whenever a SimpleLdapServer object is needed.
+   *
+   * @param boolean $reset
+   *   Forces a new object to be instantiated.
+   *
+   * @return object
+   *   SimpleLdapServer object
    */
   public static function singleton($reset = FALSE) {
     if ($reset || !isset(self::$instance)) {
@@ -136,6 +144,11 @@ class SimpleLdapServer {
 
   /**
    * Magic __set() function, handles changing server settings.
+   *
+   * @param string $name
+   *   The name of the attribute to set.
+   * @param mixed $value
+   *   The value to assigned to the given attribute.
    */
   public function __set($name, $value) {
     switch ($name) {
@@ -247,23 +260,49 @@ class SimpleLdapServer {
    * Unbind from the LDAP server.
    *
    * @return boolean
-   *   TRUE on success, FALSE on failure.
+   *   TRUE on success
+   *
+   * @throw SimpleLdapException
    */
   public function unbind() {
     if ($this->bound) {
-      $this->bound = !ldap_unbind($this->resource);
+      SimpleLdap::ldap_unbind($this->resource);
+      $this->bound = FALSE;
     }
-    return !$this->bound;
+    return TRUE;
   }
 
   /**
    * Search the LDAP server.
+   *
+   * @param string $base_dn
+   *   LDAP search base.
+   * @param string $filter
+   *   LDAP search filter.
+   * @param string $scope
+   *   LDAP search scope. Valid values are 'sub', 'one', and 'base'.
+   * @param array $attributes
+   *   Array of attributes to retrieve.
+   * @param int $attrsonly
+   *   Set to 1 in order to retrieve only the attribute names without the
+   *   values. Set to 0 (default) to retrieve both the attribute names and
+   *   values.
+   * @param int $sizelimit
+   *   Client-side size limit. Set this to 0 to indicate no limit. The server
+   *   may impose stricter limits.
+   * @param int $timelimit
+   *   Client-side time limit. Set this to 0 to indicate no limit. The server
+   *   may impose stricter limits.
+   * @param int $deref
+   *   Specifies how aliases should be handled during the search.
+   *
+   * @return array
+   *
+   * @throw SimpleLdapException
    */
   public function search($base_dn, $filter = 'objectclass=*', $scope = 'sub', $attributes = array(), $attrsonly = 0, $sizelimit = 0, $timelimit = 0, $deref = LDAP_DEREF_NEVER) {
     // Make sure there is a valid binding.
-    if (!$this->bind()) {
-      return FALSE;
-    }
+    $this->bind();
 
     try {
       // Use a post-test loop (do/while) because this will always be done once.
@@ -336,57 +375,97 @@ class SimpleLdapServer {
 
   /**
    * Check whether the provided DN exists.
+   *
+   * @param string $dn
+   *   LDAP DN to verify.
+   *
+   * @return boolean
+   *   TRUE if the entry exists, FALSE otherwise.
+   *
+   * @throw SimpleLdapException
    */
   public function exists($dn) {
     $entry = $this->search($dn, '(objectclass=*)', 'base', array('dn'));
-    if ($entry === FALSE || $entry['count'] == 0) {
-      return FALSE;
-    }
-    return TRUE;
+    return $entry['count'] > 0;
   }
 
   /**
    * Gets a single entry from the LDAP server.
+   *
+   * @param string $dn
+   *   LDAP DN to retrieve.
+   *
+   * @return array
+   *   The LDAP entry.
+   *
+   * @throw SimpleLdapException
    */
   public function entry($dn) {
-    $entry = $this->search($dn, '(objectclass=*)', 'base');
-    return $this->clean($entry);
+    return $this->search($dn, '(objectclass=*)', 'base');
   }
 
   /**
    * Compare the given attribute value with what is in the LDAP server.
+   *
+   * @param string $dn
+   *   The distinguished name of an LDAP entity.
+   * @param string $attribute
+   *   The attribute name.
+   * @param string $value
+   *   The compared value.
+   *
+   * @return boolen
+   *   TRUE if value matches otherwise returns FALSE.
+   *
+   * @throw SimpleLdapException
    */
   public function compare($dn, $attribute, $value) {
     // Make sure there is a valid binding.
-    if (!$this->bind()) {
-      return FALSE;
-    }
+    $this->bind();
 
+    // Do the comparison.
     return SimpleLdap::ldap_compare($this->resource, $dn, $attribute, $value);
   }
 
   /**
    * Add an entry to the LDAP directory.
+   *
+   * @param string $dn
+   *   The distinguished name of an LDAP entry.
+   * @param array $attributes
+   *   An array of LDAP attributes and values.
+   *
+   * @return boolean
+   *   TRUE on success.
+   *
+   * @throw SimpleLdapException
    */
   public function add($dn, $attributes) {
-    // Make sure there is a valid binding and that changes are allowed.
-    if ($this->readonly || !$this->bind()) {
-      return FALSE;
+    // Make sure changes are allowed.
+    if ($this->readonly) {
+      throw new SimpleLdapException('The LDAP Server is configured as read-only');
     }
 
-    // Verify that there are no empty attributes.
+    // Make sure there is a valid binding.
+    $this->bind();
+
+    // Clean up the attributes array.
     foreach ($attributes as $key => $value) {
       if (is_array($value)) {
+
+        // Remove empty values.
         foreach ($value as $k => $v) {
           if (empty($v)) {
             unset($value[$k]);
           }
         }
 
+        // Remove the 'count' property, if present.
         if (isset($value['count'])) {
           unset($attributes[$key]['count']);
         }
 
+        // Remove attributes with no values.
         if (count($value) == 0) {
           unset($attributes[$key]);
         }
@@ -400,33 +479,64 @@ class SimpleLdapServer {
 
   /**
    * Delete an entry from the directory.
+   *
+   * @param string $dn
+   *   The distinguished name of an LDAP entry.
+   * @param boolean $recursive
+   *   If TRUE, all children of the given DN will be deleted before attempting
+   *   to delete the DN.
+   *
+   * @return boolean
+   *   TRUE on success.
+   *
+   * @throw SimpleLdapException
    */
   public function delete($dn, $recursive = FALSE) {
-    // Make sure there is a valid binding and that changes are allowed.
-    if ($this->readonly || !$this->bind()) {
-      return FALSE;
+    // Make sure changes are allowed.
+    if ($this->readonly) {
+      throw new SimpleLdapException('The LDAP Server is configured as read-only');
     }
 
+    // Make sure there is a valid binding.
+    $this->bind();
+
+    // Delete children.
     if ($recursive) {
       $subentries = $this->clean($this->search($dn, '(objectclass=*)', 'one', array('dn')));
       foreach ($subentries as $subdn => $entry) {
-        if (!$this->delete($subdn, TRUE)) {
-          return FALSE;
-        }
+        $this->delete($subdn, TRUE);
       }
     }
 
+    // Delete the DN.
     return SimpleLdap::ldap_delete($this->resource, $dn);
   }
 
   /**
    * Modify an LDAP entry.
+   *
+   * @param string @dn
+   *   The distinguished name of an LDAP entry.
+   * @param array $attributes
+   *   An array of attributes to modify
+   * @param string $type
+   *   The type of LDAP modification operation to use. Valid values are 'add',
+   *   'del' or 'delete', and 'replace'. If unspecified, an object-level modify
+   *   is performed.
+   *
+   * @return boolean
+   *   TRUE on success.
+   *
+   * @throw SimpleLdapException
    */
   public function modify($dn, $attributes, $type = NULL) {
-    // Make sure there is a valid binding and that changes are allowed.
-    if ($this->readonly || !$this->bind()) {
-      return FALSE;
+    // Make sure changes are allowed.
+    if ($this->readonly) {
+      throw new SimpleLdapException('The LDAP Server is configured as read-only');
     }
+
+    // Make sure there is a valid binding.
+    $this->bind();
 
     switch ($type) {
       case 'add':
@@ -452,17 +562,30 @@ class SimpleLdapServer {
   /**
    * Move an entry to a new DN.
    *
+   * @param string $dn
+   *   The distinguished name of an LDAP entry.
+   * @param string $newdn
+   *   The new distinguished name of the LDAP entry.
+   * @param boolean $deleteoldrdn
+   *   If TRUE the old RDN value(s) is removed, else the old RDN value(s) is
+   *   retained as non-distinguished values of the entry.
+   *
    * @return boolean
-   *   TRUE on success, FALSE on failure.
+   *   TRUE on success
+   *
+   * @throw SimpleLdapException
    */
   public function move($dn, $newdn, $deleteoldrdn = TRUE) {
-    // Make sure there is a valid binding and that changes are allowed.
-    if ($this->readonly || !$this->bind()) {
-      return FALSE;
+    // Make sure changes are allowed.
+    if ($this->readonly) {
+      throw new SimpleLdapException('The LDAP Server is configured as read-only');
     }
 
+    // Make sure there is a valid binding.
+    $this->bind();
+
     // Parse $newdn into a format that ldap_rename() can use.
-    $parts = ldap_explode_dn($newdn, 0);
+    $parts = SimpleLdap::ldap_explode_dn($newdn, 0);
     $rdn = $parts[0];
     $parent = '';
     for ($i = 1; $i < $parts['count']; $i++) {
@@ -473,59 +596,52 @@ class SimpleLdapServer {
     }
 
     // Move the entry.
-    $result = ldap_rename($this->resource, $dn, $rdn, $parent, $deleteoldrdn);
-
-    // Return the result.
-    return $result;
+    return SimpleLdap::ldap_rename($this->resource, $dn, $rdn, $parent, $deleteoldrdn);
   }
 
   /**
    * Copy an entry to a new DN.
    *
+   * @param string $dn
+   *   The distinguished name of an LDAP entry.
+   * @param string $newdn
+   *   The distinguished name of the new LDAP entry.
+   *
    * @return boolean
-   *   TRUE on success, FALSE on failure.
+   *   TRUE on success
+   *
+   * @throw SimpleLdapException
    */
   public function copy($dn, $newdn) {
-    // Make sure there is a valid binding and that changes are allowed.
-    if ($this->readonly || !$this->bind()) {
-      return FALSE;
-    }
+    // Get the LDAP entry.
+    $entry = $this->search($dn, '(objectclass=*)', 'base');
 
-    SimpleLdap::ldap_get_option($this->resource, LDAP_OPT_CLIENT_CONTROLS, $controls);
+    // Create the copy.
+    $result = $this->add($newdn, $entry[$dn]);
 
-    $entry = $this->entry($dn);
-    if ($entry !== FALSE) {
-      $result = $this->add($newdn, $entry[$dn]);
-    }
-
-    return FALSE;
+    return $result;
   }
 
   /**
    * Connect to the LDAP server.
    *
    * @return boolean
-   *   TRUE on success, FALSE on failure.
+   *   TRUE on success.
+   *
+   * @throw SimpleLdapException
    */
   protected function connect() {
     if ($this->resource === FALSE) {
 
       // Set up the connection.
       $this->resource = SimpleLdap::ldap_connect($this->host, $this->port);
-      if ($this->resource === FALSE) {
-        return FALSE;
-      }
 
       // Set the LDAP version.
-      if (!SimpleLdap::ldap_set_option($this->resource, LDAP_OPT_PROTOCOL_VERSION, $this->version)) {
-        return FALSE;
-      }
+      SimpleLdap::ldap_set_option($this->resource, LDAP_OPT_PROTOCOL_VERSION, $this->version);
 
       // StartTLS.
       if ($this->starttls) {
-        if (!SimpleLdap::ldap_start_tls($this->resource)) {
-          return FALSE;
-        }
+        SimpleLdap::ldap_start_tls($this->resource);
       }
 
     }
@@ -537,18 +653,20 @@ class SimpleLdapServer {
    * Unbind and disconnect from the LDAP server.
    *
    * @return boolean
-   *   TRUE on success, FALSE on failure.
+   *   TRUE on success.
+   *
+   * @throw SimpleLdapException
    */
   protected function disconnect() {
-    if ($this->unbind()) {
-      $this->resource = FALSE;
-      return TRUE;
-    }
-    return FALSE;
+    $this->unbind();
+    $this->resource = FALSE;
+    return TRUE;
   }
 
   /**
    * Loads the server's rootDSE.
+   *
+   * @throw SimpleLdapException
    */
   protected function rootdse() {
     if (!is_array($this->rootdse)) {
@@ -583,6 +701,9 @@ class SimpleLdapServer {
 
   /**
    * Attempts to determine the server's baseDN.
+   *
+   * @return mixed
+   *   Returns the LDAP server base DN, or FALSE on failure.
    */
   protected function basedn() {
     // If the baseDN has already been checked, just return it.
@@ -598,11 +719,13 @@ class SimpleLdapServer {
     }
 
     // The basedn is not specified, so attempt to detect it from the rootDSE.
-    $this->rootdse();
-    if (isset($this->rootdse['namingcontexts'])) {
-      $this->basedn = $this->rootdse['namingcontexts'][0];
-      return $this->basedn;
-    }
+    try {
+      $this->rootdse();
+      if (isset($this->rootdse['namingcontexts'])) {
+        $this->basedn = $this->rootdse['namingcontexts'][0];
+        return $this->basedn;
+      }
+    } catch (SimpleLdapException $e) { }
 
     // Unable to determine the baseDN.
     return FALSE;
@@ -610,23 +733,34 @@ class SimpleLdapServer {
 
   /**
    * Cleans up an array returned by the ldap_* functions.
+   *
+   * @param array $entry
+   *   An LDAP entry as returned by SimpleLdapServer::search()
+   *
+   * @return array
+   *   A scrubbed array, with all of the "extra crud" removed.
+   *
+   * @throw SimpleLdapException
    */
   public function clean($entry) {
-    if (is_array($entry)) {
-      $clean = array();
-      for ($i = 0; $i < $entry['count']; $i++) {
-        $clean[$entry[$i]['dn']] = array();
-        for ($j = 0; $j < $entry[$i]['count']; $j++) {
-          $clean[$entry[$i]['dn']][$entry[$i][$j]] = array();
-          for ($k = 0; $k < $entry[$i][$entry[$i][$j]]['count']; $k++) {
-            $clean[$entry[$i]['dn']][$entry[$i][$j]][] = $entry[$i][$entry[$i][$j]][$k];
-          }
-        }
-      }
-      return $clean;
+    if (!is_array($entry)) {
+      throw new SimpleLdapException('Can only clean an array.');
     }
 
-    return FALSE;
+    $clean = array();
+
+    // Yes, this is ugly, but so are the ldap_*() results.
+    for ($i = 0; $i < $entry['count']; $i++) {
+      $clean[$entry[$i]['dn']] = array();
+      for ($j = 0; $j < $entry[$i]['count']; $j++) {
+        $clean[$entry[$i]['dn']][$entry[$i][$j]] = array();
+        for ($k = 0; $k < $entry[$i][$entry[$i][$j]]['count']; $k++) {
+          $clean[$entry[$i]['dn']][$entry[$i][$j]][] = $entry[$i][$entry[$i][$j]][$k];
+        }
+      }
+    }
+
+    return $clean;
   }
 
   /**
@@ -638,22 +772,24 @@ class SimpleLdapServer {
       return $this->type;
     }
 
-    // Load the rootDSE.
-    $this->rootdse();
+    try {
+      // Load the rootDSE.
+      $this->rootdse();
 
-    // Check for OpenLDAP.
-    if (isset($this->rootdse['objectclass']) && is_array($this->rootdse['objectclass'])) {
-      if (in_array('OpenLDAProotDSE', $this->rootdse['objectclass'])) {
-        $this->type = 'OpenLDAP';
+      // Check for OpenLDAP.
+      if (isset($this->rootdse['objectclass']) && is_array($this->rootdse['objectclass'])) {
+        if (in_array('OpenLDAProotDSE', $this->rootdse['objectclass'])) {
+          $this->type = 'OpenLDAP';
+          return $this->type;
+        }
+      }
+
+      // Check for Active Directory.
+      if (isset($this->rootdse['rootdomainnamingcontext'])) {
+        $this->type = 'Active Directory';
         return $this->type;
       }
-    }
-
-    // Check for Active Directory.
-    if (isset($this->rootdse['rootdomainnamingcontext'])) {
-      $this->type = 'Active Directory';
-      return $this->type;
-    }
+    } catch (SimpleLdapException $e) { }
 
     // Default to generic LDAPv3.
     $this->type = 'LDAP';
