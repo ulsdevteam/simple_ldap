@@ -551,7 +551,7 @@ function simple_ldap_user_simple_ldap_test_config() {
   $content .= "variable_set('simple_ldap_user_sync', '" . variable_get('simple_ldap_user_sync') . "');\n";
   $content .= "variable_set('simple_ldap_user_delete', " . $boolean[variable_get('simple_ldap_user_delete')] . ");\n";
 
-  $content .= "\n\$simple_ldap_attribute_map = array(\n";
+  $content .= "\n\$simple_ldap_user_attribute_map = array(\n";
   $attribute_map = variable_get('simple_ldap_user_attribute_map', array());
   foreach ($attribute_map as $attribute) {
     if (is_array($attribute)) {
