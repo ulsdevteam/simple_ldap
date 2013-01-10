@@ -17,6 +17,11 @@ class SimpleLdapUser {
 
   /**
    * Constructor.
+   *
+   * @param string $name
+   *   The drupal user name to search for, and load from LDAP.
+   *
+   * @throw SimpleLdapException
    */
   public function __construct($name) {
     // Load the LDAP server object.
@@ -59,6 +64,12 @@ class SimpleLdapUser {
 
   /**
    * Magic __get() function.
+   *
+   * @param string $name
+   *   Name of the variable to get.
+   *
+   * @return mixed
+   *   Returns the value of the requested variable, if allowed.
    */
   public function __get($name) {
     switch ($name) {
@@ -84,6 +95,11 @@ class SimpleLdapUser {
 
   /**
    * Magic __set() function.
+   *
+   * @param string $name
+   *   The name of the attribute to set.
+   * @param mixed $value
+   *   The value to assigned to the given attribute.
    */
   public function __set($name, $value) {
     $attribute_pass = variable_get('simple_ldap_user_attribute_pass');
@@ -134,6 +150,12 @@ class SimpleLdapUser {
 
   /**
    * Authenticates this user with the given password.
+   *
+   * @param string $password
+   *   The password to use for authentication.
+   *
+   * @return boolean
+   *   TRUE on success, FALSE on failure
    */
   public function authenticate($password) {
     if ($this->exists) {
@@ -147,17 +169,14 @@ class SimpleLdapUser {
    * Save user to LDAP.
    *
    * @return boolean
-   *   TRUE on success, FALSE on failure.
+   *   TRUE on success.
+   *
+   * @throw SimpleLdapException
    */
   public function save() {
     // If there is nothing to save, return "success".
     if (!$this->dirty) {
       return TRUE;
-    }
-
-    // If the server is set to readonly, return "fail".
-    if ($this->server->readonly) {
-      return FALSE;
     }
 
     if ($this->exists) {
@@ -171,37 +190,35 @@ class SimpleLdapUser {
       $result = $this->server->add($this->dn, $this->attributes);
     }
 
-    // Successfully saved.
-    if ($result !== FALSE) {
-      $this->dirty = FALSE;
-      return TRUE;
-    }
-
-    // Default to "fail".
-    return FALSE;
+    // No exceptions were thrown, so the save was successful.
+    $this->dirty = FALSE;
+    return TRUE;
   }
 
   /**
    * Delete user from LDAP directory.
    *
    * @return boolean
-   *   TRUE on success, FALSE on failure.
+   *   TRUE on success.
+   *
+   * @throw SimpleLdapException
    */
   public function delete() {
-    if ($this->exists && variable_get('simple_ldap_user_delete', TRUE)) {
-      $result = $this->server->delete($this->dn);
-      if ($result) {
-        $this->exists = FALSE;
-        $this->dirty = FALSE;
-        return TRUE;
-      }
+    if (variable_get('simple_ldap_user_delete', TRUE)) {
+      $this->server->delete($this->dn);
+      $this->exists = FALSE;
+      $this->dirty = FALSE;
+      return TRUE;
     }
 
-    return FALSE;
+    throw new SimpleLdapException('Simple LDAP User configuration does not allow users to be delete from LDAP.');
   }
 
   /**
    * Return the LDAP search filter, as set by the module configuration.
+   *
+   * @return string
+   *   The LDAP search filter to satisfy the module configuration options.
    */
   public static function filter() {
     // Get the relevant configurations.
@@ -219,11 +236,19 @@ class SimpleLdapUser {
 
   protected static $users = array();
 
-  // This is intentionally private because it handles sensitive information.
-  private static $hash = array();
-
   /**
    * Return a SimpleLdapUser object for the given username.
+   *
+   * @param string $name
+   *   The drupal user name to search for, and load from LDAP.
+   * @param boolean $reset
+   *   If TRUE, the cache for the specified user is cleared, and the user is
+   *   reloaded from LDAP.
+   *
+   * @return object
+   *   SimpleLdapUser
+   *
+   * @throw SimpleLdapException
    */
   public static function singleton($name, $reset = FALSE) {
     if ($reset || !isset(self::$users[$name])) {
@@ -235,6 +260,10 @@ class SimpleLdapUser {
 
   /**
    * Clear the cache for the given username.
+   *
+   * @param string $name
+   *   If specified, clear the cache entry for the given user. If not
+   *   specified, all cache entries are cleared.
    */
   public static function reset($name = NULL) {
     if ($name === NULL) {
@@ -245,6 +274,9 @@ class SimpleLdapUser {
     }
   }
 
+  // This is intentionally private because it handles sensitive information.
+  private static $hash = array();
+
   /**
    * Internal password hash storage.
    *
@@ -252,6 +284,11 @@ class SimpleLdapUser {
    * simple_ldap_user.password.inc to create an internal reverse hash lookup, so
    * passwords can be updated in LDAP. The hash is not exposed by the class API,
    * and is cleared after every page load.
+   *
+   * @param string $key
+   *   The hash key
+   * @param string $value
+   *   The hash value
    */
   public static function hash($key, $value) {
     self::$hash[$key] = $value;
