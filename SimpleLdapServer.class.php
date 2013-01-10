@@ -90,6 +90,12 @@ class SimpleLdapServer {
 
   /**
    * Magic __get() function.
+   *
+   * @param string $name
+   *   Name of the variable to get.
+   *
+   * @return mixed
+   *   Returns the value of the requested variable, if allowed.
    */
   public function __get($name) {
     switch ($name) {

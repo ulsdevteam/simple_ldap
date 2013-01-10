@@ -29,18 +29,26 @@ class SimpleLdapSchema {
   public function __construct(SimpleLdapServer $server) {
     $this->server = $server;
 
-    if (isset($this->server->rootdse['subschemasubentry'])) {
-      $this->dn = $this->server->rootdse['subschemasubentry'][0];
-    }
-    else {
-      // Fallback for broken servers.
-      $this->dn = 'cn=Subschema';
-    }
+    // Fallback for broken servers.
+    $this->dn = 'cn=Subschema';
+
+    // Load the subschema DN from the server.
+    try {
+      if (isset($this->server->rootdse['subschemasubentry'])) {
+        $this->dn = $this->server->rootdse['subschemasubentry'][0];
+      }
+    } catch (SimpleLdapException $e) { }
 
   }
 
   /**
    * Magic __get function.
+   *
+   * @param string $name
+   *   Name of the variable to get.
+   *
+   * @return mixed
+   *   Returns the value of the requested variable, if allowed.
    */
   public function __get($name) {
     switch ($name) {
@@ -57,6 +65,11 @@ class SimpleLdapSchema {
 
   /**
    * Magic __set function.
+   *
+   * @param string $name
+   *   The name of the attribute to set.
+   * @param mixed $value
+   *   The value to assigned to the given attribute.
    */
   public function __set($name, $value) {
     // The schema is read-only, just return.
@@ -65,6 +78,17 @@ class SimpleLdapSchema {
 
   /**
    * Returns whether the given item exists.
+   *
+   * @param string $attribute
+   *   Name of the schema attribute type to check.
+   * @param string $name
+   *   Name or OID of a single entry to check. If NULL, then this function will
+   *   return whether or not the given attribute type is empty.
+   *
+   * @return boolean
+   *   TRUE if the item exists, FALSE otherwise.
+   *
+   * @throw SimpleLdapException
    */
   public function exists($attribute, $name = NULL) {
     // Make sure the schema for the requested type is loaded.
@@ -98,8 +122,15 @@ class SimpleLdapSchema {
   /**
    * Fetches entries of the given type.
    *
+   * @param string $attribute
+   *   Name of the schema attribute type to return.
    * @param string $name
-   *   If specified, a single entry with this name is returned.
+   *   If specified, a single entry with this name or OID is returned.
+   *
+   * @return array
+   *   The requested attribute list or entry.
+   *
+   * @throw SimpleLdapException
    */
   public function get($attribute, $name = NULL) {
     if ($this->exists($attribute, $name)) {
@@ -124,11 +155,22 @@ class SimpleLdapSchema {
       }
     }
 
-    return FALSE;
+    throw new SimpleLdapException('The requested entry does not exist: ' . $attribute . ', ' . $name);
   }
 
   /**
    * Return a list of attributes defined for the objectclass.
+   *
+   * @param string $objectclass
+   *   The objectclass to query for attributes.
+   * @param boolean $recursive
+   *   If TRUE, the attributes of the parent objectclasses will also be
+   *   retrieved.
+   *
+   * @return array
+   *   A list of the MAY/MUST attributes.
+   *
+   * @throw SimpleLdapException
    */
   public function attributes($objectclass, $recursive = FALSE) {
     $may = $this->may($objectclass, $recursive);
@@ -147,48 +189,64 @@ class SimpleLdapSchema {
 
   /**
    * Return a list of attributes specified as MAY for the objectclass.
+   *
+   * @param string $objectclass
+   *   The objectclass to query for attributes.
+   * @param boolean $recursive
+   *   If TRUE, the attributes of the parent objectclasses will also be
+   *   retrieved.
+   *
+   * @return array
+   *   A list of the MAY attributes.
+   *
+   * @throw SimpleLdapException
    */
   public function may($objectclass, $recursive = FALSE) {
-    if ($oc = $this->get('objectclasses', $objectclass)) {
-      $may = array();
+    $oc = $this->get('objectclasses', $objectclass);
+    $may = array();
 
-      if (isset($oc['may'])) {
-        $may = $oc['may'];
-      }
-
-      if ($recursive && isset($oc['sup'])) {
-        foreach ($oc['sup'] as $sup) {
-          $may = array_merge($may, $this->may($sup, TRUE));
-        }
-      }
-
-      return $may;
+    if (isset($oc['may'])) {
+      $may = $oc['may'];
     }
 
-    return FALSE;
+    if ($recursive && isset($oc['sup'])) {
+      foreach ($oc['sup'] as $sup) {
+        $may = array_merge($may, $this->may($sup, TRUE));
+      }
+    }
+
+    return $may;
   }
 
   /**
    * Return a list of attributes specified as MUST for the objectclass.
+   *
+   * @param string $objectclass
+   *   The objectclass to query for attributes.
+   * @param boolean $recursive
+   *   If TRUE, the attributes of the parent objectclasses will also be
+   *   retrieved.
+   *
+   * @return array
+   *   A list of the MUST attributes.
+   *
+   * @throw SimpleLdapException
    */
   public function must($objectclass, $recursive = FALSE) {
-    if ($oc = $this->get('objectclasses', $objectclass)) {
-      $must = array();
+    $oc = $this->get('objectclasses', $objectclass);
+    $must = array();
 
-      if (isset($oc['must'])) {
-        $must = $oc['must'];
-      }
-
-      if ($recursive && isset($oc['sup'])) {
-        foreach ($oc['sup'] as $sup) {
-          $must = array_merge($must, $this->must($sup, TRUE));
-        }
-      }
-
-      return $must;
+    if (isset($oc['must'])) {
+      $must = $oc['must'];
     }
 
-    return FALSE;
+    if ($recursive && isset($oc['sup'])) {
+      foreach ($oc['sup'] as $sup) {
+        $must = array_merge($must, $this->must($sup, TRUE));
+      }
+    }
+
+    return $must;
   }
 
   /**
@@ -218,6 +276,12 @@ class SimpleLdapSchema {
    *
    * Schema parsing can be slow, so only the attributes that are specified, and
    * are not already cached, are loaded.
+   *
+   * @param array $attributes
+   *   A list of attributes to load. If not specified, all attributes are
+   *   loaded.
+   *
+   * @throw SimpleLdapException
    */
   protected function load($attributes = NULL) {
     // If no attributes are specified, default to all attributes.
@@ -243,18 +307,16 @@ class SimpleLdapSchema {
     if (!empty($load)) {
       $result = $this->server->clean($this->server->search($this->dn, 'objectclass=*', 'base', $load));
 
-      if ($result !== FALSE) {
-        // Parse the schema.
-        foreach ($load as $attribute) {
-          $attribute = drupal_strtolower($attribute);
-          $this->schema[$attribute] = array();
+      // Parse the schema.
+      foreach ($load as $attribute) {
+        $attribute = drupal_strtolower($attribute);
+        $this->schema[$attribute] = array();
 
-          // Get the values for each attribute.
-          if (isset($result[$this->dn][$attribute])) {
-            foreach ($result[$this->dn][$attribute] as $value) {
-              $parsed = $this->parse($value);
-              $this->schema[$attribute][drupal_strtolower($parsed['name'])] = $parsed;
-            }
+        // Get the values for each attribute.
+        if (isset($result[$this->dn][$attribute])) {
+          foreach ($result[$this->dn][$attribute] as $value) {
+            $parsed = $this->parse($value);
+            $this->schema[$attribute][drupal_strtolower($parsed['name'])] = $parsed;
           }
         }
       }
