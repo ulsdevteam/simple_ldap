@@ -478,3 +478,21 @@ function simple_ldap_role_sync_user_to_drupal($drupal_user) {
   // Synchronized user.
   return $drupal_user;
 }
+
+/**
+ * Implements hook_simple_ldap_test_config().
+ */
+function simple_ldap_role_simple_ldap_test_config() {
+  $content = "// From Simple LDAP Role Module\n";
+  $content .= "variable_set('simple_ldap_role_basedn', '" . variable_get('simple_ldap_role_basedn') . "');\n";
+  $content .= "variable_set('simple_ldap_role_scope', '" . variable_get('simple_ldap_role_scope') . "');\n";
+  $content .= "variable_set('simple_ldap_role_objectclass', '" . variable_get('simple_ldap_role_objectclass') . "');\n";
+  $content .= "variable_set('simple_ldap_role_attribute_name', '" . variable_get('simple_ldap_role_attribute_name') . "');\n";
+  $content .= "variable_set('simple_ldap_role_attribute_member', '" . variable_get('simple_ldap_role_attribute_member') . "');\n";
+  $content .= "variable_set('simple_ldap_role_filter', '" . variable_get('simple_ldap_role_filter') . "');\n";
+  $content .= "variable_set('simple_ldap_role_source', '" . variable_get('simple_ldap_role_source') . "');\n";
+  $content .= "variable_set('simple_ldap_role_sync', '" . variable_get('simple_ldap_role_sync') . "');\n";
+  $content .= "variable_set('simple_ldap_role_attribute_format', '" . variable_get('simple_ldap_role_attribute_format') . "');\n";
+  $content .= "variable_set('simple_ldap_role_attribute_member_default', '" . variable_get('simple_ldap_role_attribute_member_default') . "');\n";
+  return $content;
+}
