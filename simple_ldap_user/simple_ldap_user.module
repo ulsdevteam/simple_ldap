@@ -307,21 +307,41 @@ function simple_ldap_user_login_name_validate($form, &$form_state) {
   // Get the username from the form data.
   $name = trim($form_state['values']['name']);
 
+  simple_ldap_user_load_or_create_by_name($name);
+}
+
+/**
+ * Create a valid LDAP user on this site if they don't already exist.
+ *
+ * @param string $name
+ *   The username to load.
+ *
+ * @return mixed
+ *   The Drupal user object, or FALSE if the process failed.
+ */
+function simple_ldap_user_load_or_create_by_name($name) {
   // Load the LDAP user with the given username.
   $ldap_user = SimpleLdapUser::singleton($name);
 
-  // If the user exists in LDAP, make sure a matching Drupal account exists.
-  if ($ldap_user->exists) {
-    $drupal_user = user_load_by_name($name);
-    if (empty($drupal_user)) {
-      $attribute_name = variable_get('simple_ldap_user_attribute_name');
-      $account = array(
-        'name' => $ldap_user->{$attribute_name}[0],
-        'status' => 1,
-      );
-      $drupal_user = user_save(NULL, $account);
-    }
+  // If the user doesn't exist in LDAP, there is nothing for us to do.
+  if (!$ldap_user->exists) {
+    return FALSE;
   }
+
+  // Attempt to load the drupal user by name.
+  $drupal_user = user_load_by_name($name);
+
+  // If the user doesn't already exist in Drupal, create them.
+  if (!$drupal_user) {
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+    $edit = array(
+      'name' => $ldap_user->{$attribute_name}[0],
+      'status' => 1,
+    );
+    $drupal_user = user_save(NULL, $edit);
+  }
+
+  return $drupal_user;
 }
 
 /**
