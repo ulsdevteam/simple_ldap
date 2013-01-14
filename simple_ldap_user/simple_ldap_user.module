@@ -267,10 +267,16 @@ function simple_ldap_user_user_update(&$edit, $account, $category) {
  *
  * Fires when a user account is deleted, before account is
  * deleted.
+ *
+ * @throw SimpleLdapException
  */
 function simple_ldap_user_user_delete($account) {
   $ldap_user = SimpleLdapUser::singleton($account->name);
-  $ldap_user->delete();
+  try {
+    $ldap_user->delete();
+  } catch (SimpleLdapException $e) {
+    drupal_set_message(t('Failed to delete %name from LDAP.', array('@name' => $account->name)) . ' ' . t('Error @code: @message.', array('@code' => $e->getCode(), '@message' => $e->getMessage())), 'error', FALSE);
+  }
 }
 
 /**
