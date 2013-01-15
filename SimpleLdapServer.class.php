@@ -63,19 +63,39 @@ class SimpleLdapServer {
    *
    * This constructor builds the object by pulling the configuration parameters
    * from the Drupal variable system.
+   *
+   * @param array $parameters
+   *   Optional custom parameters for the server, to programmatically override
+   *   any variables from the configuration form.
    */
-  public function __construct() {
-    $this->host = variable_get('simple_ldap_host');
-    $this->port = variable_get('simple_ldap_port', 389);
-    $this->starttls = variable_get('simple_ldap_starttls', FALSE);
-    $this->binddn = variable_get('simple_ldap_binddn');
-    $this->bindpw = variable_get('simple_ldap_bindpw');
-    $this->readonly = variable_get('simple_ldap_readonly', FALSE);
+  public function __construct(array $parameters = array()) {
+    // Load up the default parameters.
+    $default_parameters = array(
+      'host' => variable_get('simple_ldap_host'),
+      'port' => variable_get('simple_ldap_port', 389),
+      'starttls' => variable_get('simple_ldap_starttls', FALSE),
+      'binddn' => variable_get('simple_ldap_binddn'),
+      'bindpw' => variable_get('simple_ldap_bindpw'),
+      'readonly' => variable_get('simple_ldap_readonly', FALSE),
+      'pagesize' => variable_get('simple_ldap_pagesize'),
+    );
+
+    // Populate the parameters array with the defaults.
+    $parameters += $default_parameters;
+
+    // Clean out anything that isn't one of the above properties, so callers
+    // cannot set arbitrary elements on the object.
+    $parameters = array_intersect_key($parameters, $default_parameters);
 
     // Only set the pagesize if paged queries are supported.
-    if (function_exists('ldap_control_paged_result_response') &&
-        function_exists('ldap_control_paged_result')) {
-      $this->pagesize = variable_get('simple_ldap_pagesize');
+    if (!function_exists('ldap_control_paged_result_response') ||
+        !function_exists('ldap_control_paged_result')) {
+      unset($parameters['pagesize']);
+    }
+
+    // Set the object parameters.
+    foreach ($parameters as $key => $value) {
+      $this->{$key} = $value;
     }
 
     $this->bind();
