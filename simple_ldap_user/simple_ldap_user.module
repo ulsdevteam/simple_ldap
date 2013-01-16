@@ -572,7 +572,7 @@ function simple_ldap_user_simple_ldap_test_config() {
   $content .= "variable_set('simple_ldap_user_attribute_name', '" . variable_get('simple_ldap_user_attribute_name') . "');\n";
   $content .= "variable_set('simple_ldap_user_attribute_mail', '" . variable_get('simple_ldap_user_attribute_mail') . "');\n";
   $content .= "variable_set('simple_ldap_user_attribute_pass', '" . variable_get('simple_ldap_user_attribute_pass') . "');\n";
-  $content .= "variable_set('simple_ldap_user_attribute_pass', '" . variable_get('simple_ldap_user_password_hash') . "');\n";
+  $content .= "variable_set('simple_ldap_user_password_hash', '" . variable_get('simple_ldap_user_password_hash') . "');\n";
   $content .= "variable_set('simple_ldap_user_filter', '" . variable_get('simple_ldap_user_filter') . "');\n";
   $content .= "variable_set('simple_ldap_user_sync', '" . variable_get('simple_ldap_user_sync') . "');\n";
   $content .= "variable_set('simple_ldap_user_delete', " . $boolean[variable_get('simple_ldap_user_delete')] . ");\n";
