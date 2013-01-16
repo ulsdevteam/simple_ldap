@@ -119,9 +119,9 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
     foreach ($attribute_map as $attribute) {
 
       // Parse the drupal attribute name.
+      $drupal = '';
       foreach ($attribute['drupal'] as $drupal_attribute) {
         $type = substr($drupal_attribute, 0, 1);
-        $drupal = '';
         switch ($type) {
           case '#':
             $drupal_attribute = substr($drupal_attribute, 1);
@@ -146,13 +146,15 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
         )
       ));
 
-      // Make sure they match the control.
-      $this->assertEqual($test_user[$attribute['ldap']] . $suffix, $drupal, t(':value matches the control value :control',
-        array(
-          ':value' => $drupal,
-          ':control' => $test_user[$attribute['ldap']] . $suffix,
-        )
-      ));
+      // Make sure simple entries match the control.
+      if (count($attribute['drupal']) == 1) {
+        $this->assertEqual($test_user[$attribute['ldap']] . $suffix, $drupal, t(':value matches the control value :control',
+          array(
+            ':value' => $drupal,
+            ':control' => $test_user[$attribute['ldap']] . $suffix,
+          )
+        ));
+      }
 
     }
   }
