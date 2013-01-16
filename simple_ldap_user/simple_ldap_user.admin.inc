@@ -95,6 +95,28 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#description' => $table . t('Additional attribute maps can be specified in @file using @variable.', array('@file' => 'settings.php', '@variable' => '$conf[\'simple_ldap_user_attribute_map\']')) . ' ' . t('See @readme for more details', array('@readme' => 'README.txt')),
   );
 
+  $attribute_map = simple_ldap_user_attribute_map();
+  if (!empty($attribute_map) && $server->type != 'Active Directory') {
+
+    // Generate a list of attribute names from the attribute map. This pulls
+    // from the schema to make the human-readable version have the right case.
+    $options = array();
+    foreach ($attribute_map as $attribute) {
+      $attribute_type = $server->schema->get('attributeTypes', $attribute['ldap']);
+      $options[$attribute['ldap']] = $attribute_type['name'];
+    }
+    asort($options);
+
+    $form['advanced']['simple_ldap_user_attribute_rdn'] = array(
+      '#type' => 'select',
+      '#title' => t('Relative Distinguished Name(RDN) attribute'),
+      '#options' => $options,
+      '#empty_value' => '',
+      '#default_value' => variable_get('simple_ldap_user_attribute_rdn'),
+      '#description' => t('Any of the mapped attributes can be used as the RDN value when provisioning a new LDAP user entry.') . ' ' . t('If set to "None", the Username attribute specified above will be used.'),
+    );
+  }
+
   return system_settings_form($form);
 }
 
@@ -249,16 +271,13 @@ function simple_ldap_user_admin_ldap($form, &$form_state) {
   // Get the selected name attribute.
   $attribute_name_selected = isset($form_state['values']['simple_ldap_user_attribute_name']) ? $form_state['values']['simple_ldap_user_attribute_name'] : variable_get('simple_ldap_user_attribute_name', 'cn');
 
-  // Additional description if !$server->readonly.
-  $description = $server->readonly ? '' : ' ' . t('This attribute is also used as the RDN when provisioning user accounts to LDAP.');
-
   $form['simple_ldap_user_attribute_name'] = array(
     '#type' => 'select',
     '#title' => t('Username attribute'),
     '#prefix' => '<div id="simple-ldap-user-attributes">',
     '#options' => $attributes,
     '#required' => TRUE,
-    '#description' => t('Which LDAP attribute should be mapped to a Drupal username.') . ' ' . t('This is commonly "cn" or "uid".') . $description,
+    '#description' => t('Which LDAP attribute should be mapped to a Drupal username.') . ' ' . t('This is commonly "cn" or "uid".'),
   );
 
   // Set default value if it exists in the list of attributes. If a default
