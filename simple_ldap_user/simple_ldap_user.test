@@ -20,7 +20,7 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
     $this->drupalUser = $this->drupalCreateUser();
 
     // Enable the Simple LDAP modules.
-    $modules = array('simple_ldap', 'simple_ldap_user', 'simple_ldap_test', 'syslog');
+    $modules = array('simple_ldap', 'simple_ldap_user', 'simple_ldap_test');
     $success = module_enable($modules);
     $this->assertTrue($success, t('Enabled modules: %modules', array('%modules' => implode(', ', $modules))));
 
