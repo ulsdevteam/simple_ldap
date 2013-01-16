@@ -327,7 +327,7 @@ class SimpleLdapRoleChangeDrupalUserRoleTestCase extends SimpleLdapRoleTestCase 
       $search = $ldap_user->dn;
     }
     else {
-      $search = $ldap_user->{$user_attribute_name}[0];
+      $search = $test_user[$user_attribute_name];
     }
     $filter = '(&' . simple_ldap_role_filter() . '(' . $role_attribute_member . '=' . $search . '))';
 
