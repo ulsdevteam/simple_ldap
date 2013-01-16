@@ -14,6 +14,7 @@
  * salt($length)
  * utf8encode($attributes)
  * utf8decode($attributes)
+ * clean($entry)
  *
  * Public static functions (wrappers)
  * ----------------------------------
@@ -99,10 +100,6 @@
  * modify($dn, $attributes, $type = FALSE)
  * move($dn, $newdn)
  * copy($dn, $newdn)
- *
- * Utility functions
- * -----------------
- * clean($entry)
  *
  * Private functions
  * -----------------

@@ -229,7 +229,7 @@ class SimpleLdapRoleDeleteDrupalRoleTestCase extends SimpleLdapRoleTestCase {
     $this->assertEqual($ldap_group['dn'], $result[0]['dn'], t('The @dn test group exists in LDAP.', array('@dn' => $ldap_group['dn'])));
 
     // Create a backup of the LDAP group.
-    $backup = $server->clean($result);
+    $backup = SimpleLdap::clean($result);
 
     // Load/Create a drupal role with the same name.
     $drupal_role = user_role_load_by_name($ldap_group[$attribute_name]);

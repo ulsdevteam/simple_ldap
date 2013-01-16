@@ -10,6 +10,38 @@
 class SimpleLdap {
 
   /**
+   * Cleans up an array returned by the ldap_* functions.
+   *
+   * @param array $entry
+   *   An LDAP entry as returned by SimpleLdapServer::search()
+   *
+   * @return array
+   *   A scrubbed array, with all of the "extra crud" removed.
+   *
+   * @throw SimpleLdapException
+   */
+  public static function clean($entry) {
+    if (!is_array($entry)) {
+      throw new SimpleLdapException('Can only clean an array.');
+    }
+
+    $clean = array();
+
+    // Yes, this is ugly, but so are the ldap_*() results.
+    for ($i = 0; $i < $entry['count']; $i++) {
+      $clean[$entry[$i]['dn']] = array();
+      for ($j = 0; $j < $entry[$i]['count']; $j++) {
+        $clean[$entry[$i]['dn']][$entry[$i][$j]] = array();
+        for ($k = 0; $k < $entry[$i][$entry[$i][$j]]['count']; $k++) {
+          $clean[$entry[$i]['dn']][$entry[$i][$j]][] = $entry[$i][$entry[$i][$j]][$k];
+        }
+      }
+    }
+
+    return $clean;
+  }
+
+  /**
    * UTF8-encode an attribute or array of attributes.
    */
   public static function utf8encode($attributes) {
