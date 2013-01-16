@@ -20,7 +20,7 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
     $this->drupalUser = $this->drupalCreateUser();
 
     // Enable the Simple LDAP modules.
-    $modules = array('simple_ldap', 'simple_ldap_user', 'simple_ldap_test');
+    $modules = array('simple_ldap', 'simple_ldap_user', 'simple_ldap_test', 'syslog');
     $success = module_enable($modules);
     $this->assertTrue($success, t('Enabled modules: %modules', array('%modules' => implode(', ', $modules))));
 
@@ -718,15 +718,23 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
 
     // Mail is special, change it explicitly.
     $value = $test_user[$attribute_mail] . $suffix;
-    $result = $server->modify($test_user['dn'], array($attribute_mail => $value), 'replace');
-    $this->assertNotIdentical($result, FALSE, t('Modified @attr LDAP attribute to :value.', array('@attr' => $attribute_mail, ':value' => $value)));
+    try {
+      $server->modify($test_user['dn'], array($attribute_mail => $value), 'replace');
+      $this->assert(TRUE, t('Modified @attr LDAP attribute to :value.', array('@attr' => $attribute_mail, ':value' => $value)));
+    } catch (SimpleLdapException $e) {
+      $this->error($e->getMessage());
+    }
 
     // Modify the other mapped attributes.
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
       $value = $test_user[$attribute['ldap']] . $suffix;
-      $result = $server->modify($test_user['dn'], array($attribute['ldap'] => $value), 'replace');
-      $this->assertNotIdentical($result, FALSE, t('Modified @attr LDAP attribute to :value.', array('@attr' => $attribute['ldap'], ':value' => $value)));
+      try {
+        $server->modify($test_user['dn'], array($attribute['ldap'] => $value), 'replace');
+        $this->assertNotIdentical(TRUE, t('Modified @attr LDAP attribute to :value.', array('@attr' => $attribute['ldap'], ':value' => $value)));
+      } catch (SimpleLdapException $e) {
+        $this->error($e->getMessage());
+      }
     }
   }
 
