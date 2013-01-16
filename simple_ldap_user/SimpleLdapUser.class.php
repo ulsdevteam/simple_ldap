@@ -57,7 +57,6 @@ class SimpleLdapUser {
       $this->exists = TRUE;
     }
     else {
-      $this->dn = $attribute_name . '=' . $name . ',' . $base_dn;
       $this->attributes[$attribute_name] = array('count' => 1, 0 => $name);
     }
   }
@@ -107,8 +106,18 @@ class SimpleLdapUser {
     switch ($name) {
       // Read-only values.
       case 'attributes':
-      case 'dn':
       case 'exists':
+        break;
+
+      case 'dn':
+        // Only allow setting the DN on new entries.
+        if (!$this->exists) {
+          try {
+            // Validate the DN format.
+            SimpleLdap::ldap_explode_dn($value);
+            $this->dn = $value;
+          } catch (SimpleLdapException $e) { }
+        }
         break;
 
       // Look up the raw password from the internal reverse hash map. This

@@ -1324,7 +1324,7 @@ class SimpleLdap {
    *
    * @throw SimpleLdapException
    */
-  public static function ldap_explode_dn($dn, $with_attrib) {
+  public static function ldap_explode_dn($dn, $with_attrib = 0) {
     // Devel debugging.
     if (variable_get('simple_ldap_devel', FALSE)) {
       dpm(__FUNCTION__);

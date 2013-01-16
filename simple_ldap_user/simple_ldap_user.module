@@ -464,6 +464,12 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
     $ldap_user->{$attribute['ldap']} = $ldap_values;
   }
 
+  // Set the DN.
+  $basedn = variable_get('simple_ldap_user_basedn');
+  $attribute_rdn = variable_get('simple_ldap_user_attribute_rdn', $attribute_name);
+  $dn = $attribute_rdn . '=' . $ldap_user->{$attribute_rdn}[0] . ',' . $basedn;
+  $ldap_user->dn = $dn;
+
   // Save any changes.
   $result = $ldap_user->save();
   return $result;
@@ -576,6 +582,7 @@ function simple_ldap_user_simple_ldap_test_config() {
   $content .= "variable_set('simple_ldap_user_filter', '" . variable_get('simple_ldap_user_filter') . "');\n";
   $content .= "variable_set('simple_ldap_user_sync', '" . variable_get('simple_ldap_user_sync') . "');\n";
   $content .= "variable_set('simple_ldap_user_delete', " . $boolean[variable_get('simple_ldap_user_delete')] . ");\n";
+  $content .= "variable_set('simple_ldap_user_attribute_rdn', '" . variable_get('simple_ldap_user_attribute_rdn') . "');\n";
 
   $content .= "\n\$simple_ldap_user_attribute_map = array(\n";
   $attribute_map = variable_get('simple_ldap_user_attribute_map', array());
