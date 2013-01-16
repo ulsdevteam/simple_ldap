@@ -84,7 +84,7 @@ function simple_ldap_role_user_presave(&$edit, $account, $category) {
     $server = SimpleLdapServer::singleton();
 
     foreach ($edit['roles'] as $rid => $value) {
-      if ($value) {
+      if ($value && $rid != DRUPAL_AUTHENTICATED_RID) {
         $role = user_role_load($rid);
         $filter = '(&(' . $attribute_name . '=' . $role->name . ')' . simple_ldap_role_filter() . ')';
         $group = $server->search($basedn, $filter, $scope, array($attribute_member));
