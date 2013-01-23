@@ -191,12 +191,23 @@ class SimpleLdapUser {
     if ($this->exists) {
       // Update existing entry.
       unset($this->attributes[variable_get('simple_ldap_user_attribute_name')]);
-      $result = $this->server->modify($this->dn, $this->attributes);
+      $this->server->modify($this->dn, $this->attributes);
     }
     else {
       // Create new entry.
-      $this->attributes['objectclass'] = array(variable_get('simple_ldap_user_objectclass'));
-      $result = $this->server->add($this->dn, $this->attributes);
+      try {
+        $this->attributes['objectclass'] = array(variable_get('simple_ldap_user_objectclass'));
+        $this->server->add($this->dn, $this->attributes);
+      } catch (SimpleLdapException $e) {
+        if ($e->getCode() == 68) {
+          // An "already exists" error was returned, try to do a modify instead.
+          unset($this->attributes[variable_get('simple_ldap_user_attribute_name')]);
+          $this->server->modify($this->dn, $this->attributes);
+        }
+        else {
+          throw $e;
+        }
+      }
     }
 
     // No exceptions were thrown, so the save was successful.
