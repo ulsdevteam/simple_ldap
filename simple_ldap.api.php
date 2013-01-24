@@ -15,6 +15,7 @@
  * utf8encode($attributes)
  * utf8decode($attributes)
  * clean($entry)
+ * removeEmptyAttributes($attributes)
  *
  * Public static functions (wrappers)
  * ----------------------------------

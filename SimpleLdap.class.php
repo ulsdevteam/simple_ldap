@@ -42,6 +42,40 @@ class SimpleLdap {
   }
 
   /**
+   * Cleans an attribute array, removing empty items.
+   *
+   * @param array $attributes
+   *   Array of attributes that needs to be cleaned.
+   *
+   * @return array
+   *   A scrubbed array with no empty attributes.
+   */
+  public static function removeEmptyAttributes($attributes) {
+    foreach ($attributes as $key => $value) {
+      if (is_array($value)) {
+        // Remove empty values.
+        foreach ($value as $k => $v) {
+          if (empty($v)) {
+            unset($value[$k]);
+          }
+        }
+
+        // Remove the 'count' property, if present.
+        if (isset($value['count'])) {
+          unset($attributes[$key]['count']);
+        }
+
+        // Remove attributes with no values.
+        if (count($value) == 0) {
+          unset($attributes[$key]);
+        }
+      }
+    }
+
+    return $attributes;
+  }
+
+  /**
    * UTF8-encode an attribute or array of attributes.
    */
   public static function utf8encode($attributes) {

@@ -476,28 +476,7 @@ class SimpleLdapServer {
     $this->bind();
 
     // Clean up the attributes array.
-    foreach ($attributes as $key => $value) {
-      if (is_array($value)) {
-
-        // Remove empty values.
-        foreach ($value as $k => $v) {
-          if (empty($v)) {
-            unset($value[$k]);
-          }
-        }
-
-        // Remove the 'count' property, if present.
-        if (isset($value['count'])) {
-          unset($attributes[$key]['count']);
-        }
-
-        // Remove attributes with no values.
-        if (count($value) == 0) {
-          unset($attributes[$key]);
-        }
-
-      }
-    }
+    $attributes = SimpleLdap::removeEmptyAttributes($attributes);
 
     // Add the entry.
     return SimpleLdap::ldap_add($this->resource, $dn, $attributes);
@@ -564,6 +543,10 @@ class SimpleLdapServer {
     // Make sure there is a valid binding.
     $this->bind();
 
+    // Clean up the attributes array.
+    $attributes = SimpleLdap::removeEmptyAttributes($attributes);
+
+    // Perform the LDAP modify.
     switch ($type) {
       case 'add':
         $result = SimpleLdap::ldap_mod_add($this->resource, $dn, $attributes);
