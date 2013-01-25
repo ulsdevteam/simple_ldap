@@ -14,6 +14,7 @@ class SimpleLdapUser {
 
   // Internal variables.
   protected $dirty = FALSE;
+  protected $move = FALSE;
 
   /**
    * Constructor.
@@ -110,12 +111,14 @@ class SimpleLdapUser {
         break;
 
       case 'dn':
-        // Only allow setting the DN on new entries.
-        if (!$this->exists) {
+        if ($this->dn != $value) {
           try {
-            // Validate the DN format.
+            // Validate the DN format before trying to use it.
             SimpleLdap::ldap_explode_dn($value);
+            // Save the old DN, so a move operation can be done during save().
+            $this->move = $this->dn;
             $this->dn = $value;
+            $this->dirty = TRUE;
           } catch (SimpleLdapException $e) { }
         }
         break;
@@ -188,9 +191,13 @@ class SimpleLdapUser {
       return TRUE;
     }
 
+    // Move(rename) the entry if the DN was changed.
+    if ($this->move) {
+      $this->server->move($this->move, $this->dn);
+    }
+
     if ($this->exists) {
       // Update existing entry.
-      unset($this->attributes[variable_get('simple_ldap_user_attribute_name')]);
       $this->server->modify($this->dn, $this->attributes);
     }
     else {
@@ -201,7 +208,6 @@ class SimpleLdapUser {
       } catch (SimpleLdapException $e) {
         if ($e->getCode() == 68) {
           // An "already exists" error was returned, try to do a modify instead.
-          unset($this->attributes[variable_get('simple_ldap_user_attribute_name')]);
           $this->server->modify($this->dn, $this->attributes);
         }
         else {

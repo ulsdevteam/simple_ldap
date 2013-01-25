@@ -1334,7 +1334,7 @@ class SimpleLdap {
 
     // Error handling.
     if ($return === FALSE) {
-      throw new SimpleLdapException($link);
+      throw new SimpleLdapException($link_identifier);
     }
 
     return $return;

@@ -465,14 +465,19 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
   }
 
   // Set the DN.
-  $basedn = variable_get('simple_ldap_user_basedn');
   $attribute_rdn = variable_get('simple_ldap_user_attribute_rdn', $attribute_name);
-  $dn = $attribute_rdn . '=' . $ldap_user->{$attribute_rdn}[0] . ',' . $basedn;
-  $ldap_user->dn = $dn;
+  if ($ldap_user->{$attribute_rdn}['count'] > 0) {
+    $basedn = variable_get('simple_ldap_user_basedn');
+    $dn = $attribute_rdn . '=' . $ldap_user->{$attribute_rdn}[0] . ',' . $basedn;
+    $ldap_user->dn = $dn;
+  }
 
   // Save any changes.
-  $result = $ldap_user->save();
-  return $result;
+  try {
+    $ldap_user->save();
+  } catch (SimpleLdapException $e) {
+    drupal_set_message(t('Failed to save the user to LDAP.') . ' ' . format_string('%error', array('%error' => $e->getMessage())), 'error');
+  }
 }
 
 /**
