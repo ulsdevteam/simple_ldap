@@ -14,7 +14,7 @@ function simple_ldap_role_menu() {
     'title' => 'Roles',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('simple_ldap_role_admin'),
-    'access arguments' => array('adminster site configuration'),
+    'access arguments' => array('administer site configuration'),
     'file' => 'simple_ldap_role.admin.inc',
     'type' => MENU_LOCAL_TASK,
     'weight' => 2,

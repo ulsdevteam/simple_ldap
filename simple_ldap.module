@@ -27,7 +27,7 @@ function simple_ldap_menu() {
   $items['admin/config/people/simple_ldap/simpletest'] = array(
     'title' => 'Simpletest Config',
     'page callback' => 'simple_ldap_simpletest',
-    'access arguments' => array('administer site configurations'),
+    'access arguments' => array('administer site configuration'),
     'type' => MENU_CALLBACK,
   );
 
