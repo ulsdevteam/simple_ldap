@@ -78,6 +78,8 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
         unset($form['links']);
       }
     case 'user_login':
+    case 'user_pass':
+      // Insert simple_ldap_user's username validation.
       array_unshift($form['#validate'], 'simple_ldap_user_login_name_validate');
       break;
 
@@ -275,7 +277,7 @@ function simple_ldap_user_user_delete($account) {
   try {
     $ldap_user->delete();
   } catch (SimpleLdapException $e) {
-    drupal_set_message(t('Failed to delete %name from LDAP.', array('@name' => $account->name)) . ' ' . t('Error @code: @message.', array('@code' => $e->getCode(), '@message' => $e->getMessage())), 'error', FALSE);
+    drupal_set_message(t('Failed to delete @name from LDAP.', array('@name' => $account->name)) . ' ' . t('Error @code: @message.', array('@code' => $e->getCode(), '@message' => $e->getMessage())), 'error', FALSE);
   }
 }
 
@@ -307,7 +309,7 @@ function simple_ldap_user_user_load($users) {
 }
 
 /**
- * Validate the username on a login form.
+ * Validate the username on a login or password reset form.
  */
 function simple_ldap_user_login_name_validate($form, &$form_state) {
   // Get the username from the form data.
@@ -320,7 +322,7 @@ function simple_ldap_user_login_name_validate($form, &$form_state) {
  * Create a valid LDAP user on this site if they don't already exist.
  *
  * @param string $name
- *   The username to load.
+ *   The username or email address to load.
  *
  * @return mixed
  *   The Drupal user object, or FALSE if the process failed.
@@ -340,8 +342,10 @@ function simple_ldap_user_load_or_create_by_name($name) {
   // If the user doesn't already exist in Drupal, create them.
   if (!$drupal_user) {
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
+    $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
     $edit = array(
       'name' => $ldap_user->{$attribute_name}[0],
+      'mail' => $ldap_user->{$attribute_mail}[0],
       'status' => 1,
     );
     $drupal_user = user_save(NULL, $edit);
@@ -465,7 +469,10 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
   }
 
   // Set the DN.
-  $attribute_rdn = variable_get('simple_ldap_user_attribute_rdn', $attribute_name);
+  $attribute_rdn = variable_get('simple_ldap_user_attribute_rdn');
+  if (empty($attribute_rdn)) {
+    $attribute_rdn = $attribute_name;
+  }
   if ($ldap_user->{$attribute_rdn}['count'] > 0) {
     $basedn = variable_get('simple_ldap_user_basedn');
     $dn = $attribute_rdn . '=' . $ldap_user->{$attribute_rdn}[0] . ',' . $basedn;

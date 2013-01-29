@@ -20,7 +20,7 @@ class SimpleLdapUser {
    * Constructor.
    *
    * @param string $name
-   *   The drupal user name to search for, and load from LDAP.
+   *   The drupal user name or email address to search for, and load from LDAP.
    *
    * @throw SimpleLdapException
    */
@@ -28,23 +28,21 @@ class SimpleLdapUser {
     // Load the LDAP server object.
     $this->server = SimpleLdapServer::singleton();
 
+    // Get the LDAP configuration.
+    $base_dn = variable_get('simple_ldap_user_basedn');
+    $scope = variable_get('simple_ldap_user_scope');
+    $attribute_name = variable_get('simple_ldap_user_attribute_name', 'cn');
+    $attribute_mail = variable_get('simple_ldap_user_attribute_mail', 'mail');
+    $filter = '(&(|(' . $attribute_name . '=' . $name . ')(' . $attribute_mail . '=' . $name . '))' . self::filter() . ')';
+
     // List of attributes to fetch from the LDAP server.
-    $attributes = array(
-      drupal_strtolower(variable_get('simple_ldap_user_attribute_name', 'cn')),
-      drupal_strtolower(variable_get('simple_ldap_user_attribute_mail', 'mail')),
-    );
+    $attributes = array($attribute_name, $attribute_mail);
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
       if (isset($attribute['ldap'])) {
         $attributes[] = $attribute['ldap'];
       }
     }
-
-    // Get the LDAP configuration.
-    $base_dn = variable_get('simple_ldap_user_basedn');
-    $scope = variable_get('simple_ldap_user_scope');
-    $attribute_name = variable_get('simple_ldap_user_attribute_name');
-    $filter = '(&(' . $attribute_name . '=' . $name . ')' . self::filter() . ')';
 
     // Attempt to load the user from the LDAP server.
     $result = $this->server->search($base_dn, $filter, $scope, $attributes, 0, 1);
@@ -266,7 +264,7 @@ class SimpleLdapUser {
    * Return a SimpleLdapUser object for the given username.
    *
    * @param string $name
-   *   The drupal user name to search for, and load from LDAP.
+   *   The drupal user name or email address to search for, and load from LDAP.
    * @param boolean $reset
    *   If TRUE, the cache for the specified user is cleared, and the user is
    *   reloaded from LDAP.
