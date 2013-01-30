@@ -71,4 +71,10 @@ function simple_ldap_user_update_7100(&$sandbox) {
     variable_set('simple_ldap_user_objectclass', array($objectclass));
   }
 
+  // simple_ldap_user_map has changed name and format.
+  $attribute_map = variable_get('simple_ldap_user_map');
+  if (!empty($attribute_map)) {
+    return t('The "simple_ldap_user_map" variable has changed name and format.') . ' ' . t('The new variable name is "simple_ldap_user_attribute_map", and the format is outlined in simple_ldap_user/README.txt.') . ' ' . t('Please update settings.php accordingly.');
+  }
+
 }
