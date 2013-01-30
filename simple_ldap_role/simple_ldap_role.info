@@ -1,7 +1,8 @@
 name = Simple LDAP Role
 description = Simple LDAP role authorization
 package = LDAP
+core = 7.x
+configure = admin/config/people/simple_ldap/role
 dependencies[] = simple_ldap
 dependencies[] = simple_ldap_user
-core = 7.x
 files[] = simple_ldap_role.test

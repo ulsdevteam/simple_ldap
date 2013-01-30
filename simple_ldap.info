@@ -2,6 +2,7 @@ name = Simple LDAP
 description = Simple LDAP server configuration
 package = LDAP
 core = 7.x
+configure = admin/config/people/simple_ldap
 files[] = SimpleLdap.class.php
 files[] = SimpleLdapException.class.php
 files[] = SimpleLdapSchema.class.php

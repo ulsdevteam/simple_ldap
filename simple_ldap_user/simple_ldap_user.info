@@ -3,6 +3,7 @@ description = Simple LDAP user authentication
 package = LDAP
 dependencies[] = simple_ldap
 core = 7.x
+configure = admin/config/people/simple_ldap/user
 files[] = SimpleLdapUser.class.php
 files[] = SimpleLdapUserController.class.php
 files[] = simple_ldap_user.test
