@@ -245,7 +245,7 @@ function simple_ldap_user_admin_ldap($form, &$form_state) {
   );
 
   // Get the selected objectclass.
-  $objectclass_selected = isset($form_state['values']['simple_ldap_user_objectclass']) ? $form_state['values']['simple_ldap_user_objectclass'] : variable_get('simple_ldap_user_objectclass', 'inetorgperson');
+  $objectclass_selected = isset($form_state['values']['simple_ldap_user_objectclass']) ? $form_state['values']['simple_ldap_user_objectclass'] : variable_get('simple_ldap_user_objectclass', array('inetorgperson'));
 
   $form['simple_ldap_user_objectclass'] = array(
     '#type' => 'select',
@@ -253,7 +253,9 @@ function simple_ldap_user_admin_ldap($form, &$form_state) {
     '#options' => $objectclasses,
     '#default_value' => $objectclass_selected,
     '#required' => TRUE,
-    '#description' => t('Which LDAP objectClass should be used when searching for a user.'),
+    '#multiple' => TRUE,
+    '#size' => 10,
+    '#description' => t('Which LDAP objectClass should be used when searching for, or creating, a user.'),
     '#ajax' => array(
       'callback' => 'simple_ldap_user_objectclass_ajax',
       'wrapper' => 'simple-ldap-user-attributes',
@@ -261,10 +263,12 @@ function simple_ldap_user_admin_ldap($form, &$form_state) {
   );
 
   // Generate a list of attributes for the selected objectclass.
-  $result = $server->schema->attributes($objectclass_selected, TRUE);
   $attributes = array();
-  foreach ($result as $attribute) {
-    $attributes[strtolower($attribute)] = $attribute;
+  foreach ($objectclass_selected as $objectclass) {
+    $result = $server->schema->attributes($objectclass, TRUE);
+    foreach ($result as $attribute) {
+      $attributes[strtolower($attribute)] = $attribute;
+    }
   }
   asort($attributes);
 

@@ -586,7 +586,7 @@ function simple_ldap_user_simple_ldap_test_config() {
   $content = "// From Simple LDAP User Module\n";
   $content .= "variable_set('simple_ldap_user_basedn', '" . variable_get('simple_ldap_user_basedn') . "');\n";
   $content .= "variable_set('simple_ldap_user_scope', '" . variable_get('simple_ldap_user_scope') . "');\n";
-  $content .= "variable_set('simple_ldap_user_objectclass', '" . variable_get('simple_ldap_user_objectclass') . "');\n";
+  $content .= "variable_set('simple_ldap_user_objectclass', array('" . implode("', '", variable_get('simple_ldap_user_objectclass')) . "'));\n";
   $content .= "variable_set('simple_ldap_user_attribute_name', '" . variable_get('simple_ldap_user_attribute_name') . "');\n";
   $content .= "variable_set('simple_ldap_user_attribute_mail', '" . variable_get('simple_ldap_user_attribute_mail') . "');\n";
   $content .= "variable_set('simple_ldap_user_attribute_pass', '" . variable_get('simple_ldap_user_attribute_pass') . "');\n";

@@ -59,3 +59,16 @@ function simple_ldap_user_requirements($phase) {
 
   return $requirements;
 }
+
+/**
+ * Update configuration variables.
+ */
+function simple_ldap_user_update_7100(&$sandbox) {
+
+  // simple_ldap_user_objectclass should be an array.
+  $objectclass = variable_get('simple_ldap_user_objectclass');
+  if (!is_array($objectclass)) {
+    variable_set('simple_ldap_user_objectclass', array($objectclass));
+  }
+
+}

@@ -20,7 +20,10 @@ function simple_ldap_test_install() {
   if (function_exists('simple_ldap_user_attribute_map')) {
     $server = SimpleLdapServer::singleton();
     $objectclass = variable_get('simple_ldap_user_objectclass');
-    $must = $server->schema->must($objectclass, TRUE);
+    $must = array();
+    foreach ($objectclass as $o) {
+      $must += $server->schema->must($o, TRUE);
+    }
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
 

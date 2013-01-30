@@ -490,7 +490,10 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
     // Fill in required fields from the user attribute map.
     $server = SimpleLdapServer::singleton();
     $objectclass = variable_get('simple_ldap_user_objectclass');
-    $must = $server->schema->must($objectclass, TRUE);
+    $must = array();
+    foreach ($objectclass as $o) {
+      $must += $server->schema->must($o, TRUE);
+    }
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
       if (in_array($attribute['ldap'], $must)) {
@@ -628,7 +631,10 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
 
     // Get a list of required LDAP attributes for the user objectclass.
     $server = SimpleLdapServer::singleton();
-    $must = $server->schema->must($objectclass, TRUE);
+    $must = array();
+    foreach ($objectclass as $o) {
+      $must += $server->schema->must($o, TRUE);
+    }
 
     // Allow registration by site visitors without administrator approval.
     variable_set('user_register', USER_REGISTER_VISITORS);
@@ -967,7 +973,10 @@ class SimpleLdapUserDeleteUserTestCase extends SimpleLdapUserWebTestCase {
     // Fill in required fields from the user attribute map.
     $server = SimpleLdapServer::singleton();
     $objectclass = variable_get('simple_ldap_user_objectclass');
-    $must = $server->schema->must($objectclass, TRUE);
+    $must = array();
+    foreach ($objectclass as $o) {
+      $must += $server->schema->must($o, TRUE);
+    }
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
       if (in_array($attribute['ldap'], $must)) {
