@@ -248,10 +248,9 @@ class SimpleLdapUser {
     // Get the relevant configurations.
     $objectclass = variable_get('simple_ldap_user_objectclass', array('*'));
     $extrafilter = variable_get('simple_ldap_user_filter');
-    $objectclass=array('*');
 
     // Construct the filter.
-    $filter = '(|(objectclass=' . implode(')(objectclass=', $objectclass) . '))';
+    $filter = '(&(objectclass=' . implode(')(objectclass=', $objectclass) . '))';
     if (!empty($extrafilter)) {
       $filter = '(&' . $filter . '(' . $extrafilter . '))';
     }
