@@ -15,7 +15,7 @@ function simple_ldap_menu() {
     'description' => 'LDAP server, authentication parameters, roles, provisioning, etc.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('simple_ldap_admin'),
-    'access arguments' => array('administer site configurations'),
+    'access arguments' => array('administer site configuration'),
     'file' => 'simple_ldap.admin.inc',
   );
 
