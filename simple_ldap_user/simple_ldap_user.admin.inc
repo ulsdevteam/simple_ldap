@@ -349,3 +349,84 @@ function simple_ldap_user_objectclass_ajax($form, $form_state) {
     $form['user']['simple_ldap_user_attribute_pass'],
   );
 }
+
+/**
+ * Form to handle mass user import.
+ */
+function simple_ldap_user_import($form, &$form_state) {
+  $form = array();
+
+  // Get LDAP Configuration.
+  $server = SimpleLdapServer::singleton();
+  $basedn = variable_get('simple_ldap_user_basedn');
+  $scope = variable_get('simple_ldap_user_scope');
+  $attribute_name = variable_get('simple_ldap_user_attribute_name');
+  $filter = '(&(' . $attribute_name . '=*)' . SimpleLdapUser::filter() . ')';
+
+  // Get a list of users that would be imported.
+  $ldap_users = SimpleLdap::clean($server->search($basedn, $filter, $scope, array('dn', $attribute_name)));
+
+  // Reformat the LDAP array.
+  $users = array();
+  foreach ($ldap_users as $dn => $entry) {
+    $users[$entry[$attribute_name][0]] = $entry[$attribute_name][0];
+  }
+  asort($users);
+
+  $form['users'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Import these users') . ' (' . count($users) . ')',
+    '#options' => $users,
+    '#default_value' => array_keys($users),
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Import'),
+  );
+
+  return $form;
+}
+
+/**
+ * Submit handler for mass user import.
+ */
+function simple_ldap_user_import_submit($form, &$form_state) {
+  $operations = array();
+  foreach ($form_state['input']['users'] as $user) {
+    if (!empty($user)) {
+      $operations[] = array('simple_ldap_user_import_user', array($user));
+    }
+  }
+
+  $form_state['redirect'] = 'admin/people';
+
+  $batch = array(
+    'operations' => $operations,
+    'finished' => 'simple_ldap_user_import_finished',
+    'file' => drupal_get_path('module', 'simple_ldap_user') . '/simple_ldap_user.admin.inc',
+  );
+
+  batch_set($batch);
+}
+
+/**
+ * Batch process function for mass user import.
+ */
+function simple_ldap_user_import_user($name, &$context) {
+  $drupal_user = simple_ldap_user_load_or_create_by_name($name);
+  $context['message'] = 'Importing ' . $name;
+  $context['results'][$name] = !empty($drupal_user);
+}
+
+/**
+ * Called when the mass user import batch is finished.
+ */
+function simple_ldap_user_import_finished($success, $results, $operations) {
+  if ($success) {
+    drupal_set_message(t('Imported @count users from LDAP.', array('@count' => count($results))));
+  }
+  else {
+    drupal_set_message(t('A problem occurred while importing the users from LDAP.'));
+  }
+}

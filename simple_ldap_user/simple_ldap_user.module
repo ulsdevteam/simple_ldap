@@ -20,6 +20,15 @@ function simple_ldap_user_menu() {
     'weight' => 1,
   );
 
+  $items['admin/people/simple_ldap_user_import'] = array(
+    'title' => 'Import from LDAP',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('simple_ldap_user_import'),
+    'access arguments' => array('administer users'),
+    'file' => 'simple_ldap_user.admin.inc',
+    'type' => MENU_LOCAL_ACTION,
+  );
+
   return $items;
 }
 
@@ -517,7 +526,7 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
 
     // Skip drupal-to-ldap many-to-one mappings.
     if (count($attribute['drupal']) > 1) {
-      break;
+      continue;
     }
 
     // Get the drupal field name and type.
