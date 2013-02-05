@@ -630,3 +630,48 @@ function simple_ldap_user_simple_ldap_test_config() {
 
   return $content;
 }
+
+/**
+ * Implements hook_user_operations().
+ */
+function simple_ldap_user_user_operations() {
+  $operations = array(
+    'simple_ldap_user_export' => array(
+      'label' => t('Export selected users to LDAP'),
+      'callback' => 'simple_ldap_user_export',
+    )
+  );
+  return $operations;
+}
+
+/**
+ * Handles bulk user export from admin/people.
+ */
+function simple_ldap_user_export($users) {
+  // Generate the batch operation array.
+  $operations = array();
+  foreach ($users as $uid) {
+    // Don't sync user1.
+    if ($uid == 1) {
+      continue;
+    }
+
+    $operations[] = array('simple_ldap_user_export_user', array($uid));
+  }
+
+  $batch = array(
+    'operations' => $operations,
+  );
+
+  batch_set($batch);
+}
+
+/**
+ * Batch process function for mass user export.
+ */
+function simple_ldap_user_export_user($uid, $context) {
+  // Sync user to LDAP.
+  $user = user_load($uid);
+  simple_ldap_user_sync_user_to_ldap($user);
+  $context['message'] = 'Exporting ' . $user->name;
+}
