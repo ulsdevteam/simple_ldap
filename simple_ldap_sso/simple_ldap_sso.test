@@ -1,0 +1,240 @@
+<?php
+
+/**
+ * @file
+ * Simple LDAP SSO module tests.
+ */
+
+class SimpleLdapSSOTestCase extends DrupalWebTestCase {
+  /**
+   * Display information about this test case.
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'SSO',
+      'description' => 'Single-Sign-On Tests',
+      'group' => 'Simple LDAP User',
+    );
+  }
+
+  /**
+   * Set up the modules and any other
+   */
+  public function setUp() {
+    // List the modules that should be enabled for this test.
+    parent::setUp('simple_ldap_sso', 'simple_ldap_test', 'simple_ldap_user', 'simple_ldap');
+
+    // Create an admin user.
+    $this->adminUser = $this->drupalCreateUser(
+      array('administer site configuration')
+    );
+    $test_user = variable_get('simple_ldap_test_user');
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+
+    // Initialize a user account object.
+    $account = new stdClass();
+    $account->name = $test_user[$attribute_name];
+    $account->pass_raw = $test_user['pass'];
+    $this->testUser = $account;
+  }
+
+  protected function setUpConfig() {
+    variable_set('simple_ldap_sso_encryption_key', 'testkey0');
+    variable_set('simple_ldap_sso_attribute_sid', 'labeleduri');
+  }
+
+  public function testSimpleLdapSSO() {
+    // Assert module is not configured.
+    $this->assertFalse(simple_ldap_sso_configured(), t('Simple LDAP SSO is not configured.'));
+    // Assert module is configured.
+    $this->setUpConfig();
+    drupal_static_reset('simple_ldap_sso_configured');
+    $this->assertTrue(simple_ldap_sso_configured(), t('Simple LDAP SSO is configured.'));
+
+    // Verify that for user 1, no SSO cookie is set.
+    $this->loginUser1();
+    $this->assertFalse(isset($this->cookies[SIMPLE_LDAP_SSO_COOKIE]['value']), 'No SSO Cookie set for User 1.');
+
+    $this->drupalLogin($this->testUser);
+    // Verify for other user, SSO cookie is set.
+    $data = $this->getSSOCookieData();
+    $this->assertEqual($data['name'], $this->testUser->name, t('SSO Cookie has valid data.'));
+
+    $this->deleteSessions($data['uid']);
+
+    $this->drupalGet('user');
+    $sessions = (bool) $this->getSessions($data['uid']);
+    $this->assertTrue($sessions, t('The session was recreated from the SSO cookie.'));
+    $this->assertText($data['name'], t('The user was logged in from the SSO cookie.'));
+
+    // Verify that session id matches what is stored in LDAP.
+    $data = $this->getSSOCookieData();
+    $sso = new SimpleLdapSSO($data['name']);
+    $sid = $this->cookies[$this->session_name]['value'];
+    $this->assertTrue($sso->validateSid($sid), t('Session id was stored in LDAP.'));
+    $this->drupalLogout();
+    // Assert SSO cookie is deleted.
+    $this->assertEqual(
+      'deleted',
+      $this->cookies[SIMPLE_LDAP_SSO_COOKIE]['value'],
+      t('The SSO cookie was deleted.'));
+    // Assert sid was deleted from LDAP.
+    $sso = new SimpleLdapSSO($data['name']);
+    $this->assertFalse($sso->validateSid($sid), t('Session id was deleted from LDAP.'));
+
+    // Assert the user is created in Drupal if there is a valid SSO cookie.
+    // First, delete the user. We can't user user_delete() as that will delete
+    // the account from LDAP as well.
+    $this->drupalLogin($this->testUser);
+    db_delete('users')
+      ->condition('uid', $data['uid'])
+      ->execute();
+    db_delete('sessions')
+      ->condition('uid', $data['uid'])
+      ->execute();
+    // Ensure the user has been deleted.
+    $account = user_load_multiple(array(), array('name' => $data['name']), TRUE);
+    $this->assertFalse((bool) $account, t('The user account was deleted.'));
+    // Then access the user page again.
+    $this->drupalGet('user');
+    // Check for the existence of the user.
+    $account = user_load_multiple(array(), array('name' => $data['name']), TRUE);
+    $this->assertTrue((bool) $account, t('The user has been recreated from a valid SSO cookie.'));
+    // Look to see if there is a session. Start by reloading the SSO cookie data.
+    $data = $this->getSSOCookieData();
+    $sessions = (bool) $this->getSessions($data['uid']);
+    $this->assertTrue($sessions, t('The session was created from the SSO cookie.'));
+    $this->assertText($data['name'], t('The user was logged in from the SSO cookie.'));
+
+    // Assert that the user can't log in if the session id in the cookie doesn't
+    // match what is stored in LDAP.
+    $this->deleteSessions($data['uid']);
+    $sso = new SimpleLdapSSO($data['name']);
+    $sso->saveSid('test');
+    // Assert the sid was saved to LDAP.
+    $this->assertTrue($sso->validateSid('test'),
+      t('Session ID saved to LDAP successfully.'));
+    // Now access the site.
+    $this->drupalGet('user');
+    $this->assertText(t('A problem was encountered when attempting to sign you in on this site.'),
+      t('The user cannot log in with a mismatching session id.'));
+
+    // Assert that the cookies have been deleted.
+    $this->assertEqual(
+      'deleted',
+      $this->cookies[SIMPLE_LDAP_SSO_COOKIE]['value'],
+      t('The SSO cookie was deleted.'));
+    $this->assertEqual(
+      'deleted',
+      $this->cookies[$this->session_name]['value'],
+      t('The session cookie was deleted.'));
+    // Assert that the session id was deleted from LDAP also.
+    $sso = new SimpleLdapSSO($data['name']);
+    $this->assertFalse($sso->validateSid('test'),
+      t('Invalid Session ID was deleted from LDAP.'));
+
+    // Log the user in anew.
+    $this->prepareSSO();
+    // Assert that if the encryption key changes, SSO will fail.
+    variable_set('simple_ldap_sso_encryption_key', 'testkey1');
+    $this->drupalGet('user');
+    $this->assertEqual(
+      'deleted',
+      $this->cookies[SIMPLE_LDAP_SSO_COOKIE]['value'],
+      t('If the SSO cookie cannot be decrypted, it is deleted.'));
+    $this->assertText(t('Log in'), t('Single Sign On fails if SSO cookie decryption fails.'));
+  }
+
+  /**
+   * Logs in a user so that an SSO cookie is set, then deletes the session from
+   * the session table, essentially mimicking SSO.
+   *
+   * @param array $account
+   *   Optional, the account to pass to drupalLogin().
+   * @return array
+   *   The session data from the SSO cookie.
+   */
+  protected function prepareSSO(array $account = NULL) {
+    if (!isset($account)) {
+      $account = $this->testUser;
+    }
+    $this->drupalLogin($account);
+    $data = $this->getSSOCookieData();
+    $this->deleteSessions($data['uid']);
+    return $data;
+  }
+
+  /**
+   * Delete a session from the database, effectively logging out the user
+   * without deleting any cookies.
+   *
+   * @param int $uid
+   *   The user id to delete.
+   */
+  protected function deleteSessions($uid) {
+    // Delete the session from the session table, and then see if it gets
+    // created again after accessing a page, to test SSO.
+    $num_deleted = db_delete('sessions')
+      ->condition('uid', $uid)
+      ->execute();
+    $sessions = $this->getSessions($uid);
+    $this->assertFalse($sessions, t('The sessions were deleted from the database.'));
+  }
+
+  /**
+   * Looks up sessions in the sessions table for a particular uid.
+   * 
+   * @param int $uid
+   *   The user id to search.
+   */
+  protected function getSessions($uid) {
+    $sql = "SELECT * FROM {sessions} WHERE uid = :uid";
+    $args = array(':uid' => $uid);
+    return db_query($sql, $args)->fetch();
+  }
+
+  /**
+   * Get the SSO cookie data from the current SSO cookie.
+   *
+   * @return array
+   *   The data array.
+   */
+  protected function getSSOCookieData() {
+    $this->assertTrue(isset($this->cookies[SIMPLE_LDAP_SSO_COOKIE]['value']), 'SSO Cookie is set.');
+
+    // Verify that cookie is readable.
+    $cookie_val = urldecode($this->cookies[SIMPLE_LDAP_SSO_COOKIE]['value']);
+    $this->verbose($cookie_val);
+    drupal_static_reset('simple_ldap_sso_get_cookie_data');
+    $data = simple_ldap_sso_get_cookie_data($cookie_val);
+    $this->assertTrue(isset($data['name']), t('SSO Cookie can be decrypted.'));
+    return $data;
+  }
+
+  /**
+   * Log in user 1.
+   */
+  protected function loginUser1() {
+    if ($this->loggedInUser) {
+      $this->drupalLogout();
+    }
+
+    // Load password hashing API.
+    require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
+
+    // Generate a random password.
+    $pass = $this->randomString();
+
+    // Update user-1's password in the database.
+    db_query("UPDATE {users} SET pass = :hash WHERE uid = 1", array(':hash' => user_hash_password($pass)));
+
+    // Load user-1.
+    $admin_user = user_load(1);
+
+    // Set the password.
+    $admin_user->pass_raw = $pass;
+
+    // Log in.
+    $this->drupalLogin($admin_user);
+  }
+}
