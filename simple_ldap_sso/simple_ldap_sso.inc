@@ -31,9 +31,11 @@ function simple_ldap_configuration_errors() {
   // We need the module files here in order to call these functions.
   drupal_load('module', 'simple_ldap');
   drupal_load('module', 'simple_ldap_user');
+  /*
   if (!simple_ldap_configured() || !simple_ldap_user_configured()) {
     $errors = t('Simple LDAP and Simple LDAP User modules must be configured.');
   }
+   */
 
   // Ensure the encryption key is set.
   if (!variable_get('simple_ldap_sso_encryption_key')) {

@@ -18,7 +18,7 @@ class SimpleLdapSSOTestCase extends DrupalWebTestCase {
   }
 
   /**
-   * Set up the modules and any other
+   * Set up the modules and any other.
    */
   public function setUp() {
     // List the modules that should be enabled for this test.
@@ -183,7 +183,7 @@ class SimpleLdapSSOTestCase extends DrupalWebTestCase {
 
   /**
    * Looks up sessions in the sessions table for a particular uid.
-   * 
+   *
    * @param int $uid
    *   The user id to search.
    */

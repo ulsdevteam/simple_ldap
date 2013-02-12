@@ -123,6 +123,7 @@ function simple_ldap_sso_menu() {
     'access arguments' => array('administer site configuration'),
     'file' => 'simple_ldap_sso.admin.inc',
     'type' => MENU_LOCAL_TASK,
+    'weight' => 3,
   );
 
   return $items;

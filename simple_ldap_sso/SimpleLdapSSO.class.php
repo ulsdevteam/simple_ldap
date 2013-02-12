@@ -27,7 +27,7 @@ class SimpleLdapSSO {
       // Search for this attribute.
       $result = $this->server->search($this->dn, 'objectclass=*', 'base', array($this->getSidAttribute()));
       // Clean up the result.
-      $clean = $this->server->clean($result);
+      $clean = SimpleLdap::clean($result);
       // Only set the value if we actually got a result.
       if (isset($clean[$this->dn][$this->getSidAttribute()][0])) {
         $this->hashedSid = $clean[$this->dn][$this->getSidAttribute()][0];
@@ -92,9 +92,8 @@ class SimpleLdapSSO {
       new SimpleLdapServer($parameters) : SimpleLdapServer::singleton();
 
     // Get the LDAP configuration.
-    $base_dn = variable_get('simple_ldap_user_basedn');
-    $attribute_name = variable_get('simple_ldap_user_attribute_name');
-    $this->dn = $attribute_name . '=' . $name . ',' . $base_dn;
+    $ldap_user = SimpleLdapUser::singleton($name);
+    $this->dn = $ldap_user->dn;
   }
 
   /**
@@ -131,6 +130,6 @@ class SimpleLdapSSO {
    */
   private function hashSid($sid) {
     $algorithm = variable_get('simple_ldap_sso_hashing_algorithm', 'sha');
-    return simple_ldap_user_hash($sid, $algorithm);
+    return SimpleLdap::hash($sid, $algorithm);
   }
 }

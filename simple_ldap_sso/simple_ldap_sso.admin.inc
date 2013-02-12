@@ -73,7 +73,7 @@ function simple_ldap_sso_admin() {
     '#title' => t('Advanced Settings'),
   );
 
-  $options = simple_ldap_user_hash_types();
+  $options = SimpleLdap::hashes();
   unset($options['none']);
   $form['advanced']['simple_ldap_sso_hashing_algorithm'] = array(
     '#type' => 'select',
@@ -120,17 +120,18 @@ function simple_ldap_sso_get_attribute_options() {
   // Initialize a Simple LDAP Server object. Used for dropdown options.
   $server = SimpleLdapServer::singleton();
 
-  $objectclass = variable_get('simple_ldap_user_objectclass', 'inetorgperson');
+  $objectclass = variable_get('simple_ldap_user_objectclass', array('inetorgperson'));
 
   $attributes = array();
 
   // Generate a list of attributes for the selected objectclass.
-  if ($result = $server->schema->attributes($objectclass, TRUE)) {
+  foreach ($objectclass as $o) {
+    $result = $server->schema->attributes($o, TRUE);
     foreach ($result as $attribute) {
       $attributes[strtolower($attribute)] = $attribute;
     }
-    asort($attributes);
   }
+  asort($attributes);
 
   return $attributes;
 }
