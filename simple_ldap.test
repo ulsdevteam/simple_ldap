@@ -4,7 +4,7 @@
  * Tests for Simple LDAP module.
  */
 
-class SimpleLdapServerWebTestCase extends DrupalWebTestCase {
+class SimpleLdapServerTestCase extends DrupalWebTestCase {
 
   /**
    * Inherited from DrupalWebTestCase::getInfo().
@@ -31,8 +31,17 @@ class SimpleLdapServerWebTestCase extends DrupalWebTestCase {
     $pagesize = variable_get('simple_ldap_pagesize');
     $debug = variable_get('simple_ldap_debug');
 
+    // Get a list of modules passed as parameters.
+    $modules = func_get_args();
+    if (isset($modules[0]) && is_array($modules[0])) {
+      $modules = $modules[0];
+    }
+    if (empty($modules)) {
+      $modules = array();
+    }
+
     // Create the sandbox environment.
-    parent::setUp(array('simple_ldap'));
+    parent::setUp(array('simple_ldap') + $modules);
 
     // Configure the sandbox environment.
     variable_set('simple_ldap_host', $host);

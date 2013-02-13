@@ -587,51 +587,6 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
 }
 
 /**
- * Implements hook_simple_ldap_test_config().
- */
-function simple_ldap_user_simple_ldap_test_config() {
-  $boolean = array(0 => 'FALSE',  1 => 'TRUE');
-
-  $content = "// From Simple LDAP User Module\n";
-  $content .= "variable_set('simple_ldap_user_basedn', '" . variable_get('simple_ldap_user_basedn') . "');\n";
-  $content .= "variable_set('simple_ldap_user_scope', '" . variable_get('simple_ldap_user_scope') . "');\n";
-  $content .= "variable_set('simple_ldap_user_objectclass', array('" . implode("', '", variable_get('simple_ldap_user_objectclass')) . "'));\n";
-  $content .= "variable_set('simple_ldap_user_attribute_name', '" . variable_get('simple_ldap_user_attribute_name') . "');\n";
-  $content .= "variable_set('simple_ldap_user_attribute_mail', '" . variable_get('simple_ldap_user_attribute_mail') . "');\n";
-  $content .= "variable_set('simple_ldap_user_attribute_pass', '" . variable_get('simple_ldap_user_attribute_pass') . "');\n";
-  $content .= "variable_set('simple_ldap_user_password_hash', '" . variable_get('simple_ldap_user_password_hash') . "');\n";
-  $content .= "variable_set('simple_ldap_user_filter', '" . variable_get('simple_ldap_user_filter') . "');\n";
-  $content .= "variable_set('simple_ldap_user_sync', '" . variable_get('simple_ldap_user_sync') . "');\n";
-  $content .= "variable_set('simple_ldap_user_delete', " . $boolean[variable_get('simple_ldap_user_delete')] . ");\n";
-  $content .= "variable_set('simple_ldap_user_attribute_rdn', '" . variable_get('simple_ldap_user_attribute_rdn') . "');\n";
-
-  $content .= "\n\$simple_ldap_user_attribute_map = array(\n";
-  $attribute_map = variable_get('simple_ldap_user_attribute_map', array());
-  foreach ($attribute_map as $attribute) {
-    if (is_array($attribute)) {
-      $content .= "  array(\n";
-      foreach ($attribute as $key => $value) {
-        if (is_array($value)) {
-          $content .= "    '$key' => array(\n";
-          foreach ($value as $v) {
-            $content .= "      '$v',\n";
-          }
-          $content .= "    ),\n";
-        }
-        else {
-          $content .= "    '$key' => '$value',\n";
-        }
-      }
-      $content .= "  ),\n";
-    }
-  }
-  $content .= ");\n";
-  $content .= "variable_set('simple_ldap_user_attribute_map', \$simple_ldap_user_attribute_map);\n";
-
-  return $content;
-}
-
-/**
  * Implements hook_user_operations().
  */
 function simple_ldap_user_user_operations() {

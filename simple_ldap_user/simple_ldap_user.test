@@ -4,30 +4,132 @@
  * Tests for Simple LDAP User module.
  */
 
-abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
+abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
 
-  protected $filter;
   protected $drupalUser;
+  protected $ldapUser;
+  protected $blockedUser;
 
   /**
    * Inherited parent::setUp().
    */
   public function setUp() {
-    parent::setUp(array());
+    // Get the live simple_ldap_user configuration.
+    $basedn = variable_get('simple_ldap_user_basedn');
+    $scope = variable_get('simple_ldap_user_scope');
+    $objectclass = variable_get('simple_ldap_user_objectclass');
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+    $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+    $attribute_pass = variable_get('simple_ldap_user_attribute_pass');
+    $attribute_map = variable_get('simple_ldap_user_attribute_map');
+    $password_hash = variable_get('simple_ldap_user_password_hash');
+    $filter = variable_get('simple_ldap_user_filter');
+    $source = variable_get('simple_ldap_user_source');
+    $sync = variable_get('simple_ldap_user_sync');
+    $delete = variable_get('simple_ldap_user_delete');
+    $this->ldapUser = variable_get('simple_ldap_user_test_active_user');
+    $this->blockedUser = variable_get('simple_ldap_user_test_blocked_user');
 
-    // Create a drupal-only user before enabling the LDAP modules so that the
+    // Make sure the variables from settings.php are written to the database.
+    // Otherwise subsequent tests will not be able to read them. These are
+    // cleaned up in $this->tearDown().
+    variable_set('simple_ldap_user_attribute_map', $attribute_map);
+    variable_set('simple_ldap_user_test_active_user', $this->ldapUser);
+    variable_set('simple_ldap_user_test_blocked_user', $this->blockedUser);
+
+    // Get a list of modules passed as parameters.
+    $modules = func_get_args();
+    if (isset($modules[0]) && is_array($modules[0])) {
+      $modules = $modules[0];
+    }
+    if (empty($modules)) {
+      $modules = array();
+    }
+
+    // Create the simpletest sandbox.
+    parent::setUp($modules);
+
+    // Create a drupal-only user before enabling Simple LDAP User so that the
     // user is only present in Drupal.
     $this->drupalUser = $this->drupalCreateUser();
 
-    // Enable the Simple LDAP modules.
-    $modules = array('simple_ldap', 'simple_ldap_user', 'simple_ldap_test');
+    // Enable the Simple LDAP User module.
+    $modules = array('simple_ldap_user');
     $success = module_enable($modules);
     $this->assertTrue($success, t('Enabled modules: %modules', array('%modules' => implode(', ', $modules))));
 
-    // Setting a filter messes with most of the tests. Clear it here, and save
-    // the value for use in tests that need it.
-    $this->filter = variable_get('simple_ldap_user_filter');
-    variable_del('simple_ldap_user_filter');
+    // Configure the sandboxed simple_ldap_user.
+    variable_set('simple_ldap_user_basedn', $basedn);
+    variable_set('simple_ldap_user_scope', $scope);
+    variable_set('simple_ldap_user_objectclass', $objectclass);
+    variable_set('simple_ldap_user_attribute_name', $attribute_name);
+    variable_set('simple_ldap_user_attribute_mail', $attribute_mail);
+    variable_set('simple_ldap_user_attribute_pass', $attribute_pass);
+    variable_set('simple_ldap_user_attribute_map', $attribute_map);
+    variable_set('simple_ldap_user_password_hash', $password_hash);
+    variable_set('simple_ldap_user_filter', $filter);
+    variable_set('simple_ldap_user_source', $source);
+    variable_set('simple_ldap_user_sync', $sync);
+    variable_set('simple_ldap_user_delete', $delete);
+    variable_set('simple_ldap_user_test_active_user', $this->ldapUser);
+    variable_set('simple_ldap_user_test_blocked_user', $this->blockedUser);
+
+    // Backwards compatibility. @todo
+    variable_set('simple_ldap_test_user', $this->ldapUser);
+    variable_set('simple_ldap_test_inactive_user', $this->blockedUser);
+
+    // Get a list of required attributes for the configured objectclass(es).
+    $server = SimpleLdapServer::singleton();
+    $must = array();
+    foreach ($objectclass as $o) {
+      $must += $server->schema->must($o, TRUE);
+    }
+
+    // Add mapped fields to user entity.
+    $attribute_map = simple_ldap_user_attribute_map();
+    foreach ($attribute_map as $attribute) {
+      // Skip one-to-many mappings.
+      if (count($attribute['drupal']) > 1) {
+        continue;
+      }
+
+      // Get the drupal name and type.
+      $drupal_attribute = reset($attribute['drupal']);
+      $type = substr($drupal_attribute, 0, 1);
+
+      // Create user fields.
+      if ($type == '#') {
+        $drupal_attribute = substr($drupal_attribute, 1);
+        $required = in_array($attribute['ldap'], $must);
+        field_create_field(array(
+          'field_name' => $drupal_attribute,
+          'type' => 'text',
+          'cardinality' => 1,
+        ));
+        field_create_instance(array(
+          'field_name' => $drupal_attribute,
+          'entity_type' => 'user',
+          'label' => $drupal_attribute,
+          'bundle' => 'user',
+          'required' => $required,
+          'settings' => array(
+            'user_register_form' => $required,
+          ),
+        ));
+      }
+    }
+  }
+
+  /**
+   * Inherited parent::tearDown().
+   */
+  protected function tearDown() {
+    // Clean up variables written to the database in setUp().
+    variable_del('simple_ldap_user_attribute_map');
+    variable_del('simple_ldap_user_test_active_user');
+    variable_del('simple_ldap_user_test_blocked_user');
+
+    parent::tearDown();
   }
 
   /**
@@ -163,7 +265,7 @@ abstract class SimpleLdapUserWebTestCase extends DrupalWebTestCase {
 
 }
 
-class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserWebTestCase {
+class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserTestCase {
 
   /**
    * Inherited parent::getInfo().
@@ -290,7 +392,7 @@ class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserWebTestCase 
 
 }
 
-class SimpleLdapUserFilterWebTestCase extends SimpleLdapUserWebTestCase {
+class SimpleLdapUserFilterWebTestCase extends SimpleLdapUserTestCase {
 
   /**
    * Inherited parent::getInfo().
@@ -342,7 +444,7 @@ class SimpleLdapUserFilterWebTestCase extends SimpleLdapUserWebTestCase {
 
 }
 
-class SimpleLdapUserUserOneLoginWebTestCase extends SimpleLdapUserWebTestCase {
+class SimpleLdapUserUserOneLoginWebTestCase extends SimpleLdapUserTestCase {
 
   /**
    * Inherited parent::getInfo().
@@ -376,7 +478,7 @@ class SimpleLdapUserUserOneLoginWebTestCase extends SimpleLdapUserWebTestCase {
 
 }
 
-class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserWebTestCase {
+class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserTestCase {
 
   /**
    * Inherited parent::getInfo().
@@ -466,7 +568,7 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserWebTestCase {
 
 }
 
-class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
+class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserTestCase {
 
   /**
    * Inherited parent::getInfo().
@@ -699,7 +801,7 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserWebTestCase {
 
 }
 
-class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
+class SimpleLdapUserSyncTestCase extends SimpleLdapUserTestCase {
 
   /**
    * Inherited parent::getInfo().
@@ -880,7 +982,7 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserWebTestCase {
 
 }
 
-class SimpleLdapUserPasswordResetTestCase extends SimpleLdapUserWebTestCase {
+class SimpleLdapUserPasswordResetTestCase extends SimpleLdapUserTestCase {
 
   /**
    * Inherited parent::getInfo().
@@ -943,7 +1045,7 @@ class SimpleLdapUserPasswordResetTestCase extends SimpleLdapUserWebTestCase {
 
 }
 
-class SimpleLdapUserDeleteUserTestCase extends SimpleLdapUserWebTestCase {
+class SimpleLdapUserDeleteUserTestCase extends SimpleLdapUserTestCase {
 
   /**
    * Inherited parent::getInfo().

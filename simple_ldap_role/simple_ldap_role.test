@@ -4,45 +4,59 @@
  * Tests for Simple LDAP Role module.
  */
 
-abstract class SimpleLdapRoleTestCase extends DrupalWebTestCase {
+abstract class SimpleLdapRoleTestCase extends SimpleLdapUserTestCase {
+
+  protected $ldapGroup;
 
   /**
    * Inherited parent::setUp().
    */
   public function setUp() {
-    parent::setUp(array(
-      'simple_ldap',
-      'simple_ldap_role',
-      'simple_ldap_test',
-      'simple_ldap_user',
-    ));
+    // Get the live simple_ldap_role configuration.
+    $basedn = variable_get('simple_ldap_role_basedn');
+    $scope = variable_get('simple_ldap_role_scope');
+    $objectclass = variable_get('simple_ldap_role_objectclass');
+    $attribute_name = variable_get('simple_ldap_role_attribute_name');
+    $attribute_member = variable_get('simple_ldap_role_attribute_member');
+    $attribute_member_format = variable_get('simple_ldap_role_attribute_member_format');
+    $attribute_member_default = variable_get('simple_ldap_role_attribute_member_default');
+    $filter = variable_get('simple_ldap_role_filter');
+    $source = variable_get('simple_ldap_role_source');
+    $sync = variable_get('simple_ldap_role_sync');
+    $this->ldapGroup = variable_get('simple_ldap_role_test_group');
+
+    // Make sure the variables from settings.php are written to the database.
+    // Otherwise subsequent tests will not be able to read them. These are
+    // cleaned up in $this->tearDown().
+    variable_set('simple_ldap_role_test_group', $this->ldapGroup);
+
+    // Create the simpletest sandbox.
+    parent::setUp(array('simple_ldap_role'));
+
+    // Configure the sandbox simple_ldap_role instance.
+    variable_set('simple_ldap_role_basedn', $basedn);
+    variable_set('simple_ldap_role_scope', $scope);
+    variable_set('simple_ldap_role_objectclass', $objectclass);
+    variable_set('simple_ldap_role_attribute_name', $attribute_name);
+    variable_set('simple_ldap_role_attribute_member', $attribute_member);
+    variable_set('simple_ldap_role_attribute_member_format', $attribute_member_format);
+    variable_set('simple_ldap_role_attribute_member_default', $attribute_member_default);
+    variable_set('simple_ldap_role_filter', $filter);
+    variable_set('simple_ldap_role_source', $source);
+    variable_set('simple_ldap_role_sync', $sync);
+
+    // Backwards compatibility. @todo
+    variable_set('simple_ldap_test_grup', $this->ldapGroup);
   }
 
   /**
-   * Log in with User 1.
+   * Inherited parent::tearDown().
    */
-  public function drupalUser1Login() {
-    if ($this->loggedInUser) {
-      $this->drupalLogout();
-    }
+  protected function tearDown() {
+    // Clean up variables written to the database in setUp().
+    variable_del('simple_ldap_role_test_group');
 
-    // Load password hashing API.
-    require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
-
-    // Generate a random password.
-    $pass = hash('sha256', microtime());
-
-    // Update user-1's password in the database.
-    db_query("UPDATE {users} SET pass = :hash WHERE uid = 1", array(':hash' => user_hash_password($pass)));
-
-    // Load user-1.
-    $admin_user = user_load(1);
-
-    // Set the password.
-    $admin_user->pass_raw = $pass;
-
-    // Log in.
-    $this->drupalLogin($admin_user);
+    parent::tearDown();
   }
 
 }
