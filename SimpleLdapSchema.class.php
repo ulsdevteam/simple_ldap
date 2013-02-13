@@ -106,9 +106,14 @@ class SimpleLdapSchema {
           return TRUE;
         }
         else {
-          // Search for the OID.
-          foreach ($this->schema[$attribute] as $attribute) {
-            if ($attribute['oid'] == $name) {
+          // Search for an alias or OID.
+          foreach ($this->schema[$attribute] as $attr) {
+            foreach ($attr['aliases'] as $alias) {
+              if (drupal_strtolower($alias) == drupal_strtolower($name)) {
+                return TRUE;
+              }
+            }
+            if ($attr['oid'] == $name) {
               return TRUE;
             }
           }
@@ -145,10 +150,15 @@ class SimpleLdapSchema {
           return $this->schema[$attribute][$name];
         }
         else {
-          // Search for a matching OID.
-          foreach ($this->schema[$attribute] as $attribute) {
-            if ($attribute['oid'] == $name) {
-              return $attribute;
+          // Search for an alias or OID.
+          foreach ($this->schema[$attribute] as $attr) {
+            foreach ($attr['aliases'] as $alias) {
+              if (drupal_strtolower($alias) == drupal_strtolower($name)) {
+                return $attr;
+              }
+            }
+            if ($attr['oid'] == $name) {
+              return $attr;
             }
           }
         }
