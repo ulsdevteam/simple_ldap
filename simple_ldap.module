@@ -24,48 +24,7 @@ function simple_ldap_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
 
-  $items['admin/config/people/simple_ldap/simpletest'] = array(
-    'title' => 'Simpletest Config',
-    'page callback' => 'simple_ldap_simpletest',
-    'access arguments' => array('administer site configuration'),
-    'type' => MENU_CALLBACK,
-  );
-
   return $items;
-}
-
-/**
- * Assembles the output from hook_simple_ldap_test_config().
- */
-function simple_ldap_simpletest() {
-  $content = '';
-  $hook = module_invoke_all('simple_ldap_test_config');
-  foreach ($hook as $conf) {
-    $content .= '<pre>';
-    $content .= $conf;
-    $content .= '</pre>';
-  }
-
-  return $content;
-}
-
-/**
- * Implements hook_simple_ldap_test_config().
- */
-function simple_ldap_simple_ldap_test_config() {
-  $boolean = array(0 => 'FALSE', 1 => 'TRUE');
-
-  $content = "// From Simple LDAP Module\n";
-  $content .= "variable_set('simple_ldap_host', '" . variable_get('simple_ldap_host') . "');\n";
-  $content .= "variable_set('simple_ldap_port', '" . variable_get('simple_ldap_port') . "');\n";
-  $content .= "variable_set('simple_ldap_starttls', " . $boolean[variable_get('simple_ldap_starttls')] . ");\n";
-  $content .= "variable_set('simple_ldap_readonly', " . $boolean[variable_get('simple_ldap_readonly')] . ");\n";
-  $content .= "variable_set('simple_ldap_binddn', '" . variable_get('simple_ldap_binddn') . "');\n";
-  $content .= "variable_set('simple_ldap_bindpw', '" . variable_get('simple_ldap_bindpw') . "');\n";
-  $content .= "variable_set('simple_ldap_basedn', '" . variable_get('simple_ldap_basedn') . "');\n";
-  $content .= "variable_set('simple_ldap_pagesize', '" . variable_get('simple_ldap_pagesize') . "');\n";
-  $content .= "variable_set('simple_ldap_debug', " . $boolean[variable_get('simple_ldap_debug')] . ");\n";
-  return $content;
 }
 
 /**
