@@ -345,8 +345,11 @@ function simple_ldap_user_load_or_create_by_name($name) {
     return FALSE;
   }
 
-  // Attempt to load the drupal user by name.
+  // Attempt to load the drupal user.
   $drupal_user = user_load_by_name($name);
+  if (!$drupal_user) {
+    $drupal_user = user_load_by_mail($name);
+  }
 
   // If the user doesn't already exist in Drupal, create them.
   if (!$drupal_user) {
