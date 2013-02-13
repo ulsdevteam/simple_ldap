@@ -86,7 +86,8 @@ function simple_ldap_role_user_presave(&$edit, $account, $category) {
     foreach ($edit['roles'] as $rid => $value) {
       if ($value && $rid != DRUPAL_AUTHENTICATED_RID) {
         $role = user_role_load($rid);
-        $filter = '(&(' . $attribute_name . '=' . $role->name . ')' . simple_ldap_role_filter() . ')';
+        $safe_name = preg_replace(array('/\(/', '/\)/'), array('\\\(', '\\\)'), $role->name);
+        $filter = '(&(' . $attribute_name . '=' . $safe_name . ')' . simple_ldap_role_filter() . ')';
         $group = $server->search($basedn, $filter, $scope, array($attribute_member));
 
         if ($attribute_member_format == 'dn') {
@@ -322,7 +323,8 @@ function simple_ldap_role_sync_user_to_ldap($drupal_user) {
   }
 
   // Generate the LDAP search filter.
-  $filter = '(&(' . $attribute_member . '=' . $search . ')' . simple_ldap_role_filter() . ')';
+  $safe_search = preg_replace(array('/\(/', '/\)/'), array('\\\(', '\\\)'), $search);
+  $filter = '(&(' . $attribute_member . '=' . $safe_search . ')' . simple_ldap_role_filter() . ')';
 
   // Get a list of LDAP groups for this user.
   $ldap_groups = $server->search($basedn, $filter, $scope, array($attribute_name, $attribute_member));

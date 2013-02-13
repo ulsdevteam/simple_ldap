@@ -33,7 +33,8 @@ class SimpleLdapUser {
     $scope = variable_get('simple_ldap_user_scope');
     $attribute_name = variable_get('simple_ldap_user_attribute_name', 'cn');
     $attribute_mail = variable_get('simple_ldap_user_attribute_mail', 'mail');
-    $filter = '(&(|(' . $attribute_name . '=' . $name . ')(' . $attribute_mail . '=' . $name . '))' . self::filter() . ')';
+    $safe_name = preg_replace(array('/\(/', '/\)/'), array('\\\(', '\\\)'), $name);
+    $filter = '(&(|(' . $attribute_name . '=' . $safe_name . ')(' . $attribute_mail . '=' . $safe_name . '))' . self::filter() . ')';
 
     // List of attributes to fetch from the LDAP server.
     $attributes = array($attribute_name, $attribute_mail);
