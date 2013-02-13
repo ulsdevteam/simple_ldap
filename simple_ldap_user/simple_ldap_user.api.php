@@ -37,6 +37,7 @@
 /**
  * simple_ldap_user helper functions.
  *
+ * simple_ldap_user_load_or_create_by_name($name)
  * simple_ldap_user_login_name_validate($form, &$form_state)
  * simple_ldap_user_source()
  * simple_ldap_user_attribute_map()
