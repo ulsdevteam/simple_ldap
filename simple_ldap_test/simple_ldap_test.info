@@ -1,6 +1,0 @@
-name = Simple LDAP test module
-description = Provides a Simple LDAP configuration for testing.
-core = 7.x
-dependencies[] = simple_ldap
-package = Development
-hidden = TRUE

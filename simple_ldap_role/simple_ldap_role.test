@@ -30,8 +30,17 @@ abstract class SimpleLdapRoleTestCase extends SimpleLdapUserTestCase {
     // cleaned up in $this->tearDown().
     variable_set('simple_ldap_role_test_group', $this->ldapGroup);
 
+    // Get a list of modules passed as parameters.
+    $modules = func_get_args();
+    if (isset($modules[0]) && is_array($modules[0])) {
+      $modules = $modules[0];
+    }
+    if (empty($modules)) {
+      $modules = array();
+    }
+
     // Create the simpletest sandbox.
-    parent::setUp(array('simple_ldap_role'));
+    parent::setUp(array('simple_ldap_role') + $modules);
 
     // Configure the sandbox simple_ldap_role instance.
     variable_set('simple_ldap_role_basedn', $basedn);
@@ -46,7 +55,7 @@ abstract class SimpleLdapRoleTestCase extends SimpleLdapUserTestCase {
     variable_set('simple_ldap_role_sync', $sync);
 
     // Backwards compatibility. @todo
-    variable_set('simple_ldap_test_grup', $this->ldapGroup);
+    variable_set('simple_ldap_test_group', $this->ldapGroup);
   }
 
   /**

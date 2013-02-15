@@ -5,15 +5,15 @@
  * Simple LDAP SSO module tests.
  */
 
-class SimpleLdapSSOTestCase extends DrupalWebTestCase {
+class SimpleLdapSSOTestCase extends SimpleLdapUserTestCase {
   /**
    * Display information about this test case.
    */
   public static function getInfo() {
     return array(
-      'name' => 'SSO',
+      'name' => 'Single Sign-On',
       'description' => 'Single-Sign-On Tests',
-      'group' => 'Simple LDAP User',
+      'group' => 'Simple LDAP SSO',
     );
   }
 
@@ -21,13 +21,36 @@ class SimpleLdapSSOTestCase extends DrupalWebTestCase {
    * Set up the modules and any other.
    */
   public function setUp() {
-    // List the modules that should be enabled for this test.
-    parent::setUp('simple_ldap_sso', 'simple_ldap_test', 'simple_ldap_user', 'simple_ldap');
+    // Get the live simple_ldap_sso configuration.
+    $binddn = variable_get('simple_ldap_sso_binddn');
+    $bindpw = variable_get('simple_ldap_sso_bindpw');
+    $encryption_key = variable_get('simple_ldap_sso_encryption_key');
+    $attribute_sid = variable_get('simple_ldap_sso_attribute_sid');
+    $hashing_algorithm = variable_get('simple_ldap_sso_hashing_algorithm');
+    $flood_limit = variable_get('simple_ldap_sso_flood_limit');
+    $flood_window = variable_get('simple_ldap_sso_flood_window');
 
-    // Create an admin user.
-    $this->adminUser = $this->drupalCreateUser(
-      array('administer site configuration')
-    );
+    // Get a list of modules passed as parameters.
+    $modules = func_get_args();
+    if (isset($modules[0]) && is_array($modules[0])) {
+      $modules = $modules[0];
+    }
+    if (empty($modules)) {
+      $modules = array();
+    }
+
+    // Create the simpletest sandbox.
+    parent::setUp(array('simple_ldap_sso') + $modules);
+
+    // Configure the sandbox simple_ldap_sso instance.
+    variable_set('simple_ldap_sso_binddn', $binddn);
+    variable_set('simple_ldap_sso_bindpw', $bindpw);
+    variable_set('simple_ldap_sso_encryption_key', $encryption_key);
+    variable_set('simple_ldap_sso_attribute_sid', $attribute_sid);
+    variable_set('simple_ldap_sso_hashing_algorithm', $hashing_algorithm);
+    variable_set('simple_ldap_sso_flood_limit', $flood_limit);
+    variable_set('simple_ldap_sso_flood_window', $flood_window);
+
     $test_user = variable_get('simple_ldap_test_user');
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
 
@@ -38,21 +61,13 @@ class SimpleLdapSSOTestCase extends DrupalWebTestCase {
     $this->testUser = $account;
   }
 
-  protected function setUpConfig() {
-    variable_set('simple_ldap_sso_encryption_key', 'testkey0');
-    variable_set('simple_ldap_sso_attribute_sid', 'labeleduri');
-  }
-
   public function testSimpleLdapSSO() {
-    // Assert module is not configured.
-    $this->assertFalse(simple_ldap_sso_configured(), t('Simple LDAP SSO is not configured.'));
     // Assert module is configured.
-    $this->setUpConfig();
     drupal_static_reset('simple_ldap_sso_configured');
     $this->assertTrue(simple_ldap_sso_configured(), t('Simple LDAP SSO is configured.'));
 
     // Verify that for user 1, no SSO cookie is set.
-    $this->loginUser1();
+    $this->drupalUser1Login();
     $this->assertFalse(isset($this->cookies[SIMPLE_LDAP_SSO_COOKIE]['value']), 'No SSO Cookie set for User 1.');
 
     $this->drupalLogin($this->testUser);
@@ -211,30 +226,4 @@ class SimpleLdapSSOTestCase extends DrupalWebTestCase {
     return $data;
   }
 
-  /**
-   * Log in user 1.
-   */
-  protected function loginUser1() {
-    if ($this->loggedInUser) {
-      $this->drupalLogout();
-    }
-
-    // Load password hashing API.
-    require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
-
-    // Generate a random password.
-    $pass = $this->randomString();
-
-    // Update user-1's password in the database.
-    db_query("UPDATE {users} SET pass = :hash WHERE uid = 1", array(':hash' => user_hash_password($pass)));
-
-    // Load user-1.
-    $admin_user = user_load(1);
-
-    // Set the password.
-    $admin_user->pass_raw = $pass;
-
-    // Log in.
-    $this->drupalLogin($admin_user);
-  }
 }
