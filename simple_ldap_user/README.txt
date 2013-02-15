@@ -70,3 +70,39 @@ $conf['simple_ldap_user_attribute_map'] = array(
   ),
 
 );
+
+Testing
+=======
+
+In order to successfully run simpletest against this module, the following
+variables need to be defined in settings.php.
+
+$conf['simple_ldap_user_test_active_user']
+$conf['simple_ldap_user_test_blocked_user']
+
+Both variables are of the same structure. They are a keyed array of LDAP
+attribute name to LDAP attribute value of existing LDAP entries to use for
+testing. 'dn' is a required attribute, and the other attributes should be
+defined according to what is configured for simple_ldap_user.
+
+The blocked_user array is only needed if an LDAP filter is specified in the
+configuration. If present, this user should be an existing LDAP entry that
+does not match the filter.
+
+Example:
+$conf['simple_ldap_user_test_active_user'] = array(
+  'dn' => 'cn=ldapuser,dc=users,dc=example,dc=com',
+  'cn' => 'ldapuser',
+  'givenname' => 'LDAP',
+  'sn' => 'User',
+  'mail' => 'ldapuser@example.com',
+  'pass' => 'secret',
+);
+$conf['simple_ldap_user_test_blocked_user'] = array(
+  'dn' => 'cn=inactive,ou=users,dc=example,dc=com',
+  'cn' => 'inactive',
+  'givenname' => 'Inactive',
+  'sn' => 'User',
+  'mail' => 'inactive@example.com',
+  'pass' => 'secret',
+);
