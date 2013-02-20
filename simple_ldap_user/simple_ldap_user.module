@@ -486,9 +486,19 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
     $attribute_rdn = $attribute_name;
   }
   if ($ldap_user->{$attribute_rdn}['count'] > 0) {
-    $basedn = variable_get('simple_ldap_user_basedn');
-    $dn = $attribute_rdn . '=' . $ldap_user->{$attribute_rdn}[0] . ',' . $basedn;
-    $ldap_user->dn = $dn;
+    if ($ldap_user->dn) {
+      // Reconstruct an existing DN.
+      $parts = SimpleLdap::ldap_explode_dn($ldap_user->dn);
+      $basedn = '';
+      for ($i = 1; $i < $parts['count']; $i++) {
+        $basedn .= ',' . $parts[$i];
+      }
+    }
+    else {
+      // Default to using the configured basedn.
+      $basedn = ',' . variable_get('simple_ldap_user_basedn');
+    }
+    $ldap_user->dn = $attribute_rdn . '=' . $ldap_user->{$attribute_rdn}[0] . $basedn;
   }
 
   // Save any changes.
