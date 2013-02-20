@@ -217,6 +217,7 @@ class SimpleLdapUser {
 
     // No exceptions were thrown, so the save was successful.
     $this->dirty = FALSE;
+    $this->move = FALSE;
     return TRUE;
   }
 
@@ -230,9 +231,15 @@ class SimpleLdapUser {
    */
   public function delete() {
     if (variable_get('simple_ldap_user_delete', TRUE)) {
-      $this->server->delete($this->dn);
+      if ($this->move) {
+        $this->server->delete($this->move);
+      }
+      else {
+        $this->server->delete($this->dn);
+      }
       $this->exists = FALSE;
       $this->dirty = FALSE;
+      $this->move = FALSE;
       return TRUE;
     }
 
