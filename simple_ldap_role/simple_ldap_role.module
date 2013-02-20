@@ -72,50 +72,12 @@ function simple_ldap_role_user_login(&$edit, $account) {
  */
 function simple_ldap_role_user_presave(&$edit, $account, $category) {
   if ($account->is_new && isset($edit['name']) && isset($edit['roles'])) {
-    // Get module configuration.
-    $basedn = variable_get('simple_ldap_role_basedn');
-    $scope = variable_get('simple_ldap_role_scope');
-    $objectclass = variable_get('simple_ldap_role_objectclass');
-    $attribute_name = variable_get('simple_ldap_role_attribute_name');
-    $attribute_member = variable_get('simple_ldap_role_attribute_member');
-    $attribute_member_format = variable_get('simple_ldap_role_attribute_member_format');
-
-    // Get an LDAP server object.
-    $server = SimpleLdapServer::singleton();
-
     foreach ($edit['roles'] as $rid => $value) {
       if ($value && $rid != DRUPAL_AUTHENTICATED_RID) {
         $role = user_role_load($rid);
-        $safe_name = preg_replace(array('/\(/', '/\)/'), array('\\\(', '\\\)'), $role->name);
-        $filter = '(&(' . $attribute_name . '=' . $safe_name . ')' . simple_ldap_role_filter() . ')';
-        $group = $server->search($basedn, $filter, $scope, array($attribute_member));
-
-        if ($attribute_member_format == 'dn') {
-          $ldap_user = SimpleLdapUser::singleton($edit['name']);
-          $member = $ldap_user->dn;
-        }
-        else {
-          $member = $edit['name'];
-        }
-
-        if ($group['count'] == 0) {
-          // The LDAP group does not exist, create it and add the user.
-          $dn = simple_ldap_role_dn($role->name);
-          $attributes = array(
-            'objectclass' => $objectclass,
-            $attribute_name => $role->name,
-            $attribute_member => $member,
-          );
-          $result = $server->add($dn, $attributes);
-        }
-        else {
-          $dn = $group[0]['dn'];
-          // The LDAP group exists, just add the user.
-          $attributes = array(
-            $attribute_member => $member,
-          );
-          $result = $server->modify($dn, $attributes, 'add');
-        }
+        $ldap_role = SimpleLdapRole::singleton($role->name);
+        $ldap_role->addUser($edit['name']);
+        $ldap_role->save();
       }
     }
   }
@@ -126,28 +88,13 @@ function simple_ldap_role_user_presave(&$edit, $account, $category) {
  */
 function simple_ldap_role_user_role_presave($role) {
   if (isset($role->op) && $role->op == 'Save role') {
-    // Get the module configurations.
-    $basedn = variable_get('simple_ldap_role_basedn');
-    $objectclass = variable_get('simple_ldap_role_objectclass');
-    $attribute_name = variable_get('simple_ldap_role_attribute_name');
-
-    // Get an LDAP server object.
-    $server = SimpleLdapServer::singleton();
-
     // Get the original role values.
     $original = user_role_load($role->rid);
+    $ldap_role = SimpleLdapRole::singleton($original->name);
 
-    // Generate the DNs.
-    $dn = simple_ldap_role_dn($original->name);
-    $newdn = simple_ldap_role_dn($role->name);
-
-    // Check if the original is present in LDAP.
-    $result = $server->search($dn, 'objectclass=' . $objectclass, 'base', array());
-
-    // Rename the LDAP group.
-    if ($result['count'] != 0) {
-      $result = $server->move($dn, $newdn);
-    }
+    // Rename the LDAP role.
+    $ldap_role->$attribute_name = $role->name;
+    $ldap_role->save();
   }
 }
 
@@ -155,72 +102,16 @@ function simple_ldap_role_user_role_presave($role) {
  * Implements hook_user_role_insert().
  */
 function simple_ldap_role_user_role_insert($role) {
-  // Get the first part of the module configuration.
-  $objectclass = variable_get('simple_ldap_role_objectclass');
-  $attribute_member = variable_get('simple_ldap_role_attribute_member');
-  $attribute_member_default = variable_get('simple_ldap_role_attribute_member_default');
-
-  // Get an LDAP server object.
-  $server = SimpleLdapServer::singleton();
-
-  // Get a list of required attributes for the configured objectclass.
-  $must = $server->schema->must($objectclass, TRUE);
-
-  // If the member attribute is not required, or a default member has been
-  // configured, continue with creating the LDAP group. Otherwise, that will
-  // have to wait until the first user is added to the role.
-  if (!in_array($attribute_member, $must) || !empty($attribute_member_default)) {
-    // Get the rest of the module configuration.
-    $basedn = variable_get('simple_ldap_role_basedn');
-    $attribute_name = variable_get('simple_ldap_role_attribute_name');
-
-    // Generate the role DN.
-    $dn = simple_ldap_role_dn($role->name);
-
-    // Generate the LDAP entry attributes.
-    $attributes = array(
-      'objectclass' => $objectclass,
-      $attribute_name => $role->name,
-    );
-    if (!empty($attribute_member_default)) {
-      $attributes[$attribute_member] = $attribute_member_default;
-    }
-
-    // Add the LDAP entry.
-    try {
-      $server->add($dn, $attributes);
-    } catch (SimpleLdapException $e) {
-      // Ignore "Already exists" exceptions.
-      if ($e->getCode() != 68) {
-        throw $e;
-      }
-    }
-  }
-
+  $ldap_role = SimpleLdapRole::singleton($role->name);
+  $ldap_role->save();
 }
 
 /**
  * Implements hook_user_role_delete().
  */
 function simple_ldap_role_user_role_delete($role) {
-  // Get the module configurations.
-  $basedn = variable_get('simple_ldap_role_basedn');
-  $scope = variable_get('simple_ldap_role_scope');
-  $attribute_name = variable_get('simple_ldap_role_attribute_name');
-
-  // Get an LDAP server object.
-  $server = SimpleLdapServer::singleton();
-
-  // Generate a search filter to find the group in LDAP.
-  $name = preg_replace(array('/\(/', '/\)/'), array('\\\(', '\\\)'), $role->name);
-  $filter = '(&(' . $attribute_name . '=' . $name . ')' . simple_ldap_role_filter() . ')';
-
-  // Search for the LDAP group, and delete it if it is found.
-  $ldap_group = $server->search($basedn, $filter, $scope, array($attribute_name));
-  if ($ldap_group['count'] == 1) {
-    // Delete the LDAP group.
-    $server->delete($ldap_group[0]['dn']);
-  }
+  $ldap_role = SimpleLdapRole::singelton($role->name);
+  $ldap_role->delete();
 }
 
 /**
@@ -236,7 +127,7 @@ function simple_ldap_role_cron() {
   $server = SimpleLdapServer::singleton();
 
   // Get a list of LDAP groups.
-  $ldap_groups = $server->search($basedn, simple_ldap_role_filter(), $scope, array($attribute_name));
+  $ldap_groups = $server->search($basedn, SimpleLdapRole::filter(), $scope, array($attribute_name));
 
   // Get a list of Drupal roles.
   $drupal_roles = user_roles(TRUE);
@@ -271,33 +162,6 @@ function simple_ldap_role_source() {
 }
 
 /**
- * Returns the filter to use in an LDAP search.
- */
-function simple_ldap_role_filter() {
-  // Get Module configuration.
-  $objectclass = variable_get('simple_ldap_role_objectclass', '*');
-  $extrafilter = variable_get('simple_ldap_role_filter');
-
-  // Construct the filter.
-  $filter = '(objectclass=' . $objectclass . ')';
-  if (!empty($extrafilter)) {
-    $filter = '(&' . $filter . '(' . $extrafilter . '))';
-  }
-
-  return $filter;
-}
-
-/**
- * Generate a DN for the given role name, based on the module configuration.
- */
-function simple_ldap_role_dn($name) {
-  $basedn = variable_get('simple_ldap_role_basedn');
-  $attribute_name = variable_get('simple_ldap_role_attribute_name');
-  $dn = $attribute_name . '=' . $name . ',' . $basedn;
-  return $dn;
-}
-
-/**
  * Implements hook_sync_user_to_ldap().
  *
  * Synchronize Drupal roles to LDAP groups.
@@ -315,7 +179,7 @@ function simple_ldap_role_sync_user_to_ldap($drupal_user) {
   // Get an LDAP server object.
   $server = SimpleLdapServer::singleton();
 
-  // Determine the search string to use.
+  // Determine the search string to use depending on the module configuration.
   if ($attribute_member_format == 'dn') {
     $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
     $search = $ldap_user->dn;
@@ -326,9 +190,9 @@ function simple_ldap_role_sync_user_to_ldap($drupal_user) {
 
   // Generate the LDAP search filter.
   $safe_search = preg_replace(array('/\(/', '/\)/'), array('\\\(', '\\\)'), $search);
-  $filter = '(&(' . $attribute_member . '=' . $safe_search . ')' . simple_ldap_role_filter() . ')';
+  $filter = '(&(' . $attribute_member . '=' . $safe_search . ')' . SimpleLdapRole::filter() . ')';
 
-  // Get a list of LDAP groups for this user.
+  // Get a list of LDAP groups of which this user is a member.
   $ldap_groups = $server->search($basedn, $filter, $scope, array($attribute_name, $attribute_member));
 
   // Get a list of Drupal roles for this user.

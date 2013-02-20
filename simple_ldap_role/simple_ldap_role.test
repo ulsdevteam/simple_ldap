@@ -98,7 +98,8 @@ class SimpleLdapRoleCreateDrupalRoleTestCase extends SimpleLdapRoleTestCase {
 
     // Generate a randome group name.
     $name = $this->randomName();
-    $dn = simple_ldap_role_dn($name);
+    $ldap_role = SimpleLdapRole::singleton($name);
+    $dn = $ldap_role->dn;
 
     // Log in as User 1.
     $this->drupalUser1Login();
@@ -166,7 +167,7 @@ class SimpleLdapRoleUpdateDrupalRoleTestCase extends SimpleLdapRoleTestCase {
     // Get module configurations.
     $attribute_name = variable_get('simple_ldap_role_attribute_name');
     $attribute_member = variable_get('simple_ldap_role_attribute_member');
-    $filter = simple_ldap_role_filter();
+    $filter = SimpleLdapRole::filter();
 
     // Get an LDAP server object.
     $server = SimpleLdapServer::singleton();
@@ -198,7 +199,7 @@ class SimpleLdapRoleUpdateDrupalRoleTestCase extends SimpleLdapRoleTestCase {
     $this->assertText('The role has been renamed.', t('The drupal role was updated'));
 
     // Load the group from LDAP and check that it was updated.
-    $dn = simple_ldap_role_dn($drupal_role->name . ' modified');
+    //$dn = simple_ldap_role_dn($drupal_role->name . ' modified');
     $result = $server->search($dn, $filter, 'base', array('dn'));
     $this->assertEqual($dn, $result[0]['dn'], t('The @dn test group exists in LDAP.', array('@dn' => $dn)));
 
@@ -238,7 +239,7 @@ class SimpleLdapRoleDeleteDrupalRoleTestCase extends SimpleLdapRoleTestCase {
     // Get module configurations.
     $attribute_name = variable_get('simple_ldap_role_attribute_name');
     $attribute_member = variable_get('simple_ldap_role_attribute_member');
-    $filter = simple_ldap_role_filter();
+    $filter = SimpleLdapRole::filter();
 
     // Get an LDAP server object.
     $server = SimpleLdapServer::singleton();
@@ -352,7 +353,7 @@ class SimpleLdapRoleChangeDrupalUserRoleTestCase extends SimpleLdapRoleTestCase 
     else {
       $search = $test_user[$user_attribute_name];
     }
-    $filter = '(&' . simple_ldap_role_filter() . '(' . $role_attribute_member . '=' . $search . '))';
+    $filter = '(&' . SimpleLdapRole::filter() . '(' . $role_attribute_member . '=' . $search . '))';
 
     // Verify that the LDAP user is now a member of the LDAP group.
     $ldap_group = $server->search($test_group['dn'], $filter, 'base');
@@ -431,7 +432,7 @@ class SimpleLdapRoleModifyLdapGroup extends SimpleLdapRoleTestCase {
     $server->add($dn, $attributes);
 
     // Verify that the LDAP group exists.
-    $ldap_group = $server->search($dn, simple_ldap_role_filter(), 'base');
+    $ldap_group = $server->search($dn, SimpleLdapRole::filter(), 'base');
     $this->assertEqual($ldap_group['count'], 1, t('@dn exists in LDAP', array('@dn' => $dn)));
 
     // Verify that the LDAP group does not exist in Drupal.
@@ -450,11 +451,11 @@ class SimpleLdapRoleModifyLdapGroup extends SimpleLdapRoleTestCase {
     $server->move($dn, $newdn);
 
     // Verify that the original LDAP group does not.
-    $ldap_group = $server->search($dn, simple_ldap_role_filter(), 'base');
+    $ldap_group = $server->search($dn, SimpleLdapRole::filter(), 'base');
     $this->assertEqual($ldap_group['count'], 0, t('@dn does not exist in LDAP', array('@dn' => $dn)));
 
     // Verify that the updated LDAP group exists.
-    $ldap_group = $server->search($newdn, simple_ldap_role_filter(), 'base');
+    $ldap_group = $server->search($newdn, SimpleLdapRole::filter(), 'base');
     $this->assertEqual($ldap_group['count'], 1, t('@dn exists in LDAP', array('@dn' => $newdn)));
 
     // Run cron.

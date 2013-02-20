@@ -22,6 +22,13 @@ function simple_ldap_role_admin($form, &$form_state) {
   // String to append to items disabled by $server->readonly.
   $readonly_note = $server->readonly ? ' (' . t('Disabled by LDAP Server configuration.') . ')' : '';
 
+  // Generate a list of object classes supported by the server.
+  $objectclasses = $server->schema->get('objectclasses');
+  foreach ($objectclasses as $key => $objectclass) {
+    $objectclasses[$key] = $objectclass['name'];
+  }
+  asort($objectclasses);
+
   $form['role'] = array(
     '#type' => 'fieldset',
     '#title' => t('LDAP Roles'),
@@ -46,13 +53,6 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#default_value' => variable_get('simple_ldap_role_scope', 'sub'),
   );
 
-  // Generate a list of object classes supported by the server.
-  $objectclasses = $server->schema->get('objectclasses');
-  foreach ($objectclasses as $key => $objectclass) {
-    $objectclasses[$key] = $objectclass['name'];
-  }
-  asort($objectclasses);
-
   // Get the selected objectclass.
   $objectclass_selected = isset($form_state['values']['simple_ldap_role_objectclass']) ? $form_state['values']['simple_ldap_role_objectclass'] : variable_get('simple_ldap_role_objectclass', 'groupofnames');
 
@@ -62,6 +62,8 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#options' => $objectclasses,
     '#default_value' => $objectclass_selected,
     '#required' => TRUE,
+    '#multiple' => TRUE,
+    '#size' => 10,
     '#description' => t('Which LDAP objectClass should be used when searching for a role.'),
     '#ajax' => array(
       'callback' => 'simple_ldap_role_objectclass_ajax',
@@ -70,10 +72,12 @@ function simple_ldap_role_admin($form, &$form_state) {
   );
 
   // Generate a list of attributes for the selected objectclass.
-  $result = $server->schema->attributes($objectclass_selected, TRUE);
   $attributes = array();
-  foreach ($result as $attribute) {
-    $attributes[strtolower($attribute)] = $attribute;
+  foreach ($objectclass_selected as $objectclass) {
+    $result = $server->schema->attributes($objectclass, TRUE);
+    foreach ($result as $attribute) {
+      $attributes[strtolower($attribute)] = $attribute;
+    }
   }
   asort($attributes);
 
@@ -164,9 +168,12 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#default_value' => variable_get('simple_ldap_role_attribute_member_format', 'dn'),
   );
 
-  $must = $server->schema->must($objectclass_selected, TRUE);
-  $disabled = !in_array($attribute_member_selected, $must);
-  $note = $disabled ? ' (' . t('@attribute is not a required attribute of @objectclass', array('@attribute' => $attributes[$attribute_member_selected], '@objectclass' => $objectclasses[$objectclass_selected])) . ')' : '';
+  $disabled = FALSE;
+  foreach ($objectclass_selected as $objectclass) {
+    $must = $server->schema->must($objectclass, TRUE);
+    $disabled = $disabled || in_array($attribute_member_selected, $must);
+  }
+  $note = $disabled ? ' (' . t('@attribute is not a required attribute of the selected objectclasses', array('@attribute' => $attributes[$attribute_member_selected])) . ')' : '';
 
   $form['advanced']['simple_ldap_role_attribute_member_default'] = array(
     '#type' => 'textfield',
