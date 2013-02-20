@@ -37,16 +37,11 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     variable_set('simple_ldap_user_test_active_user', $this->ldapUser);
     variable_set('simple_ldap_user_test_blocked_user', $this->blockedUser);
 
-    // Get a list of modules passed as parameters.
+    // Create the simpletest sandbox.
     $modules = func_get_args();
     if (isset($modules[0]) && is_array($modules[0])) {
       $modules = $modules[0];
     }
-    if (empty($modules)) {
-      $modules = array();
-    }
-
-    // Create the simpletest sandbox.
     parent::setUp($modules);
 
     // Create a drupal-only user before enabling Simple LDAP User so that the

@@ -31,17 +31,17 @@ class SimpleLdapServerTestCase extends DrupalWebTestCase {
     $pagesize = variable_get('simple_ldap_pagesize');
     $debug = variable_get('simple_ldap_debug');
 
-    // Get a list of modules passed as parameters.
+    // Create the sandbox environment.
     $modules = func_get_args();
     if (isset($modules[0]) && is_array($modules[0])) {
       $modules = $modules[0];
     }
-    if (empty($modules)) {
-      $modules = array();
-    }
+    parent::setUp($modules);
 
-    // Create the sandbox environment.
-    parent::setUp(array('simple_ldap') + $modules);
+    // Enable the simple_ldap module.
+    $modules = array('simple_ldap');
+    $success = module_enable($modules);
+    $this->assertTrue($success, t('Enabled modules: %modules', array('%modules' => implode(', ', $modules))));
 
     // Configure the sandbox environment.
     variable_set('simple_ldap_host', $host);
