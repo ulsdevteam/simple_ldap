@@ -261,7 +261,7 @@ function simple_ldap_sso_decrypt($string) {
 function _simple_ldap_encrypt_decrypt($text, $encrypt = TRUE) {
   $key = variable_get('simple_ldap_sso_encryption_key');
 
-  $td = mcrypt_module_open('rijndael-128', '', 'ecb', '');
+  $td = mcrypt_module_open('rijndael-256', '', MCRYPT_MODE_CBC, '');
   $iv = mcrypt_create_iv(mcrypt_enc_get_iv_size($td), MCRYPT_RAND);
 
   $key = substr($key, 0, mcrypt_enc_get_key_size($td));
