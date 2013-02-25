@@ -530,7 +530,7 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
   $edit = array();
 
   // Mail is a special attribute.
-  if ($drupal_user->mail != $ldap_user->{$attribute_mail}[0]) {
+  if (isset($ldap_user->{$attribute_mail}[0]) && $drupal_user->mail != $ldap_user->{$attribute_mail}[0]) {
     $edit['mail'] = $ldap_user->{$attribute_mail}[0];
   }
 
