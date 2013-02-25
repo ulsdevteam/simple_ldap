@@ -544,7 +544,7 @@ class SimpleLdapServer {
     $this->bind();
 
     // Clean up the attributes array.
-    $attributes = SimpleLdap::removeEmptyAttributes($attributes);
+    $attributes = SimpleLdap::removeEmptyAttributes($attributes, FALSE);
 
     // Perform the LDAP modify.
     switch ($type) {

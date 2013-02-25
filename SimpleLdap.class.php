@@ -46,11 +46,14 @@ class SimpleLdap {
    *
    * @param array $attributes
    *   Array of attributes that needs to be cleaned.
+   * @param boolean $strip_empty_array
+   *   Determines whether an attribute consisting of an empty array should be
+   *   stripped or left intact. Defaults to TRUE.
    *
    * @return array
    *   A scrubbed array with no empty attributes.
    */
-  public static function removeEmptyAttributes($attributes) {
+  public static function removeEmptyAttributes($attributes, $strip_empty_array = TRUE) {
     foreach ($attributes as $key => $value) {
       if (is_array($value)) {
         // Remove empty values.
@@ -66,7 +69,7 @@ class SimpleLdap {
         }
 
         // Remove attributes with no values.
-        if (count($value) == 0) {
+        if ($strip_empty_array && count($value) == 0) {
           unset($attributes[$key]);
         }
       }
