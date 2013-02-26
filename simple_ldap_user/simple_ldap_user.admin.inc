@@ -109,7 +109,7 @@ function simple_ldap_user_admin($form, &$form_state) {
 
     $form['advanced']['simple_ldap_user_attribute_rdn'] = array(
       '#type' => 'select',
-      '#title' => t('Relative Distinguished Name(RDN) attribute'),
+      '#title' => t('Relative Distinguished Name (RDN) attribute'),
       '#options' => $options,
       '#empty_value' => '',
       '#default_value' => variable_get('simple_ldap_user_attribute_rdn'),
