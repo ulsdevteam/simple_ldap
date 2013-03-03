@@ -126,7 +126,8 @@ class SimpleLdapUser {
       // intentionally falls through to default:.
       case $attribute_pass:
         if (isset(self::$hash[$value])) {
-          $value = SimpleLdap::hash(self::$hash[$value]);
+          $hash = variable_get('simple_ldap_user_password_hash');
+          $value = SimpleLdap::hash(self::$hash[$value], $hash);
         }
         else {
           // A plain text copy of the password is not available. Do not
