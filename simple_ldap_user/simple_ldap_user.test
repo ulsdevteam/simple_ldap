@@ -8,6 +8,7 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
 
   protected $drupalUser;
   protected $ldapUser;
+  protected $userPassword;
   protected $blockedUser;
 
   /**
@@ -28,14 +29,12 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     $source = variable_get('simple_ldap_user_source');
     $sync = variable_get('simple_ldap_user_sync');
     $delete = variable_get('simple_ldap_user_delete');
-    $this->ldapUser = variable_get('simple_ldap_user_test_active_user');
     $this->blockedUser = variable_get('simple_ldap_user_test_blocked_user');
 
     // Make sure the variables from settings.php are written to the database.
     // Otherwise subsequent tests will not be able to read them. These are
     // cleaned up in $this->tearDown().
     variable_set('simple_ldap_user_attribute_map', $attribute_map);
-    variable_set('simple_ldap_user_test_active_user', $this->ldapUser);
     variable_set('simple_ldap_user_test_blocked_user', $this->blockedUser);
 
     // Create the simpletest sandbox.
@@ -45,9 +44,11 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     }
     parent::setUp($modules);
 
-    // Create a drupal-only user before enabling Simple LDAP User so that the
-    // user is only present in Drupal.
-    $this->drupalUser = $this->drupalCreateUser();
+    // Create a set of drupal-only users before enabling Simple LDAP User so
+    // that they are only present in Drupal.
+    for ($i = 0; $i < 5; $i++) {
+      $this->drupalUser[$i] = $this->drupalCreateUser();
+    }
 
     // Enable the Simple LDAP User module.
     $modules = array('simple_ldap_user');
@@ -68,8 +69,40 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     variable_set('simple_ldap_user_source', $source);
     variable_set('simple_ldap_user_sync', $sync);
     variable_set('simple_ldap_user_delete', $delete);
-    variable_set('simple_ldap_user_test_active_user', $this->ldapUser);
-    variable_set('simple_ldap_user_test_blocked_user', $this->blockedUser);
+
+    // Get the fully qualified attribute map.
+    $attribute_map = simple_ldap_user_attribute_map();
+
+    // Create a set of LDAP entries to use during testing.
+    for ($i = 0; $i < 5; $i++) {
+      // Create a new LDAP User object, and set the attributes.
+      $name = $this->randomName();
+      $this->ldapUser[$i] = new SimpleLdapUser($name);
+      $this->ldapUser[$i]->$attribute_mail = $attribute_mail;
+      foreach ($attribute_map as $attribute) {
+        $this->ldapUser[$i]->{$attribute['ldap']} = $this->randomName();
+      }
+
+      // Set the DN.
+      if (empty($attribute_rdn)) {
+        $this->ldapUser[$i]->dn = $attribute_name . '=' . $name . ',' . $basedn;
+      }
+      else {
+        $this->ldapUser[$i]->dn = $attribute_rdn . '=' . $this->ldapUser[$i]->{$attribute_rdn}[0] . ',' . $basedn;
+      }
+
+      // Set the user's password.
+      $this->userPassword[$i] = $this->randomName();
+      SimpleLdapUser::hash($this->userPassword[$i], $this->userPassword[$i]);
+      $this->ldapUser[$i]->$attribute_pass = $this->userPassword[$i];
+
+      // Save the entry to LDAP.
+      $this->ldapUser[$i]->save();
+
+      // If no exception is thrown by save() then the save was successful, but
+      // show the DN to make the tester feel better.
+      $this->assertTrue($this->ldapUser[$i]->exists, t(':dn was added to LDAP', array(':dn' => $this->ldapUser[$i]->dn)));
+    }
 
     // Get a list of required attributes for the configured objectclass(es).
     $server = SimpleLdapServer::singleton();
@@ -79,7 +112,6 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     }
 
     // Add mapped fields to user entity.
-    $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
       // Skip one-to-many mappings.
       if (count($attribute['drupal']) > 1) {
@@ -117,10 +149,21 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
    * Inherited parent::tearDown().
    */
   protected function tearDown() {
+    // Get module configuration.
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+
     // Clean up variables written to the database in setUp().
     variable_del('simple_ldap_user_attribute_map');
-    variable_del('simple_ldap_user_test_active_user');
-    variable_del('simple_ldap_user_test_blocked_user');
+
+    // Clean up the LDAP entries that were added for testing.
+    foreach ($this->ldapUser as $ldapUser) {
+      // Create a new SimpleLdapUser object, which performs a new search based
+      // on the name attribute. This accounts for the possibility that the LDAP
+      // entry has changed since it was created.
+      $ldap_user = new SimpleLdapUser($ldapUser->{$attribute_name}[0]);
+      $ldap_user->delete();
+      $this->assertFalse($ldap_user->exists, t(':dn was removed from LDAP', array(':dn' => $ldap_user->dn)));
+    }
 
     parent::tearDown();
   }
@@ -175,7 +218,7 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
    */
   public function verifySync($suffix = '') {
     // Load configuration variables.
-    $test_user = variable_get('simple_ldap_user_test_active_user');
+    $test_user = $this->ldapUser[0];
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
 
@@ -254,27 +297,22 @@ class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserTestCase {
    */
   public function testGoodAuthentication() {
     // Load configuration variables.
-    $test_user = variable_get('simple_ldap_user_test_active_user');
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
 
     // Initialize a user account object.
     $account = new stdClass();
-    $account->name = $test_user[$attribute_name];
-    $account->pass_raw = $test_user['pass'];
-
-    // Verify that the test user exists in LDAP.
-    $ldap_user = new SimpleLdapUser($test_user[$attribute_name]);
-    $this->assertTrue($ldap_user->exists, t('The test user was found in LDAP.'));
+    $account->name = $this->ldapUser[0]->{$attribute_name}[0];
+    $account->pass_raw = $this->userPassword[0];
 
     // Verify that the test user does not exist in Drupal.
-    $drupal_user = user_load_by_name($test_user[$attribute_name]);
+    $drupal_user = user_load_by_name($this->ldapUser[0]->{$attribute_name}[0]);
     $this->assertIdentical($drupal_user, FALSE, t('The test user does not exist in Drupal.'));
 
     // Verify that the user can log in.
     $this->drupalLogin($account);
 
     // Verify that the Drupal user was created during authentication.
-    $drupal_user = user_load_by_name($test_user[$attribute_name]);
+    $drupal_user = user_load_by_name($this->ldapUser[0]->{$attribute_name}[0]);
     $this->assertNotIdentical($drupal_user, FALSE, t('The test user was created in Drupal.'));
 
     // Verify again that the user can log in, now that the account exists in
@@ -282,7 +320,7 @@ class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserTestCase {
     $this->drupalLogin($account);
 
     // Create a new Drupal user that is not in LDAP.
-    $account = $this->drupalUser;
+    $account = $this->drupalUser[0];
 
     // Verify that the user does not exist in LDAP by random chance.
     $ldap_user = new SimpleLdapUser($account->name);
@@ -297,20 +335,15 @@ class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserTestCase {
    */
   public function testBadAuthentication() {
     // Load configuration variables.
-    $test_user = variable_get('simple_ldap_user_test_active_user');
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
 
     // Initialize a user account object, with an invalid password.
     $account = new stdClass();
-    $account->name = $test_user[$attribute_name];
-    $account->pass_raw = $test_user['pass'] . 'invalid';
-
-    // Verify that the test user exists in LDAP.
-    $ldap_user = new SimpleLdapUser($test_user[$attribute_name]);
-    $this->assertTrue($ldap_user->exists, t('The test user was found in LDAP.'));
+    $account->name = $this->ldapUser[0]->{$attribute_name}[0];
+    $account->pass_raw = $this->userPassword[0] . 'invalid';
 
     // Verify that the test user does not exist in Drupal.
-    $drupal_user = user_load_by_name($test_user[$attribute_name]);
+    $drupal_user = user_load_by_name($this->ldapUser[0]->{$attribute_name}[0]);
     $this->assertIdentical($drupal_user, FALSE, t('The test user does not exist in Drupal.'));
 
     // Verify that the user cannot log in.
@@ -318,7 +351,7 @@ class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserTestCase {
 
     // Verify that the Drupal user was created during the authentication
     // attempt.
-    $drupal_user = user_load_by_name($test_user[$attribute_name]);
+    $drupal_user = user_load_by_name($this->ldapUser[0]->{$attribute_name}[0]);
     $this->assertNotIdentical($drupal_user, FALSE, t('The test user was created in Drupal.'));
 
     // Verify again that the user cannot log in, now that the account exists in
@@ -326,7 +359,7 @@ class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserTestCase {
     $this->drupalNoLogin($account);
 
     // Create a new Drupal user that is not in LDAP.
-    $account = $this->drupalUser;
+    $account = $this->drupalUser[0];
     $account->pass_raw = $account->pass_raw . 'invalid';
 
     // Verify that the user odes not exist in LDAP (by random chance).
@@ -469,7 +502,7 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserTestCase {
    */
   public function postProfileForm($suffix = '') {
     // Load configuration variables.
-    $test_user = variable_get('simple_ldap_user_test_active_user');
+    $test_user = $this->ldapUser[0];
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
     $attribute_map = simple_ldap_user_attribute_map();
@@ -514,7 +547,7 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserTestCase {
    */
   public function testUserChangesProfile() {
     // Load configuration variables.
-    $test_user = variable_get('simple_ldap_user_test_active_user');
+    $test_user = $this->ldapUser[0];
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
 
     // Generate a random suffix for testing.
@@ -790,7 +823,7 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserTestCase {
    */
   public function modifyLdap($suffix = '') {
     // Load configuration variables.
-    $test_user = variable_get('simple_ldap_user_test_active_user');
+    $test_user = $this->ldapuser[0];
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
 
@@ -824,7 +857,7 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserTestCase {
     variable_set('simple_ldap_user_sync', 'hook_user_login');
 
     // Load configuration variables.
-    $test_user = variable_get('simple_ldap_user_test_active_user');
+    $test_user = $this->ldapUser[0];
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
 
     // Initialize a user account object.
@@ -867,7 +900,7 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserTestCase {
     variable_set('simple_ldap_user_sync', 'hook_user_load');
 
     // Load configuration variables.
-    $test_user = variable_get('simple_ldap_user_test_active_user');
+    $test_user = $this->ldapUser[0];
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
 
     // Initialize a user account object.
@@ -922,7 +955,7 @@ class SimpleLdapUserPasswordResetTestCase extends SimpleLdapUserTestCase {
    */
   public function testPasswordChange() {
     // Load configuration variables.
-    $test_user = variable_get('simple_ldap_user_test_active_user');
+    $test_user = $this->ldapUser[0];
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
 
     // Initialize a user account object.
