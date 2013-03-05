@@ -63,7 +63,7 @@ function simple_ldap_active_group_blocked($account) {
   // Search for the LDAP user and group.
   $server = SimpleLdapServer::singleton();
   $ldap_user = $server->search($user_basedn, $user_filter, $user_scope);
-  $ldap_group = $server->search($dn, 'objectclass=*', 'base');
+  $ldap_group = $server->search($group_dn, 'objectclass=*', 'base');
 
   // Verify that a user and group were both found in LDAP.
   if ($ldap_group['count'] > 0 && $ldap_user['count'] > 0) {
