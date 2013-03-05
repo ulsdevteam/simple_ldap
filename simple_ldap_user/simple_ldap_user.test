@@ -9,7 +9,6 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
   protected $drupalUser;
   protected $ldapUser;
   protected $userPassword;
-  protected $blockedUser;
 
   /**
    * Inherited parent::setUp().
@@ -29,13 +28,11 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     $source = variable_get('simple_ldap_user_source');
     $sync = variable_get('simple_ldap_user_sync');
     $delete = variable_get('simple_ldap_user_delete');
-    $this->blockedUser = variable_get('simple_ldap_user_test_blocked_user');
 
     // Make sure the variables from settings.php are written to the database.
     // Otherwise subsequent tests will not be able to read them. These are
     // cleaned up in $this->tearDown().
     variable_set('simple_ldap_user_attribute_map', $attribute_map);
-    variable_set('simple_ldap_user_test_blocked_user', $this->blockedUser);
 
     // Create the simpletest sandbox.
     $modules = func_get_args();
@@ -78,7 +75,7 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
       // Create a new LDAP User object, and set the attributes.
       $name = $this->randomName();
       $this->ldapUser[$i] = new SimpleLdapUser($name);
-      $this->ldapUser[$i]->$attribute_mail = $attribute_mail;
+      $this->ldapUser[$i]->$attribute_mail = $this->randomName() . '@example.com';
       foreach ($attribute_map as $attribute) {
         $this->ldapUser[$i]->{$attribute['ldap']} = $this->randomName();
       }
@@ -218,15 +215,14 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
    */
   public function verifySync($suffix = '') {
     // Load configuration variables.
-    $test_user = $this->ldapUser[0];
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
 
     // Load the LDAP user.
-    $ldap_user = new SimpleLdapUser($test_user[$attribute_name]);
+    $ldap_user = new SimpleLdapUser($this->ldapUser[0]->{$attribute_name}[0]);
 
     // Load the Drupal user.
-    $drupal_user = user_load_multiple(array(), array('name' => $test_user[$attribute_name]), TRUE);
+    $drupal_user = user_load_multiple(array(), array('name' => $this->ldapUser[0]->{$attribute_name}[0]), TRUE);
     $drupal_user = reset($drupal_user);
 
     // Check the mapped fields.
@@ -266,10 +262,10 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
         ));
 
         // Make sure simple entries match the control.
-        $this->assertEqual($test_user[$attribute['ldap']] . $suffix, $drupal, t(':value matches the control value :control',
+        $this->assertEqual($this->ldapUser[0]->{$attribute['ldap']}[0] . $suffix, $drupal, t(':value matches the control value :control',
           array(
             ':value' => $drupal,
-            ':control' => $test_user[$attribute['ldap']] . $suffix,
+            ':control' => $this->ldapUser[0]->{$attribute['ldap']}[0] . $suffix,
           )
         ));
       }
@@ -450,18 +446,17 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserTestCase {
    */
   public function postProfileForm($suffix = '') {
     // Load configuration variables.
-    $test_user = $this->ldapUser[0];
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
     $attribute_map = simple_ldap_user_attribute_map();
 
     // Get the drupal user.
-    $drupal_user = user_load_by_name($test_user[$attribute_name]);
+    $drupal_user = user_load_by_name($this->ldapUser[0]->{$attribute_name}[0]);
 
     // Create the form variable array.
     $edit = array();
-    $edit['current_pass'] = $test_user['pass'];
-    $edit['mail'] = $test_user[$attribute_mail] . $suffix;
+    $edit['current_pass'] = $this->userPassword[0];
+    $edit['mail'] = $this->ldapUser[0]->{$attribute_mail}[0] . $suffix;
 
     foreach ($attribute_map as $attribute) {
 
@@ -477,11 +472,11 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserTestCase {
       switch ($type) {
         case '#':
           $drupal_attribute = substr($drupal_attribute, 1);
-          $edit[$drupal_attribute . '[und][0][value]'] = $test_user[$attribute['ldap']] . $suffix;
+          $edit[$drupal_attribute . '[und][0][value]'] = $this->ldapUser[0]->{$attribute['ldap']}[0] . $suffix;
           break;
 
         default:
-          $edit[$drupal_attribute] = $test_user[$attribute['ldap']] . $suffix;
+          $edit[$drupal_attribute] = $this->ldapUser[0]->{$attribute['ldap']}[0] . $suffix;
       }
 
     }
@@ -495,7 +490,6 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserTestCase {
    */
   public function testUserChangesProfile() {
     // Load configuration variables.
-    $test_user = $this->ldapUser[0];
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
 
     // Generate a random suffix for testing.
@@ -503,8 +497,8 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserTestCase {
 
     // Initialize a user account object.
     $account = new stdClass();
-    $account->name = $test_user[$attribute_name];
-    $account->pass_raw = $test_user['pass'];
+    $account->name = $this->ldapUser[0]->{$attribute_name}[0];
+    $account->pass_raw = $this->userPassword[0];
 
     // Log in user. This should create/sync an LDAP user (tested elsewhere).
     $this->drupalLogin($account);
@@ -771,7 +765,6 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserTestCase {
    */
   public function modifyLdap($suffix = '') {
     // Load configuration variables.
-    $test_user = $this->ldapuser[0];
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
 
@@ -779,14 +772,14 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserTestCase {
     $server = SimpleLdapServer::singleton();
 
     // Search for the User account.
-    $ldap_user = new SimpleLdapUser($test_user[$attribute_name]);
+    $ldap_user = new SimpleLdapUser($this->ldapUser[0]->{$attribute_name}[0]);
 
     // Modify the mapped attributes.
     $attribute_map = simple_ldap_user_attribute_map();
     array_unshift($attribute_map, array('drupal' => array('mail'), 'ldap' => $attribute_mail));
     foreach ($attribute_map as $attribute) {
       if (count($attribute['drupal']) == 1) {
-        $value = $test_user[$attribute['ldap']] . $suffix;
+        $value = $this->ldapUser[0]->{$attribute['ldap']}[0] . $suffix;
         try {
           $server->modify($ldap_user->dn, array($attribute['ldap'] => $value), 'replace');
           $this->assert(TRUE, t('Modified @attr LDAP attribute to :value.', array('@attr' => $attribute['ldap'], ':value' => $value)));
@@ -805,13 +798,12 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserTestCase {
     variable_set('simple_ldap_user_sync', 'hook_user_login');
 
     // Load configuration variables.
-    $test_user = $this->ldapUser[0];
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
 
     // Initialize a user account object.
     $account = new stdClass();
-    $account->name = $test_user[$attribute_name];
-    $account->pass_raw = $test_user['pass'];
+    $account->name = $this->ldapUser[0]->{$attribute_name}[0];
+    $account->pass_raw = $this->userPassword[0];
 
     // Log in with the test user, this should do the initial account sync
     // (tested elsewhere).
@@ -848,13 +840,12 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserTestCase {
     variable_set('simple_ldap_user_sync', 'hook_user_load');
 
     // Load configuration variables.
-    $test_user = $this->ldapUser[0];
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
 
     // Initialize a user account object.
     $account = new stdClass();
-    $account->name = $test_user[$attribute_name];
-    $account->pass_raw = $test_user['pass'];
+    $account->name = $this->ldapUser[0]->{$attribute_name}[0];
+    $account->pass_raw = $this->userPassword[0];
 
     // Log in with the test user, this should do the initial account sync
     // (tested elsewhere).
@@ -867,19 +858,19 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserTestCase {
     // the user, and verify synchronization.
     variable_set('simple_ldap_user_source', 'drupal');
     $this->modifyLdap();
-    $drupal_user = user_load_multiple(array(), array('name' => $test_user[$attribute_name]), TRUE);
+    $drupal_user = user_load_multiple(array(), array('name' => $this->ldapUser[0]->{$attribute_name}[0]), TRUE);
     $this->verifySync();
 
     // LDAP is the authoritative source. Change all of the mapped fields, load
     // the user, and verify synchronization.
     variable_set('simple_ldap_user_source', 'ldap');
     $this->modifyLdap($suffix);
-    $drupal_user = user_load_multiple(array(), array('name' => $test_user[$attribute_name]), TRUE);
+    $drupal_user = user_load_multiple(array(), array('name' => $this->ldapUser[0]->{$attribute_name}[0]), TRUE);
     $this->verifySync($suffix);
 
     // Clean up by removing the suffix from the LDAP entry, and resyncing.
     $this->modifyLdap();
-    $drupal_user = user_load_multiple(array(), array('name' => $test_user[$attribute_name]), TRUE);
+    $drupal_user = user_load_multiple(array(), array('name' => $this->ldapUser[0]->{$attribute_name}[0]), TRUE);
     $this->verifySync();
   }
 
@@ -903,23 +894,22 @@ class SimpleLdapUserPasswordResetTestCase extends SimpleLdapUserTestCase {
    */
   public function testPasswordChange() {
     // Load configuration variables.
-    $test_user = $this->ldapUser[0];
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
 
     // Initialize a user account object.
     $account = new stdClass();
-    $account->name = $test_user[$attribute_name];
-    $account->pass_raw = $test_user['pass'];
+    $account->name = $this->ldapUser[0]->{$attribute_name}[0];
+    $account->pass_raw = $this->userPassword[0];
 
     // Log in user. This should create/sync an LDAP user (tested elsewhere).
     $this->drupalLogin($account);
 
     // Get the drupal user.
-    $drupal_user = user_load_by_name($test_user[$attribute_name]);
+    $drupal_user = user_load_by_name($this->ldapUser[0]->{$attribute_name}[0]);
 
     // Create the form variable array.
     $edit = array();
-    $edit['current_pass'] = $test_user['pass'];
+    $edit['current_pass'] = $this->userPassword[0];
     $edit['pass[pass1]'] = $this->randomName();
     $edit['pass[pass2]'] = $edit['pass[pass1]'];
 
@@ -935,7 +925,7 @@ class SimpleLdapUserPasswordResetTestCase extends SimpleLdapUserTestCase {
 
     // Reset the password.
     $edit['current_pass'] = $edit['pass[pass1]'];
-    $edit['pass[pass1]'] = $test_user['pass'];
+    $edit['pass[pass1]'] = $this->userPassword[0];
     $edit['pass[pass2]'] = $edit['pass[pass1]'];
 
     // Submit user edit form.
