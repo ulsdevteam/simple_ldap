@@ -396,58 +396,6 @@ class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserTestCase {
 
 }
 
-class SimpleLdapUserFilterWebTestCase extends SimpleLdapUserTestCase {
-
-  /**
-   * Inherited parent::getInfo().
-   */
-  public static function getInfo() {
-    return array(
-      'name' => 'Search filter',
-      'description' => 'Tests the LDAP search filter, if it is configured.',
-      'group' => 'Simple LDAP User',
-    );
-  }
-
-  /**
-   * Test the configured search filter.
-   */
-  public function testFilter() {
-    // Load configuration variables.
-    $inactive_user = variable_get('simple_ldap_user_test_blocked_user');
-    $attribute_name = variable_get('simple_ldap_user_attribute_name');
-
-    // Only run the tests if there is a filter configured.
-    if (empty($this->filter)) {
-      $this->assertTrue(TRUE, t('There is no search filter configured.'));
-    }
-    else {
-      // Initialize a user account object.
-      $account = new stdClass();
-      $account->name = $inactive_user[$attribute_name];
-      $account->pass_raw = $inactive_user['pass'];
-
-      // Verify that the user exists before enabling the filter.
-      $ldap_user = new SimpleLdapUser($account->name);
-      $this->assertTrue($ldap_user->exists, t('The user exists in the LDAP directory.'));
-
-      // Verify that the user can authenticate.
-      $this->drupalLogin($account);
-
-      // Enable the configured search filter (saved in parent::setUp()).
-      variable_set('simple_ldap_user_filter', $this->filter);
-
-      // Verify that the user no longer exists, according to the filter.
-      $ldap_user = new SimpleLdapUser($account->name);
-      $this->assertFalse($ldap_user->exists, t('The user does not exist according to the search filter.'));
-
-      // Attempt to log in anyway.
-      $this->drupalNoLogin($account);
-    }
-  }
-
-}
-
 class SimpleLdapUserUserOneLoginWebTestCase extends SimpleLdapUserTestCase {
 
   /**
