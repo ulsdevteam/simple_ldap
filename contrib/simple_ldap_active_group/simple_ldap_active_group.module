@@ -78,7 +78,7 @@ function simple_ldap_active_group_blocked($account) {
       }
 
       // Delete the user from the group.
-      $server->modify($dn, array('member' => $ldap_dn), 'del');
+      $server->modify($group_dn, array('member' => $user_dn), 'del');
     }
   }
 }
