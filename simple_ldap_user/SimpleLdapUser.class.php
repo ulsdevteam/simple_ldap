@@ -217,6 +217,7 @@ class SimpleLdapUser {
     }
 
     // No exceptions were thrown, so the save was successful.
+    $this->exists = TRUE;
     $this->dirty = FALSE;
     $this->move = FALSE;
     return TRUE;
@@ -226,7 +227,8 @@ class SimpleLdapUser {
    * Delete user from LDAP directory.
    *
    * @return boolean
-   *   TRUE on success.
+   *   TRUE on success. FALSE if a save was not performed, which would only
+   *   happen if a valid DN has not been defined for the object.
    *
    * @throw SimpleLdapException
    */
@@ -235,9 +237,14 @@ class SimpleLdapUser {
       if ($this->move) {
         $this->server->delete($this->move);
       }
-      else {
+      else if ($this->dn) {
         $this->server->delete($this->dn);
       }
+      else {
+        return FALSE;
+      }
+
+      // There were no exceptions thrown, so the entry was successfully deleted.
       $this->exists = FALSE;
       $this->dirty = FALSE;
       $this->move = FALSE;
