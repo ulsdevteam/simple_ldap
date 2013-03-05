@@ -7,17 +7,6 @@
 class SimpleLdapServerTestCase extends DrupalWebTestCase {
 
   /**
-   * Inherited from DrupalWebTestCase::getInfo().
-   */
-  public static function getInfo() {
-    return array(
-      'name' => 'LDAP server connectivity',
-      'description' => 'Tests the Simple LDAP server configuration and connectivity.',
-      'group' => 'Simple LDAP',
-    );
-  }
-
-  /**
    * Inherited from DrupalWebTestCase::setUp().
    */
   public function setUp() {
@@ -54,12 +43,27 @@ class SimpleLdapServerTestCase extends DrupalWebTestCase {
     variable_set('simple_ldap_debug', $debug);
   }
 
+}
+
+class SimpleLdapServerConnectionTestCase extends SimpleLdapServerTestCase {
+
+  /**
+   * Inherited from DrupalWebTestCase::getInfo().
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'LDAP server connectivity',
+      'description' => 'Tests the Simple LDAP server configuration and connectivity.',
+      'group' => 'Simple LDAP',
+    );
+  }
+
   /**
    * Test the LDAP server configuration and connectivity.
    */
   public function testLdapServer() {
     // Initialize the LDAP server.
-    $this->server = SimpleLdapServer::singleton();
+    $this->server = new SimpleLdapServer();
 
     // Initialize t() params.
     $t = array(
