@@ -58,7 +58,7 @@ function simple_ldap_active_group_blocked($account) {
   $user_basedn = variable_get('simple_ldap_user_basedn');
   $user_scope = variable_get('simple_ldap_user_scope');
   $user_attribute_name = variable_get('simple_ldap_user_attribute_name');
-  $user_filter = '&(' . $user_attribute_name . '=' . $account->name . ')(' . simple_ldap_active_group_filter() . ')';
+  $user_filter = '(&(' . $user_attribute_name . '=' . $account->name . ')' . simple_ldap_active_group_filter() . ')';
   $group_dn = variable_get('simple_ldap_active_group_group');
 
   // Search for the LDAP user and group.
@@ -91,7 +91,7 @@ function simple_ldap_active_group_active($account) {
   $user_basedn = variable_get('simple_ldap_user_basedn');
   $user_scope = variable_get('simple_ldap_user_scope');
   $user_attribute_name = variable_get('simple_ldap_user_attribute_name');
-  $user_filter = '&(' . $user_attribute_name . '=' . $account->name . ')(' . simple_ldap_active_group_filter() . ')';
+  $user_filter = '(&(' . $user_attribute_name . '=' . $account->name . ')' . simple_ldap_active_group_filter() . ')';
   $group_dn = variable_get('simple_ldap_active_group_group');
 
   // Search for the LDAP user and group.
