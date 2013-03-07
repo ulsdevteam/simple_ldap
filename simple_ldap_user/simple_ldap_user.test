@@ -70,6 +70,9 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     // Get the fully qualified attribute map.
     $attribute_map = simple_ldap_user_attribute_map();
 
+    // Initialize an LDAP server object.
+    $server = SimpleLdapServer::singleton();
+
     // Create a set of LDAP entries to use during testing.
     for ($i = 0; $i < 5; $i++) {
       // Create a new LDAP User object, and set the attributes.
@@ -77,7 +80,14 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
       $this->ldapUser[$i] = new SimpleLdapUser($name);
       $this->ldapUser[$i]->$attribute_mail = $this->randomName() . '@example.com';
       foreach ($attribute_map as $attribute) {
-        $this->ldapUser[$i]->{$attribute['ldap']} = $this->randomName();
+        $attributetype = $server->schema->get('attributetypes', $attribute['ldap']);
+        // A syntax type of 1.3.6.1.4.1.1466.115.121.1.27 is an integer.
+        if (isset($attributetype['syntax']) && $attributetype['syntax'] == '1.3.6.1.4.1.1466.115.121.1.27') {
+          $this->ldapUser[$i]->{$attribute['ldap']} = 1000 + $i;
+        }
+        else {
+          $this->ldapUser[$i]->{$attribute['ldap']} = $this->randomName();
+        }
       }
 
       // Set the DN.
@@ -102,10 +112,13 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     }
 
     // Get a list of required attributes for the configured objectclass(es).
-    $server = SimpleLdapServer::singleton();
     $must = array();
     foreach ($objectclass as $o) {
-      $must += $server->schema->must($o, TRUE);
+      foreach ($server->schema->must($o, TRUE) as $m) {
+        if (!in_array($m, $must)) {
+          $must[] = strtolower($m);
+        }
+      }
     }
 
     // Add mapped fields to user entity.
@@ -123,9 +136,19 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
       if ($type == '#') {
         $drupal_attribute = substr($drupal_attribute, 1);
         $required = in_array($attribute['ldap'], $must);
+
+        $attributetype = $server->schema->get('attributetypes', $attribute['ldap']);
+        // A syntax type of 1.3.6.1.4.1.1466.115.121.1.27 is an integer.
+        if (isset($attributetype['syntax']) && $attributetype['syntax'] == '1.3.6.1.4.1.1466.115.121.1.27') {
+          $type = 'number_integer';
+        }
+        else {
+          $type = 'text';
+        }
+
         field_create_field(array(
           'field_name' => $drupal_attribute,
-          'type' => 'text',
+          'type' => $type,
           'cardinality' => 1,
         ));
         field_create_instance(array(
@@ -218,6 +241,8 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
 
+    $server = SimpleLdapServer::singleton();
+
     // Load the LDAP user.
     $ldap_user = new SimpleLdapUser($this->ldapUser[0]->{$attribute_name}[0]);
 
@@ -262,10 +287,23 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
         ));
 
         // Make sure simple entries match the control.
-        $this->assertEqual($this->ldapUser[0]->{$attribute['ldap']}[0] . $suffix, $drupal, t(':value matches the control value :control',
+        $attributetype = $server->schema->get('attributetypes', $attribute['ldap']);
+        // A syntax type of 1.3.6.1.4.1.1466.115.121.1.27 is an integer.
+        if (isset($attributetype['syntax']) && $attributetype['syntax'] == '1.3.6.1.4.1.1466.115.121.1.27') {
+          if ($suffix) {
+            $value = hexdec(substr(sha1($suffix), 0, 2));
+          }
+          else {
+            $value = $this->ldapUser[0]->{$attribute['ldap']}[0];
+          }
+        }
+        else {
+          $value = $this->ldapUser[0]->{$attribute['ldap']}[0] . $suffix;
+        }
+        $this->assertEqual($value, $drupal, t(':value matches the control value :control',
           array(
             ':value' => $drupal,
-            ':control' => $this->ldapUser[0]->{$attribute['ldap']}[0] . $suffix,
+            ':control' => $value,
           )
         ));
       }
@@ -450,6 +488,8 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserTestCase {
     $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
     $attribute_map = simple_ldap_user_attribute_map();
 
+    $server = SimpleLdapServer::singleton();
+
     // Get the drupal user.
     $drupal_user = user_load_by_name($this->ldapUser[0]->{$attribute_name}[0]);
 
@@ -462,21 +502,35 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserTestCase {
 
       // Skip drupal-to-ldap many-to-one mappings.
       if (count($attribute['drupal']) > 1) {
-        break;
+        continue;
       }
 
       // Get the field name and type.
       $drupal_attribute = reset($attribute['drupal']);
       $type = substr($drupal_attribute, 0, 1);
 
+      $attributetype = $server->schema->get('attributetypes', $attribute['ldap']);
+      // A syntax type of 1.3.6.1.4.1.1466.115.121.1.27 is an integer.
+      if (isset($attributetype['syntax']) && $attributetype['syntax'] == '1.3.6.1.4.1.1466.115.121.1.27') {
+        if ($suffix) {
+          $value = hexdec(substr(sha1($suffix), 0, 2));
+        }
+        else {
+          $value = $this->ldapUser[0]->{$attribute['ldap']}[0];
+        }
+      }
+      else {
+        $value = $this->ldapUser[0]->{$attribute['ldap']}[0] . $suffix;
+      }
+
       switch ($type) {
         case '#':
           $drupal_attribute = substr($drupal_attribute, 1);
-          $edit[$drupal_attribute . '[und][0][value]'] = $this->ldapUser[0]->{$attribute['ldap']}[0] . $suffix;
+          $edit[$drupal_attribute . '[und][0][value]'] = $value;
           break;
 
         default:
-          $edit[$drupal_attribute] = $this->ldapUser[0]->{$attribute['ldap']}[0] . $suffix;
+          $edit[$drupal_attribute] = $value;
       }
 
     }
@@ -540,19 +594,30 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserTestCase {
     $objectclass = variable_get('simple_ldap_user_objectclass');
     $must = array();
     foreach ($objectclass as $o) {
-      $must += $server->schema->must($o, TRUE);
+      foreach ($server->schema->must($o, TRUE) as $m) {
+        if (!in_array($m, $must)) {
+          $must[] = strtolower($m);
+        }
+      }
     }
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
       if (in_array($attribute['ldap'], $must)) {
         if (count($attribute['drupal']) > 1) {
-          break;
+          continue;
         }
         $drupal_attribute = reset($attribute['drupal']);
         if (substr($drupal_attribute, 0, 1) == '#') {
           $drupal_attribute = substr($drupal_attribute, 1);
         }
-        $edit[$drupal_attribute . '[und][0][value]'] = $this->randomName();
+        $attributetype = $server->schema->get('attributetypes', $attribute['ldap']);
+        // A syntax type of 1.3.6.1.4.1.1466.115.121.1.27 is an integer.
+        if (isset($attributetype['syntax']) && $attributetype['syntax'] == '1.3.6.1.4.1.1466.115.121.1.27') {
+          $edit[$drupal_attribute . '[und][0][value]'] = rand(1000, 65535);
+        }
+        else {
+          $edit[$drupal_attribute . '[und][0][value]'] = $this->randomName();
+        }
       }
     }
 
@@ -681,8 +746,13 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserTestCase {
     $server = SimpleLdapServer::singleton();
     $must = array();
     foreach ($objectclass as $o) {
-      $must += $server->schema->must($o, TRUE);
+      foreach ($server->schema->must($o, TRUE) as $m) {
+        if (!in_array($m, $must)) {
+          $must[] = strtolower($m);
+        }
+      }
     }
+    debug($must);
 
     // Allow registration by site visitors without administrator approval.
     variable_set('user_register', USER_REGISTER_VISITORS);
@@ -698,8 +768,9 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserTestCase {
     $this->drupalGet('user/register');
     foreach ($attribute_map as $field) {
       if (count($field['drupal']) > 1) {
-        break;
+        continue;
       }
+      debug($field);
       $drupal_attribute = reset($field['drupal']);
       $type = substr($drupal_attribute, 0, 1);
       if (in_array($field['ldap'], $must) && $type == '#') {
@@ -721,6 +792,11 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserTestCase {
     // Load the LDAP user.
     $ldap_user = new SimpleLdapUser($name);
 
+    // Check the LDAP objectclass(es).
+    foreach ($ldap_user->objectclass as $o) {
+      $this->assertTrue(in_array($o, $objectclass), t('The LDAP entry has the :o objectclass', array(':o' => $o)));
+    }
+
     // Check user fields.
     $this->assertEqual($new_user->name, $name, t('Drupal username matches.'));
     $this->assertEqual($ldap_user->{$attribute_name}[0], $name, t('LDAP username matches.'));
@@ -730,7 +806,7 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserTestCase {
 
     foreach ($attribute_map as $field) {
       if (count($field['drupal']) > 1) {
-        break;
+        continue;
       }
       $drupal_attribute = reset($field['drupal']);
       $type = substr($drupal_attribute, 0, 1);
@@ -779,7 +855,19 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserTestCase {
     array_unshift($attribute_map, array('drupal' => array('mail'), 'ldap' => $attribute_mail));
     foreach ($attribute_map as $attribute) {
       if (count($attribute['drupal']) == 1) {
-        $value = $this->ldapUser[0]->{$attribute['ldap']}[0] . $suffix;
+        $attributetype = $server->schema->get('attributetypes', $attribute['ldap']);
+        // A syntax type of 1.3.6.1.4.1.1466.115.121.1.27 is an integer.
+        if (isset($attributetype['syntax']) && $attributetype['syntax'] == '1.3.6.1.4.1.1466.115.121.1.27') {
+          if ($suffix) {
+            $value = hexdec(substr(sha1($suffix), 0, 2));
+          }
+          else {
+            $value = $this->ldapUser[0]->{$attribute['ldap']}[0];
+          }
+        }
+        else {
+          $value = $this->ldapUser[0]->{$attribute['ldap']}[0] . $suffix;
+        }
         try {
           $server->modify($ldap_user->dn, array($attribute['ldap'] => $value), 'replace');
           $this->assert(TRUE, t('Modified @attr LDAP attribute to :value.', array('@attr' => $attribute['ldap'], ':value' => $value)));
@@ -970,19 +1058,30 @@ class SimpleLdapUserDeleteUserTestCase extends SimpleLdapUserTestCase {
     $objectclass = variable_get('simple_ldap_user_objectclass');
     $must = array();
     foreach ($objectclass as $o) {
-      $must += $server->schema->must($o, TRUE);
+      foreach ($server->schema->must($o, TRUE) as $m) {
+        if (!in_array($m, $must)) {
+          $must[] = strtolower($m);
+        }
+      }
     }
     $attribute_map = simple_ldap_user_attribute_map();
     foreach ($attribute_map as $attribute) {
       if (in_array($attribute['ldap'], $must)) {
         if (count($attribute['drupal']) > 1) {
-          break;
+          continue;
         }
         $drupal_attribute = reset($attribute['drupal']);
         if (substr($drupal_attribute, 0, 1) == '#') {
           $drupal_attribute = substr($drupal_attribute, 1);
         }
-        $edit[$drupal_attribute . '[und][0][value]'] = $this->randomName();
+        $attributetype = $server->schema->get('attributetypes', $attribute['ldap']);
+        // A syntax type of 1.3.6.1.4.1.1466.115.121.1.27 is an integer.
+        if (isset($attributetype['syntax']) && $attributetype['syntax'] == '1.3.6.1.4.1.1466.115.121.1.27') {
+          $edit[$drupal_attribute . '[und][0][value]'] = rand(1000, 65535);
+        }
+        else {
+          $edit[$drupal_attribute . '[und][0][value]'] = $this->randomName();
+        }
       }
     }
 
