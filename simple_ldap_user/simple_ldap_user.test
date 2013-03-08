@@ -41,10 +41,86 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     }
     parent::setUp($modules);
 
+    // Initialize an LDAP server object.
+    $server = SimpleLdapServer::singleton();
+
     // Create a set of drupal-only users before enabling Simple LDAP User so
     // that they are only present in Drupal.
     for ($i = 0; $i < 5; $i++) {
       $this->drupalUser[$i] = $this->drupalCreateUser();
+    }
+
+    // Get a list of required attributes for the configured objectclass(es).
+    $must = array();
+    foreach ($objectclass as $o) {
+      foreach ($server->schema->must($o, TRUE) as $m) {
+        if (!in_array($m, $must)) {
+          $must[] = strtolower($m);
+        }
+      }
+    }
+
+    // Add mapped fields to user entity.
+    foreach ($attribute_map as $attribute) {
+      // Clean up the attribute. We can't use simple_ldap_user_attribute_map()
+      // yet because simple_ldap_user is not enabled yet. The module can't be
+      // enabled until after the Drupal users are initialized, or they would
+      // sync to LDAP, and invalidate the tests. Chicken and egg problem here.
+      $attribute['ldap'] = strtolower($attribute['ldap']);
+      if (!is_array($attribute['drupal'])) {
+        $attribute['drupal'] = array($attribute['drupal']);
+      }
+
+      // Skip one-to-many mappings.
+      if (count($attribute['drupal']) > 1) {
+        continue;
+      }
+
+      // Get the drupal name and type.
+      $drupal_attribute = reset($attribute['drupal']);
+      $type = substr($drupal_attribute, 0, 1);
+
+      // Create user fields.
+      if ($type == '#') {
+        $drupal_attribute = substr($drupal_attribute, 1);
+        $required = in_array($attribute['ldap'], $must);
+
+        $attributetype = $server->schema->get('attributetypes', $attribute['ldap']);
+        // A syntax type of 1.3.6.1.4.1.1466.115.121.1.27 is an integer.
+        if (isset($attributetype['syntax']) && $attributetype['syntax'] == '1.3.6.1.4.1.1466.115.121.1.27') {
+          $type = 'number_integer';
+        }
+        else {
+          $type = 'text';
+        }
+
+        field_create_field(array(
+          'field_name' => $drupal_attribute,
+          'type' => $type,
+          'cardinality' => 1,
+        ));
+        field_create_instance(array(
+          'field_name' => $drupal_attribute,
+          'entity_type' => 'user',
+          'label' => $drupal_attribute,
+          'bundle' => 'user',
+          'required' => $required,
+          'settings' => array(
+            'user_register_form' => $required,
+          ),
+        ));
+
+        // Populate the field value of each of the test Drupal users.
+        foreach ($this->drupalUser as $drupal_user) {
+          if ($type == 'number_integer') {
+            $edit[$drupal_attribute]['und'][0]['value'] = $drupal_user->uid + 1000;
+          }
+          else {
+            $edit[$drupal_attribute]['und'][0]['value'] = $this->randomName();
+          }
+          $drupal_user = user_save($drupal_user, $edit);
+        }
+      }
     }
 
     // Enable the Simple LDAP User module.
@@ -69,9 +145,6 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
 
     // Get the fully qualified attribute map.
     $attribute_map = simple_ldap_user_attribute_map();
-
-    // Initialize an LDAP server object.
-    $server = SimpleLdapServer::singleton();
 
     // Create a set of LDAP entries to use during testing.
     for ($i = 0; $i < 5; $i++) {
@@ -111,58 +184,6 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
       $this->assertTrue($this->ldapUser[$i]->exists, t(':dn was added to LDAP', array(':dn' => $this->ldapUser[$i]->dn)));
     }
 
-    // Get a list of required attributes for the configured objectclass(es).
-    $must = array();
-    foreach ($objectclass as $o) {
-      foreach ($server->schema->must($o, TRUE) as $m) {
-        if (!in_array($m, $must)) {
-          $must[] = strtolower($m);
-        }
-      }
-    }
-
-    // Add mapped fields to user entity.
-    foreach ($attribute_map as $attribute) {
-      // Skip one-to-many mappings.
-      if (count($attribute['drupal']) > 1) {
-        continue;
-      }
-
-      // Get the drupal name and type.
-      $drupal_attribute = reset($attribute['drupal']);
-      $type = substr($drupal_attribute, 0, 1);
-
-      // Create user fields.
-      if ($type == '#') {
-        $drupal_attribute = substr($drupal_attribute, 1);
-        $required = in_array($attribute['ldap'], $must);
-
-        $attributetype = $server->schema->get('attributetypes', $attribute['ldap']);
-        // A syntax type of 1.3.6.1.4.1.1466.115.121.1.27 is an integer.
-        if (isset($attributetype['syntax']) && $attributetype['syntax'] == '1.3.6.1.4.1.1466.115.121.1.27') {
-          $type = 'number_integer';
-        }
-        else {
-          $type = 'text';
-        }
-
-        field_create_field(array(
-          'field_name' => $drupal_attribute,
-          'type' => $type,
-          'cardinality' => 1,
-        ));
-        field_create_instance(array(
-          'field_name' => $drupal_attribute,
-          'entity_type' => 'user',
-          'label' => $drupal_attribute,
-          'bundle' => 'user',
-          'required' => $required,
-          'settings' => array(
-            'user_register_form' => $required,
-          ),
-        ));
-      }
-    }
   }
 
   /**
@@ -236,7 +257,7 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
   /**
    * Verifies that Drupal, LDAP, and the test user values match.
    */
-  public function verifySync($suffix = '') {
+  public function verifySync($suffix = '', $name = NULL) {
     // Load configuration variables.
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
@@ -244,10 +265,17 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     $server = SimpleLdapServer::singleton();
 
     // Load the LDAP user.
-    $ldap_user = new SimpleLdapUser($this->ldapUser[0]->{$attribute_name}[0]);
+    if ($name === NULL) {
+      $ldap_user = new SimpleLdapUser($this->ldapUser[0]->{$attribute_name}[0]);
+      $control = $this->ldapUser[0];
+    }
+    else {
+      $ldap_user = new SimpleLdapUser($name);
+      $control = $ldap_user;
+    }
 
     // Load the Drupal user.
-    $drupal_user = user_load_multiple(array(), array('name' => $this->ldapUser[0]->{$attribute_name}[0]), TRUE);
+    $drupal_user = user_load_multiple(array(), array('name' => $ldap_user->{$attribute_name}[0]), TRUE);
     $drupal_user = reset($drupal_user);
 
     // Check the mapped fields.
@@ -294,11 +322,11 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
             $value = hexdec(substr(sha1($suffix), 0, 2));
           }
           else {
-            $value = $this->ldapUser[0]->{$attribute['ldap']}[0];
+            $value = $control->{$attribute['ldap']}[0];
           }
         }
         else {
-          $value = $this->ldapUser[0]->{$attribute['ldap']}[0] . $suffix;
+          $value = $control->{$attribute['ldap']}[0] . $suffix;
         }
         $this->assertEqual($value, $drupal, t(':value matches the control value :control',
           array(
@@ -752,7 +780,6 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserTestCase {
         }
       }
     }
-    debug($must);
 
     // Allow registration by site visitors without administrator approval.
     variable_set('user_register', USER_REGISTER_VISITORS);
@@ -770,7 +797,6 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserTestCase {
       if (count($field['drupal']) > 1) {
         continue;
       }
-      debug($field);
       $drupal_attribute = reset($field['drupal']);
       $type = substr($drupal_attribute, 0, 1);
       if (in_array($field['ldap'], $must) && $type == '#') {
@@ -1108,6 +1134,101 @@ class SimpleLdapUserDeleteUserTestCase extends SimpleLdapUserTestCase {
     // Verify that the user was deleted from LDAP.
     $ldap_user = new SimpleLdapUser($name);
     $this->assertFalse($ldap_user->exists, t('The user was deleted from LDAP.'));
+  }
+
+}
+
+class SimpleLdapUserMassImportExportTestCase extends SimpleLdapUserTestCase {
+
+  /**
+   * Inherited parent::getInfo().
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'Mass Import/Export',
+      'description' => 'Tests mass user import from LDAP, and export to LDAP.',
+      'group' => 'Simple LDAP User',
+    );
+  }
+
+  /**
+   * Test mass export.
+   */
+  public function testExport() {
+    // Log in as user 1.
+    $this->drupalUser1Login();
+
+    // Clear cache, otherwise the export option is not present.
+    $this->drupalPost('admin/config/development/performance', array(), t('Clear all caches'));
+
+    // Verify that the drupal users do not exist in LDAP.
+    foreach ($this->drupalUser as $drupal_user) {
+      $ldap_user = new SimpleLdapUser($drupal_user->name);
+      $this->assertFalse($ldap_user->exists, t(':name does not exist in LDAP.', array(':name' => $drupal_user->name)));
+    }
+
+    // Submit the export user form.
+    $edit = array('operation' => 'simple_ldap_user_export');
+    foreach ($this->drupalUser as $drupal_user) {
+      $edit['accounts[' . $drupal_user->uid . ']'] = TRUE;
+    }
+    $this->drupalPost('admin/people', $edit, t('Update'));
+
+    // Verify that the users were exported to LDAP.
+    foreach ($this->drupalUser as $drupal_user) {
+      $ldap_user = new SimpleLdapUser($drupal_user->name);
+      $this->assertTrue($ldap_user->exists, t(':name exists in LDAP at :dn.', array(':name' => $drupal_user->name, ':dn' => $ldap_user->dn)));
+      $this->verifySync('', $drupal_user->name);
+      // Cleanup LDAP.
+      $ldap_user->delete();
+      $this->assertFalse($ldap_user->exists, t(':dn was removed from LDAP', array(':dn' => $ldap_user->dn)));
+    }
+  }
+
+  /**
+   * Test mass import.
+   */
+  public function testImport() {
+    // Get configuration.
+    $server = SimpleLdapServer::singleton();
+    $basedn = variable_get('simple_ldap_user_basedn');
+    $scope = variable_get('simple_ldap_user_scope');
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+
+    // Log in as user 1.
+    $this->drupalUser1Login();
+
+    // Clear cache, otherwise the import menu item doesn't work.
+    $this->drupalPost('admin/config/development/performance', array(), t('Clear all caches'));
+
+    // Verify that the LDAP users do not exist in Drupal.
+    foreach ($this->ldapUser as $ldap_user) {
+      $drupal_user = user_load_by_name($ldap_user->{$attribute_name}[0]);
+      $this->assertIdentical($drupal_user, FALSE, t('The user :name does not exist in Drupal.', array(':name' => $ldap_user->{$attribute_name}[0])));
+    }
+
+    // Submit the import user form.
+    $edit = array();
+    // Perform the same search that is done to generate the form, so all of the
+    // extra entries can be set to false. We just want to import the users
+    // created specifically for this test.
+    $filter = '(&(' . $attribute_name . '=*)' . SimpleLdapUser::filter() . ')';
+    $ldap_users = SimpleLdap::clean($server->search($basedn, $filter, $scope, array('dn', $attribute_name)));
+    foreach($ldap_users as $ldap_user) {
+      $edit['users[' . $ldap_user[$attribute_name][0] . ']'] = FALSE;
+    }
+    // Select the users that were created for this test.
+    foreach ($this->ldapUser as $ldap_user) {
+      $edit['users[' . $ldap_user->{$attribute_name}[0] . ']'] = TRUE;
+    }
+    $this->drupalPost('admin/people/simple_ldap_user_import', $edit, t('Import'));
+
+    // Verify that the users were imported into Drupal.
+    foreach ($this->ldapUser as $ldap_user) {
+      $drupal_user = user_load_by_name($ldap_user->{$attribute_name}[0]);
+      $this->assertNotIdentical($drupal_user, FALSE, t('The test user :name was created in Drupal.', array(':name' => $ldap_user->{$attribute_name}[0])));
+      $this->verifySync('', $ldap_user->{$attribute_name}[0]);
+    }
   }
 
 }
