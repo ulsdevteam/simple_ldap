@@ -1050,6 +1050,27 @@ class SimpleLdapUserPasswordResetTestCase extends SimpleLdapUserTestCase {
     $this->drupalLogin($account);
   }
 
+  /**
+   * Tests that a user can request a password reset before a Drupal user is
+   * created.
+   */
+  public function testLdapNoDrupalPasswordReset() {
+    // Get the configuration.
+    $attribute_name = variable_get('simple_ldap_user_attribute_name');
+
+    // Verify that the test user does not exist in Drupal.
+    $drupal_user = user_load_by_name($this->ldapUser[0]->{$attribute_name}[0]);
+    $this->assertIdentical($drupal_user, FALSE, t('The test user does not exist in Drupal.'));
+
+    // Submit the password reset form.
+    $edit = array('name' => $this->ldapUser[0]->{$attribute_name}[0]);
+    $this->drupalPost('user/password', $edit, t('E-mail new password'));
+    $this->assertText(t('Further instructions have been sent to your e-mail address.'), t('A new password was successfully requested.'));
+
+    // Verify that the Drupal user was created.
+    $drupal_user = user_load_by_name($this->ldapUser[0]->{$attribute_name}[0]);
+    $this->assertNotIdentical($drupal_user, FALSE, t('The test user was created in Drupal.'));
+  }
 }
 
 class SimpleLdapUserDeleteUserTestCase extends SimpleLdapUserTestCase {
