@@ -271,8 +271,14 @@ function _simple_ldap_encrypt_decrypt($text, $encrypt = TRUE) {
   if ($encrypt) {
     // Create the IV.
     $iv = mcrypt_create_iv($iv_size, MCRYPT_RAND);
+    // Generate an HMAC.
+    $hmac = hash('sha256', trim($text));
+    // Prepend the text with the HMAC.
+    $text = $hmac . $text;
+    // Now encrypt the text.
+    $encrypted_text = mcrypt_encrypt($cipher, $key, $text, $mode, $iv);
     // Prepend the encrypted text with the IV before it is base64 encoded.
-    $output = base64_encode($iv . mcrypt_encrypt($cipher, $key, $text, $mode, $iv));
+    $output = base64_encode($iv . $encrypted_text);
   }
   else {
     // Decode the string.
@@ -283,6 +289,16 @@ function _simple_ldap_encrypt_decrypt($text, $encrypt = TRUE) {
     $data = substr($decoded, $iv_size);
     // Now, decrypt the string.
     $output = mcrypt_decrypt($cipher, $key, $data, $mode, $iv);
+    // Get the HMAC from the front of this string.
+    $hmac = substr($output, 0, 64);
+    // Remove the HMAC from the output.
+    $output = substr($output, 64);
+    // If the hash doesn't match, log an error and return an empty string.
+    if ($hmac != hash('sha256', trim($output))) {
+      $message = 'Possible break-in attempted. The HMAC does not match on the encrypted text.';
+      watchdog(__FUNCTION__, $message, array(), WATCHDOG_ALERT);
+      $output = '';
+    }
   }
 
   return $output;
