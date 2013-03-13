@@ -259,26 +259,28 @@ function simple_ldap_sso_decrypt($string) {
  *   A string of encrypted or decrypted text.
  */
 function _simple_ldap_encrypt_decrypt($text, $encrypt = TRUE) {
-  $key = variable_get('simple_ldap_sso_encryption_key');
-
-  $td = mcrypt_module_open('rijndael-256', '', MCRYPT_MODE_CBC, '');
-  $iv = mcrypt_create_iv(mcrypt_enc_get_iv_size($td), MCRYPT_RAND);
-
-  $key = substr($key, 0, mcrypt_enc_get_key_size($td));
-
-  mcrypt_generic_init($td, $key, $iv);
+  // Hash the key to get a more secure key.
+  $key = hash('sha256', variable_get('simple_ldap_sso_encryption_key'), TRUE);
+  $cipher = 'rijndael-256';
+  $mode = MCRYPT_MODE_CBC;
+  $iv_size = mcrypt_get_iv_size($cipher, $mode);
 
   if ($encrypt) {
-    // Base64 encode the encrypted text because the result may contain
-    // characters that are not stored consistently in cookies.
-    $output = base64_encode(mcrypt_generic($td, $text));
+    // Create the IV.
+    $iv = mcrypt_create_iv($iv_size, MCRYPT_RAND);
+    // Prepend the encrypted text with the IV before it is base64 encoded.
+    $output = base64_encode($iv . mcrypt_encrypt($cipher, $key, $text, $mode, $iv));
   }
   else {
-    $output = mdecrypt_generic($td, base64_decode($text));
+    // Decode the string.
+    $decoded = base64_decode($text);
+    // Get the IV from the beginning of the string.
+    $iv = substr($decoded, 0, $iv_size);
+    // Get the encrypted data from the string.
+    $data = substr($decoded, $iv_size);
+    // Now, decrypt the string.
+    $output = mcrypt_decrypt($cipher, $key, $data, $mode, $iv);
   }
-
-  mcrypt_generic_deinit($td);
-  mcrypt_module_close($td);
 
   return $output;
 }
