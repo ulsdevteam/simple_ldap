@@ -570,7 +570,7 @@ class SimpleLdap {
    *
    * @throw SimpleLdapException
    */
-  public static function ldap_control_paged_result_response($link, $result, &$cookie, &$estimated) {
+  public static function ldap_control_paged_result_response($link, $result, &$cookie = NULL, &$estimated = NULL) {
     // Devel debugging.
     if (variable_get('simple_ldap_devel', FALSE)) {
       dpm(__FUNCTION__);
@@ -595,11 +595,6 @@ class SimpleLdap {
         '@return' => print_r($return, TRUE),
       );
       watchdog('simple_ldap', $message, $variables, WATCHDOG_DEBUG);
-    }
-
-    // Error handling.
-    if ($return === FALSE) {
-      throw new SimpleLdapException($link);
     }
 
     return $return;
