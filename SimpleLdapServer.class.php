@@ -43,18 +43,31 @@ class SimpleLdapServer {
   /**
    * Singleton constructor.
    *
-   * This method should be used whenever a SimpleLdapServer object is needed.
+   * This method should be used whenever a SimpleLdapServer object is needed. By
+   * default, a new SimpleLdapServer object is returned, but this can be
+   * overridden by setting conf['simple_ldap_server_class'] to an extended class
+   * in settings.php.
    *
    * @param boolean $reset
    *   Forces a new object to be instantiated.
    *
    * @return object
    *   SimpleLdapServer object
+   *
+   * @throw SimpleLdapException
    */
   public static function singleton($reset = FALSE) {
     if ($reset || !isset(self::$instance)) {
-      self::$instance = new SimpleLdapServer();
+      $server_class = variable_get('simple_ldap_server_class', 'SimpleLdapServer');
+      self::$instance = new $server_class();
     }
+
+    // Since custom classes are allowed, at least make sure it's a
+    // SimpleLdapServer child.
+    if (!is_a(self::$instance, 'SimpleLdapServer')) {
+      throw new SimpleLdapException('Invalid controller class. Must be of type SimpleLdapServer.');
+    }
+
     return self::$instance;
   }
 
