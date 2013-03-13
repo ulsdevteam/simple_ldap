@@ -77,7 +77,7 @@ function simple_ldap_role_user_presave(&$edit, $account, $category) {
     $scope = variable_get('simple_ldap_role_scope');
     $objectclass = variable_get('simple_ldap_role_objectclass');
     $attribute_name = variable_get('simple_ldap_role_attribute_name');
-    $attribute_member = variable_get('simple_ldap_role_attirubte_member');
+    $attribute_member = variable_get('simple_ldap_role_attribute_member');
     $attribute_member_format = variable_get('simple_ldap_role_attribute_member_format');
 
     // Get an LDAP server object.
