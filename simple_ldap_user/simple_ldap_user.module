@@ -356,8 +356,8 @@ function simple_ldap_user_load_or_create_by_name($name) {
     $attribute_name = variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
     $edit = array(
-      'name' => $ldap_user->{$attribute_name}[0],
-      'mail' => $ldap_user->{$attribute_mail}[0],
+      'name' => $ldap_user->{strtolower($attribute_name)}[0],
+      'mail' => $ldap_user->{strtolower($attribute_mail)}[0],
       'status' => 1,
     );
     $drupal_user = user_save(NULL, $edit);
@@ -603,12 +603,14 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
  * Implements hook_user_operations().
  */
 function simple_ldap_user_user_operations() {
-  $operations = array(
-    'simple_ldap_user_export' => array(
+  $operations = array();
+  $server = SimpleLdapServer::singleton();
+  if (!$server->readonly) {
+    $operations['simple_ldap_user_export'] = array(
       'label' => t('Export selected users to LDAP'),
       'callback' => 'simple_ldap_user_export',
-    )
-  );
+    );
+  }
   return $operations;
 }
 

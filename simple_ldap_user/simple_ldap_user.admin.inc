@@ -128,6 +128,12 @@ function simple_ldap_user_admin_active_directory($form, &$form_state) {
 
   $server = SimpleLdapServer::singleton();
 
+  // Generate a list of object classes supported by the server.
+  $objectclasses = $server->schema->get('objectclasses');
+  foreach ($objectclasses as $key => $objectclass) {
+    $objectclasses[$key] = $objectclass['name'];
+  }
+  asort($objectclasses);
   $form = array(
     '#type' => 'fieldset',
     '#title' => t('LDAP Users'),
@@ -153,11 +159,15 @@ function simple_ldap_user_admin_active_directory($form, &$form_state) {
   );
 
   $form['simple_ldap_user_objectclass'] = array(
-    '#type' => 'textfield',
+    '#type' => 'select',
     '#title' => t('User objectClass'),
-    '#default_value' => 'user',
+    '#options' => $objectclasses,
+    '#default_value' => array('user'),
+    '#required' => TRUE,
+    '#multiple' => TRUE,
+    '#size' => 10,
+    '#description' => t('Which LDAP objectClass should be used when searching for, or creating, a user.'),
     '#disabled' => TRUE,
-    '#description' => t('Which LDAP objectClass should be used when searching for a user.'),
   );
 
   $form['simple_ldap_user_attribute_name'] = array(
@@ -360,7 +370,7 @@ function simple_ldap_user_import($form, &$form_state) {
   $server = SimpleLdapServer::singleton();
   $basedn = variable_get('simple_ldap_user_basedn');
   $scope = variable_get('simple_ldap_user_scope');
-  $attribute_name = variable_get('simple_ldap_user_attribute_name');
+  $attribute_name = strtolower(variable_get('simple_ldap_user_attribute_name'));
   $filter = '(&(' . $attribute_name . '=*)' . SimpleLdapUser::filter() . ')';
 
   // Get a list of users that would be imported.
