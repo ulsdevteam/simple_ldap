@@ -71,7 +71,7 @@ function simple_ldap_role_user_login(&$edit, $account) {
  * Implements hook_user_presave().
  */
 function simple_ldap_role_user_presave(&$edit, $account, $category) {
-  if ($account->is_new && isset($edit['name']) && isset($edit['roles'])) {
+  if (isset($edit['name']) && isset($edit['roles'])) {
     foreach ($edit['roles'] as $rid => $value) {
       if ($value && $rid != DRUPAL_AUTHENTICATED_RID) {
         $role = user_role_load($rid);
@@ -218,34 +218,30 @@ function simple_ldap_role_sync_user_to_ldap($drupal_user) {
 
     // Add or modify the LDAP group to make sure the user is a member.
     if (!$found) {
-      $filter = '(&(' . $attribute_name . '=' . $name . ')' . simple_ldap_role_filter() . ')';
-      $group = $server->search($basedn, $filter, $scope, array($attribute_member));
-
-      // Generate the DN for the group.
-      $dn = simple_ldap_role_dn($name);
-
-      if ($group['count'] == 0) {
-        // The LDAP group does not exist, create it and add the user.
-        $attributes = array(
-          $attribute_member => $search,
-          $attribute_name => $name,
-          'objectclass' => $objectclass,
-        );
-        $result = $server->add($dn, $attributes);
-      }
-      else {
-        // The LDAP group exists, just add the user.
-        $attributes = array(
-          $attribute_member => $search,
-        );
-        $result = $server->modify($dn, $attributes, 'add');
-      }
+      $ldap_group = SimpleLdapRole::singleton($name);
+      $ldap_group->addUser($drupal_user->name);
+      $ldap_group->save();
     }
   }
 
   // Check if the member attribute is required.
-  $must = $server->schema->must($objectclass, TRUE);
-  $required = in_array($attribute_member, $must);
+  $required = FALSE;
+  foreach ($objectclass as $o) {
+    $must = $server->schema->must($o, TRUE);
+    $required = $required || in_array($attribute_member, $must);
+  }
+
+  // Remove user from LDAP groups.
+  for ($i = 0; $i < $ldap_groups['count']; $i++) {
+    $name = $ldap_groups[$i][$attribute_name][0];
+    $dn = $ldap_groups[$i]['dn'];
+    if (!in_array($name, $drupal_roles)) {
+      $ldap_group = SimpleLdapRole::singleton($name);
+      $ldap_group->deleteUser($drupal_user->name);
+      $ldap_group->save();
+    }
+  }
+  return;
 
   // Remove users from LDAP groups.
   for ($i = 0; $i < $ldap_groups['count']; $i++) {
@@ -298,7 +294,7 @@ function simple_ldap_role_sync_user_to_drupal($drupal_user) {
   }
 
   // Generate the LDAP search filter.
-  $filter = '(&(' . $attribute_member . '=' . $search . ')' . simple_ldap_role_filter() . ')';
+  $filter = '(&(' . $attribute_member . '=' . $search . ')' . SimpleLdapRole::filter() . ')';
 
   // Get a list of LDAP groups for this user.
   $ldap_groups = $server->search($basedn, $filter, $scope);

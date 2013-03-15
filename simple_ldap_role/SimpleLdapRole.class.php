@@ -110,7 +110,7 @@ class SimpleLdapRole {
             $this->move = $this->dn;
             $this->dn = $value;
             $this->dirty = TRUE;
-          } catch SimpleLdapException $e { }
+          } catch (SimpleLdapException $e) { }
         }
         break;
 
@@ -167,12 +167,20 @@ class SimpleLdapRole {
     // Perform the save.
     if ($this->exists) {
       // Update an existing entry.
-      $this->server->modify($this->dn, $this->attributes);
+      try {
+        dpm($this->attributes);
+        dpm($this->dn);
+        $this->server->modify($this->dn, $this->attributes);
+      } catch (SimpleLdapException $e) {
+        // TODO: it seems that trying to modify an entry with an object class
+        // violation throws an exception, but the error code is "success"
+        dpm($e->getCode());
+      }
     }
     else {
       // Create a new entry.
       try {
-        $this->attributes['objectclass'] = array_values(variable_get('simple_ldap_user_objectclass'));
+        $this->attributes['objectclass'] = array_values(variable_get('simple_ldap_role_objectclass'));
         $this->server->add($this->dn, $this->attributes);
       } catch (SimpleLdapExcpetion $e) {
         switch ($e->getCode()) {
@@ -182,10 +190,12 @@ class SimpleLdapRole {
             break;
 
           case 19:
-            // A "constraint violation" error was returned, which means that the
-            // objectclass requires a member, but no member was present. Return
-            // FALSE here to indicate that this is what happened. Creating the
-            // LDAP group will have to wait until there is a member of the role.
+          case 65:
+            // A "constraint violation" or "object class violation" error was
+            // returned, which means that the objectclass requires a member, but
+            // no member was present. Return FALSE here to indicate that this is
+            // what happened. Creating the LDAP group will have to wait until
+            // there is a member of the role.
             return FALSE;
             break;
 
@@ -197,7 +207,7 @@ class SimpleLdapRole {
 
     // No exceptions were thrown, so the save was successful.
     $this->dirty = FALSE;
-    $this->move = FALSE;
+   $this->move = FALSE;
     return TRUE;
 
   }
@@ -223,15 +233,21 @@ class SimpleLdapRole {
     return $true;
   }
 
+  /**
+   * Add an LDAP user to the LDAP group.
+   */
   public function addUser($user) {
+    // Make sure the user is a SimpleLdapUser object.
     if (is_string($user)) {
       $user = SimpleLdapUser::singleton($user);
     }
 
+    // Get the module configuration.
     $user_attribute_name = variable_get('simple_ldap_user_attribute_name');
     $attribute_member = variable_get('simple_ldap_role_attribute_member');
     $attribute_member_format = variable_get('simple_ldap_role_attribute_member_format');
 
+    // Determine the member attribute format.
     if ($attribute_member_format == 'dn') {
       $member = $user->dn;
     }
@@ -239,16 +255,47 @@ class SimpleLdapRole {
       $member = $user->{$user_attribute_name}[0];
     }
 
-    if (!in_array($member, $this->attributes[$attribute_member])) {
+    // Add the user to this group.
+    if (empty($this->attributes[$attribute_member]) || array_search($member, $this->attributes[$attribute_member]) === FALSE) {
       $this->attributes[$attribute_member][] = $member;
       $this->dirty = TRUE;
     }
-
   }
 
+  /**
+   * Remove an LDAP user from the LDAP group.
+   */
   public function deleteUser($user) {
+    // Make sure the user is a SimpleLdapUser object.
     if (is_string($user)) {
       $user = SimpleLdapUser::singleton($user);
+    }
+
+    // Get the module configuration.
+    $user_attribute_name = variable_get('simple_ldap_user_attribute_name');
+    $attribute_member = variable_get('simple_ldap_role_attribute_member');
+    $attribute_member_format = variable_get('simple_ldap_role_attribute_member_format');
+
+    // Determine the member attribute format.
+    if ($attribute_member_format == 'dn') {
+      $member = $user->dn;
+    }
+    else {
+      $member = $user->{$user_attribute_name}[0];
+    }
+
+    // Remove the user from this group.
+    if (is_array($this->attributes[$attribute_member])) {
+      $key = array_search($member, $this->attributes[$attribute_member]);
+      if ($key !== FALSE) {
+        unset($this->attributes[$attribute_member][$key]);
+        if (isset($this->attributes[$attribute_member]['count'])) {
+          unset($this->attributes[$attribute_member]['count']);
+        }
+        $this->attributes[$attribute_member] = array_values($this->attributes[$attribute_member]);
+        $this->attributes[$attribute_member]['count'] = count($this->attributes[$attribute_member]);
+        $this->dirty = TRUE;
+      }
     }
   }
 
@@ -290,7 +337,7 @@ class SimpleLdapRole {
     if ($reset || !isset(self::$roles[$name])) {
       self::$roles[$name] = new SimpleLdapRole($name);
     }
-    return self::$role[$name];
+    return self::$roles[$name];
   }
 
 }

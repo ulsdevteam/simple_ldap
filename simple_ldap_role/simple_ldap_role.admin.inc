@@ -168,18 +168,18 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#default_value' => variable_get('simple_ldap_role_attribute_member_format', 'dn'),
   );
 
-  $disabled = FALSE;
+  $required = FALSE;
   foreach ($objectclass_selected as $objectclass) {
     $must = $server->schema->must($objectclass, TRUE);
-    $disabled = $disabled || in_array($attribute_member_selected, $must);
+    $required = $required || in_array($attribute_member_selected, $must);
   }
-  $note = $disabled ? ' (' . t('@attribute is not a required attribute of the selected objectclasses', array('@attribute' => $attributes[$attribute_member_selected])) . ')' : '';
+  $note = $required ? '' : ' (' . t('@attribute is not a required attribute of the selected objectclasses', array('@attribute' => $attributes[$attribute_member_selected])) . ')';
 
   $form['advanced']['simple_ldap_role_attribute_member_default'] = array(
     '#type' => 'textfield',
     '#title' => t('Default group member') . $note . $readonly_note,
     '#default_value' => variable_get('simple_ldap_role_attribute_member_default'),
-    '#disabled' => $disabled || $server->readonly,
+    '#disabled' => !$required || $server->readonly,
     '#description' => t('If the selected member attribute is a required attribute of the selected objectclass, then every LDAP group must have at least one member.') . ' ' . t('The value here will be used as that default member in the event that the group would otherwise be empty.') . ' ' . t('Leave this blank if the group should be deleted instead.'),
     '#prefix' => '<div id="simple-ldap-role-attribute-member-default">',
     '#suffix' => '</div>',
