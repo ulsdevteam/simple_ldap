@@ -27,7 +27,6 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     $filter = variable_get('simple_ldap_user_filter');
     $source = variable_get('simple_ldap_user_source');
     $sync = variable_get('simple_ldap_user_sync');
-    $delete = variable_get('simple_ldap_user_delete');
 
     // Make sure the variables from settings.php are written to the database.
     // Otherwise subsequent tests will not be able to read them. These are
@@ -141,7 +140,6 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     variable_set('simple_ldap_user_filter', $filter);
     variable_set('simple_ldap_user_source', $source);
     variable_set('simple_ldap_user_sync', $sync);
-    variable_set('simple_ldap_user_delete', $delete);
 
     // Get the fully qualified attribute map.
     $attribute_map = simple_ldap_user_attribute_map();

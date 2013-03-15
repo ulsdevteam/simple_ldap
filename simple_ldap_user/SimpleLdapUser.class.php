@@ -234,25 +234,21 @@ class SimpleLdapUser {
    * @throw SimpleLdapException
    */
   public function delete() {
-    if (variable_get('simple_ldap_user_delete', TRUE)) {
-      if ($this->move) {
-        $this->server->delete($this->move);
-      }
-      else if ($this->dn) {
-        $this->server->delete($this->dn);
-      }
-      else {
-        return FALSE;
-      }
-
-      // There were no exceptions thrown, so the entry was successfully deleted.
-      $this->exists = FALSE;
-      $this->dirty = FALSE;
-      $this->move = FALSE;
-      return TRUE;
+    if ($this->move) {
+      $this->server->delete($this->move);
+    }
+    else if ($this->dn) {
+      $this->server->delete($this->dn);
+    }
+    else {
+      return FALSE;
     }
 
-    throw new SimpleLdapException('Simple LDAP User configuration does not allow users to be delete from LDAP.');
+    // There were no exceptions thrown, so the entry was successfully deleted.
+    $this->exists = FALSE;
+    $this->dirty = FALSE;
+    $this->move = FALSE;
+    return TRUE;
   }
 
   /**
