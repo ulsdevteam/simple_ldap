@@ -88,6 +88,9 @@ function simple_ldap_role_user_presave(&$edit, $account, $category) {
  */
 function simple_ldap_role_user_role_presave($role) {
   if (isset($role->op) && $role->op == 'Save role') {
+    // Get the module configuration.
+    $attribute_name = variable_get('simple_ldap_role_attribute_name');
+
     // Get the original role values.
     $original = user_role_load($role->rid);
     $ldap_role = SimpleLdapRole::singleton($original->name);
@@ -110,7 +113,7 @@ function simple_ldap_role_user_role_insert($role) {
  * Implements hook_user_role_delete().
  */
 function simple_ldap_role_user_role_delete($role) {
-  $ldap_role = SimpleLdapRole::singelton($role->name);
+  $ldap_role = SimpleLdapRole::singleton($role->name);
   $ldap_role->delete();
 }
 

@@ -54,6 +54,7 @@ class SimpleLdapRole {
       // Set up a new LDAP entry.
       $this->dn = $attribute_name . '=' . $name . ',' . $basedn;
       $this->attributes[$attribute_name] = array('count' => 1, 0 => $name);
+      $this->attributes[$attribute_member] = array('count' => 0);
       $this->dirty = TRUE;
     }
   }
@@ -77,10 +78,14 @@ class SimpleLdapRole {
 
       default:
         if (isset($this->attributes[$name])) {
-          // Make sure 'count' is set.
+          // Make sure 'count' is set accurately.
           if (!isset($this->attributes[$name]['count'])) {
             $this->attributes[$name]['count'] = count($this->attributes[$name]);
           }
+          else {
+            $this->attributes[$name]['count'] = count($this->attributes[$name]) - 1;
+          }
+
           return $this->attributes[$name];
         }
         return array('count' => 0);
@@ -96,6 +101,7 @@ class SimpleLdapRole {
    *   The value to assigned to the given attribute.
    */
   public function __set($name, $value) {
+    $attribute_name = variable_get('simple_ldap_role_attribute_name');
     switch ($name) {
       case 'attributes':
       case 'exists':
@@ -133,6 +139,16 @@ class SimpleLdapRole {
         if (!empty($diff1) || !empty($diff2)) {
           $this->attributes[$name] = $value;
           $this->dirty = TRUE;
+
+          // Reconstruct the DN if the RDN attribute was just changed.
+          if ($name == $attribute_name) {
+            $parts = SimpleLdap::ldap_explode_dn($this->dn);
+            unset($parts['count']);
+            $parts[0] = $attribute_name . '=' . $value[0];
+
+            $this->move = $this->dn;
+            $this->dn = implode(',', $parts);
+          }
         }
     }
   }
@@ -152,7 +168,7 @@ class SimpleLdapRole {
     }
 
     // Move(rename) the entry if the DN was changed.
-    if ($this->move) {
+    if ($this->move && $this->exists) {
       $this->server->move($this->move, $this->dn);
     }
 
@@ -160,21 +176,30 @@ class SimpleLdapRole {
     // attribute array.
     $attribute_member = variable_get('simple_ldap_role_attribute_member');
     $attribute_member_default = variable_get('simple_ldap_role_attribute_member_default');
-    if (!empty($attribute_member_default) && !in_array($attribute_member_default, $this->attributes[$attribute_member])) {
+    if (!empty($attribute_member_default) && !in_array($attribute_member_default, $this->attributes[$attribute_member], TRUE)) {
       $this->attributes[$attribute_member][] = $attribute_member_default;
     }
 
-    // Perform the save.
+    // Save the LDAP entry.
     if ($this->exists) {
       // Update an existing entry.
       try {
-        dpm($this->attributes);
-        dpm($this->dn);
         $this->server->modify($this->dn, $this->attributes);
       } catch (SimpleLdapException $e) {
-        // TODO: it seems that trying to modify an entry with an object class
-        // violation throws an exception, but the error code is "success"
-        dpm($e->getCode());
+        switch ($e->getCode()) {
+          case 19:
+          case 65:
+            // A "constraint violation" or "object class violation" error was
+            // returned, which means that the objectclass requires a member, but
+            // no member was present in the attribute array. This also indicates
+            // that no default user is specified in the configuration, so the
+            // group should be deleted from LDAP.
+            $this->server->delete($this->dn);
+            break;
+
+          default:
+            throw $e;
+        }
       }
     }
     else {
@@ -182,10 +207,11 @@ class SimpleLdapRole {
       try {
         $this->attributes['objectclass'] = array_values(variable_get('simple_ldap_role_objectclass'));
         $this->server->add($this->dn, $this->attributes);
-      } catch (SimpleLdapExcpetion $e) {
+      } catch (SimpleLdapException $e) {
         switch ($e->getCode()) {
           case 68:
-            // An "already exists" error was returned, try to do a modify instead.
+            // An "already exists" error was returned, try to do a modify
+            // instead.
             $this->server->modify($this->dn, $this->attributes);
             break;
 
@@ -207,7 +233,7 @@ class SimpleLdapRole {
 
     // No exceptions were thrown, so the save was successful.
     $this->dirty = FALSE;
-   $this->move = FALSE;
+    $this->move = FALSE;
     return TRUE;
 
   }
@@ -230,7 +256,7 @@ class SimpleLdapRole {
     $this->exists = FALSE;
     $this->dirty = FALSE;
     $this->move = FALSE;
-    return $true;
+    return TRUE;
   }
 
   /**
@@ -256,7 +282,7 @@ class SimpleLdapRole {
     }
 
     // Add the user to this group.
-    if (empty($this->attributes[$attribute_member]) || array_search($member, $this->attributes[$attribute_member]) === FALSE) {
+    if (empty($this->attributes[$attribute_member]) || !in_array($member, $this->attributes[$attribute_member], TRUE)) {
       $this->attributes[$attribute_member][] = $member;
       $this->dirty = TRUE;
     }
