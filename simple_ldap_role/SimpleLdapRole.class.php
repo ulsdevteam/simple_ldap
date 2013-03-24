@@ -247,11 +247,23 @@ class SimpleLdapRole {
    * @throw SimpleLdapException
    */
   public function delete() {
-    if ($this->move) {
-      $this->server->delete($this->move);
-    }
-    else {
-      $this->server->delete($this->dn);
+    try {
+      if ($this->move) {
+        $this->server->delete($this->move);
+      }
+      else {
+        $this->server->delete($this->dn);
+      }
+    } catch (SimpleLdapException $e) {
+      switch ($e->getCode()) {
+        case 32:
+          // A "No such object" exception was thrown, which means there was no
+          // LDAP entry to delete. Just absorb this exception.
+          break;
+
+        default:
+          throw $e;
+      }
     }
     $this->exists = FALSE;
     $this->dirty = FALSE;
