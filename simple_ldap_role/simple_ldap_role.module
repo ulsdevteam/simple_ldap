@@ -244,33 +244,6 @@ function simple_ldap_role_sync_user_to_ldap($drupal_user) {
       $ldap_group->save();
     }
   }
-  return;
-
-  // Remove users from LDAP groups.
-  for ($i = 0; $i < $ldap_groups['count']; $i++) {
-    $name = $ldap_groups[$i][$attribute_name][0];
-    $dn = $ldap_groups[$i]['dn'];
-    if (!in_array($name, $drupal_roles)) {
-      if ($ldap_groups[$i][$attribute_member]['count'] == 1 && $required) {
-        // This is the last member of the group, and at least one member is
-        // required by the LDAP schema.
-        if (empty($attribute_member_default)) {
-          // There is no default user, so just delete the group.
-          $result = $server->delete($dn);
-          continue;
-        }
-        else {
-          // Change the group to only have the default user as a member.
-          $result = $server->modify($dn, array($attribute_member => $attribute_member_default), 'replace');
-        }
-      }
-      else {
-        // There are more users in the group, just delete the user.
-        $result = $server->modify($dn, array($attribute_member => $search), 'del');
-      }
-    }
-  }
-
 }
 
 /**
