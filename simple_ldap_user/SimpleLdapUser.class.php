@@ -82,9 +82,12 @@ class SimpleLdapUser {
       default:
         if (isset($this->attributes[$name])) {
 
-          // Make sure 'count' is set.
+          // Make sure 'count' is set accurately.
           if (!isset($this->attributes[$name]['count'])) {
             $this->attributes[$name]['count'] = count($this->attributes[$name]);
+          }
+          else {
+            $this->attributes[$name]['count'] = count($this->attributes[$name]) - 1;
           }
 
           return $this->attributes[$name];
