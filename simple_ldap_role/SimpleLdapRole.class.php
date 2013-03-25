@@ -74,7 +74,7 @@ class SimpleLdapRole {
       case 'dn':
       case 'exists':
       case 'server':
-        return $this->name;
+        return $this->$name;
 
       default:
         if (isset($this->attributes[$name])) {
@@ -232,10 +232,10 @@ class SimpleLdapRole {
     }
 
     // No exceptions were thrown, so the save was successful.
+    $this->exists = TRUE;
     $this->dirty = FALSE;
     $this->move = FALSE;
     return TRUE;
-
   }
 
   /**
