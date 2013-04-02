@@ -71,6 +71,33 @@ $conf['simple_ldap_user_attribute_map'] = array(
 
 );
 
+Active Directory Example:
+-------------------------
+$conf['simple_ldap_user_attribute_map'] = array(
+  array(
+    'drupal' => '#field_first_name',
+    'ldap' => 'givenName',
+  ),
+  array(
+    'drupal' => '#field_last_name',
+    'ldap' => 'sn',
+  ),
+  array(
+    'drupal' => array(
+      '#field_first_name',
+      '#field_last_name',
+    ),
+    'ldap' => 'CN',
+  ),
+  array(
+    'drupal' => array(
+      '#field_first_name',
+      '#field_last_name',
+    ),
+    'ldap' => 'displayName',
+  ),
+);
+
 Testing
 =======
 
