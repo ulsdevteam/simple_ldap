@@ -247,7 +247,9 @@ class SimpleLdapServer {
    */
   public function bind($binddn = FALSE, $bindpw = FALSE, $rebind = FALSE) {
     // Connect first.
-    if ($this->connect() === FALSE) {
+    try {
+      $this->connect();
+    } catch (SimpleLdapException $e) {
       return FALSE;
     }
 
