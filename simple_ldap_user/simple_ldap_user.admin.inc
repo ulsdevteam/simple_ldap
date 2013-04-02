@@ -38,9 +38,11 @@ function simple_ldap_user_admin($form, &$form_state) {
       $attribute_mail_selected = 'mail';
       $attribute_pass_selected = 'unicodepwd';
       $password_hash_selected = 'unicode';
+      $attribute_rdn_selected = 'cn';
 
       // Generate a list of attributes for the selected objectclass.
       $attributes = array(
+        'cn' => 'CN',
         'mail' => 'mail',
         'samaccountname' => 'sAMAccountName',
         'unicodepwd' => 'unicodePwd',
@@ -55,6 +57,7 @@ function simple_ldap_user_admin($form, &$form_state) {
       $attribute_mail_selected = isset($form_state['values']['simple_ldap_user_attribute_mail']) ? $form_state['values']['simple_ldap_user_attribute_mail'] : variable_get('simple_ldap_user_attribute_mail', 'mail');
       $attribute_pass_selected = isset($form_state['values']['simple_ldap_user_attribute_pass']) ? $form_state['values']['simple_ldap_user_attribute_pass'] : variable_get('simple_ldap_user_attribute_pass', 'userpassword');
       $password_hash_selected = variable_get('simple_ldap_user_password_hash', 'salted sha');
+      $attribute_rdn_selected = variable_get('simple_ldap_user_attribute_rdn');
 
       // Generate a list of attributes for the selected objectclass.
       $attributes = array();
@@ -232,7 +235,7 @@ function simple_ldap_user_admin($form, &$form_state) {
   );
 
   $attribute_map = simple_ldap_user_attribute_map();
-  if (!empty($attribute_map) && $server->type != 'Active Directory') {
+  if (!empty($attribute_map)) {
 
     // Generate a list of attribute names from the attribute map. This pulls
     // from the schema to make the human-readable version have the right case.
@@ -248,8 +251,9 @@ function simple_ldap_user_admin($form, &$form_state) {
       '#title' => t('Relative Distinguished Name (RDN) attribute'),
       '#options' => $options,
       '#empty_value' => '',
-      '#default_value' => variable_get('simple_ldap_user_attribute_rdn'),
+      '#default_value' => $attribute_rdn_selected,
       '#description' => t('Any of the mapped attributes can be used as the RDN value when provisioning a new LDAP user entry.') . ' ' . t('If set to "None", the Username attribute specified above will be used.'),
+      '#disabled' => $readonly,
     );
   }
 

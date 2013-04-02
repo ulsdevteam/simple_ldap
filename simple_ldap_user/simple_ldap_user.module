@@ -50,14 +50,23 @@ function simple_ldap_user_form_user_admin_account_alter(&$form, &$form_state, $f
     // Verify active users. Blocked users may be provisioned to LDAP when they
     // are set to active, so they are left alone here.
     if ($user['status'] == 'active') {
-      // Load the Drupal user object.
+      // Load the user objects.
       $drupal_user = user_load($uid);
+      $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
 
       // Check whether the user exists in LDAP.
-      $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
       if (!$ldap_user->exists) {
         $form['accounts']['#options'][$uid]['status'] = 'blocked';
       }
+
+      // Check whether the user is disabled (Active Directory only).
+      // http://support.microsoft.com/kb/305144
+      if ($ldap_user->server->type == 'Active Directory') {
+        if (isset($ldap_user->useraccountcontrol[0]) && (int)$ldap_user->useraccountcontrol[0] & 2) {
+          $form['accounts']['#options'][$uid]['status'] = 'blocked';
+        }
+      }
+
     }
   }
 }
@@ -95,35 +104,34 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
     case 'user_profile_form':
       // Disable mapped fields if LDAP Server is read-only.
       $server = SimpleLdapServer::singleton();
-      if ($server->readonly) {
-        $attribute_map = simple_ldap_user_attribute_map();
+      $attribute_map = simple_ldap_user_attribute_map();
 
-        // Mail and Password are special attributes.
-        $form['account']['mail']['#disabled'] = $server->readonly;
-        $form['account']['pass']['#disabled'] = $server->readonly;
+      // Name, Mail, and Password are special attributes.
+      $form['account']['name']['#disabled'] = $server->readonly;
+      $form['account']['mail']['#disabled'] = $server->readonly;
+      $form['account']['pass']['#disabled'] = $server->readonly;
 
-        // Other mapped fields.
-        foreach ($attribute_map as $attribute) {
+      // Active Directory has some additional restrictions.
+      if ($server->type == 'Active Directory') {
+        $form['account']['name']['#disabled'] = TRUE;
+        $form['account']['pass']['#disabled'] = stripos($server->host, 'ldaps://') === FALSE;
+      }
 
-          // Parse the drupal attribute names.
-          foreach ($attribute['drupal'] as $drupal_attribute) {
+      // Other mapped fields.
+      foreach ($attribute_map as $attribute) {
+        foreach ($attribute['drupal'] as $drupal_attribute) {
+          $type = substr($drupal_attribute, 0, 1);
+          switch ($type) {
+            case '#':
+              // Use Field API.
+              $form[substr($drupal_attribute, 1)]['#disabled'] = $server->readonly;
+              break;
 
-            // Get the field type.
-            $type = substr($drupal_attribute, 0, 1);
-
-            switch ($type) {
-              case '#':
-                // Use Field API.
-                $form[substr($drupal_attribute, 1)]['#disabled'] = $server->readonly;
-                break;
-
-              default:
-                // Use the user object directly.
-                $form['account'][$drupal_attribute]['#disabled'] = $server->readonly;
-            }
+            default:
+              // Use the user object directly.
+              $form['account'][$drupal_attribute]['#disabled'] = $server->readonly;
           }
         }
-
       }
       break;
 

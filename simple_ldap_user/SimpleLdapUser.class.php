@@ -45,6 +45,11 @@ class SimpleLdapUser {
       }
     }
 
+    // Include the userAccountControl attribute for Active Directory.
+    if ($this->server->type == 'Active Directory') {
+      $attributes[] = 'useraccountcontrol';
+    }
+
     // Attempt to load the user from the LDAP server.
     $result = $this->server->search($base_dn, $filter, $scope, $attributes, 0, 1);
     if ($result['count'] == 1) {
@@ -198,6 +203,17 @@ class SimpleLdapUser {
     // Move(rename) the entry if the DN was changed.
     if ($this->move) {
       $this->server->move($this->move, $this->dn);
+    }
+
+    // Active Directory has some restrictions on what can be modified.
+    if ($this->server->type == 'Active Directory') {
+      $attribute_pass = variable_get('simple_ldap_user_attribute_pass');
+      $attribute_rdn = variable_get('simple_ldap_user_attribute_rdn');
+      // Passwords can only be changed over LDAPs.
+      if (stripos($this->server->host, 'ldaps://') === FALSE) {
+        unset($this->attributes[$attribute_pass]);
+      }
+      unset($this->attributes[$attribute_rdn]);
     }
 
     if ($this->exists) {
