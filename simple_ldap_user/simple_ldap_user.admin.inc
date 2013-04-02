@@ -13,18 +13,162 @@ function simple_ldap_user_admin($form, &$form_state) {
   // Get an LDAP server object.
   $server = SimpleLdapServer::singleton();
 
+  // Verify LDAP server connectivity.
+  if (!$server->bind()) {
+    drupal_set_message(t('Unable to bind to the LDAP server.') . ' ' . l('Check the server configuration.', 'admin/config/people/simple_ldap'), 'warning');
+    return $form;
+  }
+
   // String to append to items disabled by $server->readonly.
   $disabled_note = $server->readonly ? ' (' . t('Disabled by LDAP Server configuration.') . ')' : '';
 
-  // LDAP user admin form.
+  // Generate a list of object classes supported by the server.
+  $objectclasses = $server->schema->get('objectclasses');
+  foreach ($objectclasses as $key => $objectclass) {
+    $objectclasses[$key] = $objectclass['name'];
+  }
+  asort($objectclasses);
+
+  // Derive directory-specific values to use in the form.
   switch ($server->type) {
     case 'Active Directory':
-      $form['user'] = simple_ldap_user_admin_active_directory($form, $form_state);
+      $readonly = TRUE;
+      $objectclass_selected = array('user');
+      $attribute_name_selected = 'samaccountname';
+      $attribute_mail_selected = 'mail';
+      $attribute_pass_selected = 'unicodepwd';
+      $password_hash_selected = 'unicode';
+
+      // Generate a list of attributes for the selected objectclass.
+      $attributes = array(
+        'mail' => 'mail',
+        'samaccountname' => 'sAMAccountName',
+        'unicodepwd' => 'unicodePwd',
+      );
       break;
 
+    case 'OpenLDAP':
     default:
-      $form['user'] = simple_ldap_user_admin_ldap($form, $form_state);
+      $readonly = FALSE;
+      $objectclass_selected = isset($form_state['values']['simple_ldap_user_objectclass']) ? $form_state['values']['simple_ldap_user_objectclass'] : variable_get('simple_ldap_user_objectclass', array('inetorgperson'));
+      $attribute_name_selected = isset($form_state['values']['simple_ldap_user_attribute_name']) ? $form_state['values']['simple_ldap_user_attribute_name'] : variable_get('simple_ldap_user_attribute_name', 'cn');
+      $attribute_mail_selected = isset($form_state['values']['simple_ldap_user_attribute_mail']) ? $form_state['values']['simple_ldap_user_attribute_mail'] : variable_get('simple_ldap_user_attribute_mail', 'mail');
+      $attribute_pass_selected = isset($form_state['values']['simple_ldap_user_attribute_pass']) ? $form_state['values']['simple_ldap_user_attribute_pass'] : variable_get('simple_ldap_user_attribute_pass', 'userpassword');
+      $password_hash_selected = variable_get('simple_ldap_user_password_hash', 'salted sha');
+
+      // Generate a list of attributes for the selected objectclass.
+      $attributes = array();
+      foreach ($objectclass_selected as $objectclass) {
+        try {
+          $result = $server->schema->attributes($objectclass, TRUE);
+          foreach ($result as $attribute) {
+            $attributes[strtolower($attribute)] = $attribute;
+          }
+        } catch (SimpleLdapException $e) {
+          // Just absorb the exception. This means that an objectclass was
+          // specified that does not exist on the server. Just don't add any
+          // attributes to the list in this case.
+        }
+      }
+      asort($attributes);
   }
+
+  $form['user'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('LDAP Users'),
+  );
+
+  $form['user']['simple_ldap_user_basedn'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Base DN'),
+    '#default_value' => variable_get('simple_ldap_user_basedn', $server->basedn),
+    '#required' => TRUE,
+    '#description' => t('The Base DN that will be searched for user accounts.'),
+  );
+
+  $form['user']['simple_ldap_user_scope'] = array(
+    '#type' => 'radios',
+    '#title' => t('Search scope'),
+    '#options' => array(
+      'sub' => t('Subtree') . ' - ' . t('Search the base DN and all of its children for user accounts.'),
+      'one' => t('One-level') . ' - ' . t('Do not include children of the base DN while searching for user accounts.'),
+    ),
+    '#required' => TRUE,
+    '#default_value' => variable_get('simple_ldap_user_scope', 'sub'),
+  );
+
+  $form['user']['simple_ldap_user_objectclass'] = array(
+    '#type' => 'select',
+    '#title' => t('User objectClass'),
+    '#options' => $objectclasses,
+    '#default_value' => $objectclass_selected,
+    '#required' => TRUE,
+    '#multiple' => TRUE,
+    '#size' => 10,
+    '#description' => t('Which LDAP objectClass should be used when searching for, or creating, a user.'),
+    '#disabled' => $readonly,
+    '#ajax' => array(
+      'callback' => 'simple_ldap_user_objectclass_ajax',
+      'wrapper' => 'simple-ldap-user-attributes',
+    ),
+  );
+
+  $form['user']['simple_ldap_user_attribute_name'] = array(
+    '#type' => 'select',
+    '#title' => t('Username attribute'),
+    '#prefix' => '<div id="simple-ldap-user-attributes">',
+    '#options' => $attributes,
+    '#required' => TRUE,
+    '#description' => t('Which LDAP attribute should be mapped to a Drupal username.') . ' ' . t('This is commonly "cn" or "uid".'),
+    '#disabled' => $readonly,
+  );
+
+  // Set default value if it exists in the list of attributes. If a default
+  // value is not set, the empty option is selected.
+  if (array_key_exists($attribute_name_selected, $attributes)) {
+    $form['user']['simple_ldap_user_attribute_name']['#default_value'] = $attribute_name_selected;
+  }
+
+  $form['user']['simple_ldap_user_attribute_mail'] = array(
+    '#type' => 'select',
+    '#title' => t('Email attribute'),
+    '#options' => $attributes,
+    '#required' => TRUE,
+    '#description' => t("Which LDAP attribute should be mapped to a Drupal user's email address.") . ' ' . t('This is commonly "mail".'),
+    '#disabled' => $readonly,
+  );
+
+  // Set default value if it exists in the list of attributes. If a default
+  // value is not set, the empty option is selected.
+  if (array_key_exists($attribute_mail_selected, $attributes)) {
+    $form['user']['simple_ldap_user_attribute_mail']['#default_value'] = $attribute_mail_selected;
+  }
+
+  $form['user']['simple_ldap_user_attribute_pass'] = array(
+    '#type' => 'select',
+    '#title' => t('Password attribute') . $disabled_note,
+    '#suffix' => '</div>',
+    '#options' => $attributes,
+    '#description' => t("Which LDAP attribute should be mapped to a Drupal user's password.") . ' ' . t('This is only used for password resets, not for authentication, and is commonly "userPassword".'),
+    '#disabled' => $readonly || $server->readonly,
+    '#empty_value' => FALSE,
+  );
+
+  // Set default value if it exists in the list of attributes. If a default
+  // value is not set, the empty option is selected.
+  if (array_key_exists($attribute_pass_selected, $attributes)) {
+    $form['user']['simple_ldap_user_attribute_pass']['#default_value'] = $attribute_pass_selected;
+  }
+
+  $form['user']['simple_ldap_user_password_hash'] = array(
+    '#type' => 'select',
+    '#title' => t('Password hashing algorithm') . $disabled_note,
+    '#options' => SimpleLdap::hashes(),
+    '#description' => t('Which encryption algorithm should be used to encrypt passwords when writing to LDAP.') . ' ' . t('Note that mhash support is required for SMD5, SHA, and SSHA.'),
+    '#disabled' => $readonly || $server->readonly,
+    '#default_value' => $password_hash_selected,
+    '#empty_value' => 'none',
+  );
 
   // LDAP user admin advanced form.
   $form['advanced'] = array(
@@ -110,241 +254,6 @@ function simple_ldap_user_admin($form, &$form_state) {
   }
 
   return system_settings_form($form);
-}
-
-/**
- * Generate Simple Ldap User admin form for Active Directory.
- */
-function simple_ldap_user_admin_active_directory($form, &$form_state) {
-  $form = array();
-
-  $server = SimpleLdapServer::singleton();
-
-  // Generate a list of object classes supported by the server.
-  $objectclasses = $server->schema->get('objectclasses');
-  foreach ($objectclasses as $key => $objectclass) {
-    $objectclasses[$key] = $objectclass['name'];
-  }
-  asort($objectclasses);
-  $form = array(
-    '#type' => 'fieldset',
-    '#title' => t('LDAP Users'),
-  );
-
-  $form['simple_ldap_user_basedn'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Base DN'),
-    '#default_value' => variable_get('simple_ldap_user_basedn', $server->basedn),
-    '#required' => TRUE,
-    '#description' => t('The Base DN that will be searched for user accounts.'),
-  );
-
-  $form['simple_ldap_user_scope'] = array(
-    '#type' => 'radios',
-    '#title' => t('Search scope'),
-    '#options' => array(
-      'sub' => t('Subtree') . ' - ' . t('Search the base DN and all of its children for user accounts.'),
-      'one' => t('One-level') . ' - ' . t('Do not include children of the base DN while searching for user accounts.'),
-    ),
-    '#required' => TRUE,
-    '#default_value' => variable_get('simple_ldap_user_scope', 'sub'),
-  );
-
-  $form['simple_ldap_user_objectclass'] = array(
-    '#type' => 'select',
-    '#title' => t('User objectClass'),
-    '#options' => $objectclasses,
-    '#default_value' => array('user'),
-    '#required' => TRUE,
-    '#multiple' => TRUE,
-    '#size' => 10,
-    '#description' => t('Which LDAP objectClass should be used when searching for, or creating, a user.'),
-    '#disabled' => TRUE,
-  );
-
-  $form['simple_ldap_user_attribute_name'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Username attribute'),
-    '#default_value' => 'sAMAccountName',
-    '#disabled' => TRUE,
-    '#description' => t('Which LDAP attribute should be mapped to a Drupal username.') . ' ' . t('This is commonly "cn" or "uid".'),
-  );
-
-  $form['simple_ldap_user_attribute_mail'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Email attribute'),
-    '#default_value' => 'mail',
-    '#disabled' => TRUE,
-    '#description' => t("Which LDAP attribute should be mapped to a Drupal user's email address.") . ' ' . t('This is commonly "mail".'),
-  );
-
-  $form['simple_ldap_user_attribute_pass'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Password attribute'),
-    '#default_value' => 'unicodePwd',
-    '#disabled' => TRUE,
-    '#description' => t("Which LDAP attribute should be mapped to a Drupal user's password.") . ' ' . t('This is only used for password resets, not for authentication, and is commonly "userPassword".'),
-  );
-
-  $form['simple_ldap_user_password_hash'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Password hashing algorithm'),
-    '#default_value' => 'unicode',
-    '#disabled' => TRUE,
-    '#description' => t('Which encryption algorithm should be used to encrypt passwords when writing to LDAP.') . ' ' . t('Note that mhash support is required for SMD5, SHA, and SSHA.'),
-  );
-
-  return $form;
-}
-
-/**
- * Generate Simple Ldap User admin form for generic LDAP servers.
- */
-function simple_ldap_user_admin_ldap($form, &$form_state) {
-  $form = array();
-
-  // Verify that simple_ldap has been configured.
-  if (!simple_ldap_configured()) {
-    drupal_set_message(t('Please configure the Simple LDAP server first.'), 'warning');
-    return $form;
-  }
-
-  // Initialize a Simple LDAP Server object. Used for dropdown options.
-  $server = SimpleLdapServer::singleton();
-
-  // String to append to items disabled by $server->readonly.
-  $disabled_note = $server->readonly ? ' (' . t('Disabled by LDAP Server configuration.') . ')' : '';
-
-  // Generate a list of object classes supported by the server.
-  $objectclasses = $server->schema->get('objectclasses');
-  foreach ($objectclasses as $key => $objectclass) {
-    $objectclasses[$key] = $objectclass['name'];
-  }
-  asort($objectclasses);
-
-  $form = array(
-    '#type' => 'fieldset',
-    '#title' => t('LDAP Users'),
-  );
-
-  $form['simple_ldap_user_basedn'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Base DN'),
-    '#default_value' => variable_get('simple_ldap_user_basedn', $server->basedn),
-    '#required' => TRUE,
-    '#description' => t('The Base DN that will be searched for user accounts.'),
-  );
-
-  $form['simple_ldap_user_scope'] = array(
-    '#type' => 'radios',
-    '#title' => t('Search scope'),
-    '#options' => array(
-      'sub' => t('Subtree') . ' - ' . t('Search the base DN and all of its children for user accounts.'),
-      'one' => t('One-level') . ' - ' . t('Do not include children of the base DN while searching for user accounts.'),
-    ),
-    '#required' => TRUE,
-    '#default_value' => variable_get('simple_ldap_user_scope', 'sub'),
-  );
-
-  // Get the selected objectclass.
-  $objectclass_selected = isset($form_state['values']['simple_ldap_user_objectclass']) ? $form_state['values']['simple_ldap_user_objectclass'] : variable_get('simple_ldap_user_objectclass', array('inetorgperson'));
-
-  $form['simple_ldap_user_objectclass'] = array(
-    '#type' => 'select',
-    '#title' => t('User objectClass'),
-    '#options' => $objectclasses,
-    '#default_value' => $objectclass_selected,
-    '#required' => TRUE,
-    '#multiple' => TRUE,
-    '#size' => 10,
-    '#description' => t('Which LDAP objectClass should be used when searching for, or creating, a user.'),
-    '#ajax' => array(
-      'callback' => 'simple_ldap_user_objectclass_ajax',
-      'wrapper' => 'simple-ldap-user-attributes',
-    ),
-  );
-
-  // Generate a list of attributes for the selected objectclass.
-  $attributes = array();
-  foreach ($objectclass_selected as $objectclass) {
-    try {
-      $result = $server->schema->attributes($objectclass, TRUE);
-      foreach ($result as $attribute) {
-        $attributes[strtolower($attribute)] = $attribute;
-      }
-    } catch (SimpleLdapException $e) {
-      // Just absorb the exception. This means that an objectclass was specified
-      // that does not exist on the server. Just don't add any attributes to the
-      // list in this case.
-    }
-  }
-  asort($attributes);
-
-  // Get the selected name attribute.
-  $attribute_name_selected = isset($form_state['values']['simple_ldap_user_attribute_name']) ? $form_state['values']['simple_ldap_user_attribute_name'] : variable_get('simple_ldap_user_attribute_name', 'cn');
-
-  $form['simple_ldap_user_attribute_name'] = array(
-    '#type' => 'select',
-    '#title' => t('Username attribute'),
-    '#prefix' => '<div id="simple-ldap-user-attributes">',
-    '#options' => $attributes,
-    '#required' => TRUE,
-    '#description' => t('Which LDAP attribute should be mapped to a Drupal username.') . ' ' . t('This is commonly "cn" or "uid".'),
-  );
-
-  // Set default value if it exists in the list of attributes. If a default
-  // value is not set, the empty option is selected.
-  if (array_key_exists($attribute_name_selected, $attributes)) {
-    $form['simple_ldap_user_attribute_name']['#default_value'] = $attribute_name_selected;
-  }
-
-  // Get the selected mail attribute.
-  $attribute_mail_selected = isset($form_state['values']['simple_ldap_user_attribute_mail']) ? $form_state['values']['simple_ldap_user_attribute_mail'] : variable_get('simple_ldap_user_attribute_mail', 'mail');
-
-  $form['simple_ldap_user_attribute_mail'] = array(
-    '#type' => 'select',
-    '#title' => t('Email attribute'),
-    '#options' => $attributes,
-    '#required' => TRUE,
-    '#description' => t("Which LDAP attribute should be mapped to a Drupal user's email address.") . ' ' . t('This is commonly "mail".'),
-  );
-
-  // Set default value if it exists in the list of attributes. If a default
-  // value is not set, the empty option is selected.
-  if (array_key_exists($attribute_mail_selected, $attributes)) {
-    $form['simple_ldap_user_attribute_mail']['#default_value'] = $attribute_mail_selected;
-  }
-
-  // Get the selected password attribute.
-  $attribute_pass_selected = isset($form_state['values']['simple_ldap_user_attribute_pass']) ? $form_state['values']['simple_ldap_user_attribute_pass'] : variable_get('simple_ldap_user_attribute_pass', 'userpassword');
-
-  $form['simple_ldap_user_attribute_pass'] = array(
-    '#type' => 'select',
-    '#title' => t('Password attribute') . $disabled_note,
-    '#suffix' => '</div>',
-    '#options' => $attributes,
-    '#description' => t("Which LDAP attribute should be mapped to a Drupal user's password.") . ' ' . t('This is only used for password resets, not for authentication, and is commonly "userPassword".'),
-    '#disabled' => $server->readonly,
-    '#empty_value' => FALSE,
-  );
-
-  // Set default value if it exists in the list of attributes. If a default
-  // value is not set, the empty option is selected.
-  if (array_key_exists($attribute_pass_selected, $attributes)) {
-    $form['simple_ldap_user_attribute_pass']['#default_value'] = $attribute_pass_selected;
-  }
-
-  $form['simple_ldap_user_password_hash'] = array(
-    '#type' => 'select',
-    '#title' => t('Password hashing algorithm') . $disabled_note,
-    '#options' => SimpleLdap::hashes(),
-    '#description' => t('Which encryption algorithm should be used to encrypt passwords when writing to LDAP.') . ' ' . t('Note that mhash support is required for SMD5, SHA, and SSHA.'),
-    '#disabled' => $server->readonly,
-    '#default_value' => variable_get('simple_ldap_user_password_hash', 'salted sha'),
-    '#empty_value' => 'none',
-  );
-
-  return $form;
 }
 
 /**
