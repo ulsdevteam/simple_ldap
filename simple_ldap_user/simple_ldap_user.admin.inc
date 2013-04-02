@@ -42,7 +42,7 @@ function simple_ldap_user_admin($form, &$form_state) {
 
       // Generate a list of attributes for the selected objectclass.
       $attributes = array(
-        'cn' => 'CN',
+        'cn' => 'cn',
         'mail' => 'mail',
         'samaccountname' => 'sAMAccountName',
         'unicodepwd' => 'unicodePwd',
