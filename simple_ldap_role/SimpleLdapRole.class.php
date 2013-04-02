@@ -47,7 +47,12 @@ class SimpleLdapRole {
       // Found an existing LDAP entry.
       $this->dn = $result[0]['dn'];
       $this->attributes[$attribute_name] = $result[0][$attribute_name];
-      $this->attributes[$attribute_member] = $result[0][$attribute_member];
+      if (isset($result[0][$attribute_member])) {
+        $this->attributes[$attribute_member] = $result[0][$attribute_member];
+      }
+      else {
+        $this->attributes[$attribute_member] = array('count' => 0);
+      }
       $this->exists = TRUE;
     }
     else {
@@ -178,6 +183,12 @@ class SimpleLdapRole {
     $attribute_member_default = variable_get('simple_ldap_role_attribute_member_default');
     if (!empty($attribute_member_default) && !in_array($attribute_member_default, $this->attributes[$attribute_member], TRUE)) {
       $this->attributes[$attribute_member][] = $attribute_member_default;
+    }
+
+    // Active Directory has some restrictions on what can be modified.
+    if ($this->server->type == 'Active Directory') {
+      $attribute_name = variable_get('simple_ldap_role_attribute_name');
+      unset($this->attributes[$attribute_name]);
     }
 
     // Save the LDAP entry.

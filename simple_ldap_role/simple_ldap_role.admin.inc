@@ -10,14 +10,14 @@
 function simple_ldap_role_admin($form, &$form_state) {
   $form = array();
 
-  // Verify that simple_ldap_user has been configured.
-  if (!simple_ldap_configured()) {
-    drupal_set_message(t('Please configure the Simple LDAP server first.'), 'warning');
+  // Get an LDAP server object.
+  $server = SimpleLdapServer::singleton();
+
+  // Verify LDAP server connectivity.
+  if (!$server->bind()) {
+    drupal_set_message(t('Unable to bind to the LDAP server.') . ' ' . l('Check the server configuration.', 'admin/config/people/simple_ldap'), 'warning');
     return $form;
   }
-
-  // Initialize a Simple LDAP Server object. Used for dropdown options.
-  $server = SimpleLdapServer::singleton();
 
   // String to append to items disabled by $server->readonly.
   $readonly_note = $server->readonly ? ' (' . t('Disabled by LDAP Server configuration.') . ')' : '';
@@ -28,6 +28,47 @@ function simple_ldap_role_admin($form, &$form_state) {
     $objectclasses[$key] = $objectclass['name'];
   }
   asort($objectclasses);
+
+  // Derive directory-specific values to use in the form.
+  switch ($server->type) {
+    case 'Active Directory':
+      $readonly = TRUE;
+      $objectclass_selected = array('group');
+      $attribute_name_selected = 'cn';
+      $attribute_member_selected = 'member';
+      $attribute_member_format = 'dn';
+
+      // Generate a list of attributes for the selected objectclass.
+      $attributes = array(
+        'cn' => 'cn',
+        'member' => 'member',
+      );
+      break;
+
+    case 'OpenLDAP':
+    default:
+      $readonly = FALSE;
+      $objectclass_selected = isset($form_state['values']['simple_ldap_role_objectclass']) ? $form_state['values']['simple_ldap_role_objectclass'] : variable_get('simple_ldap_role_objectclass', 'groupofnames');
+      $attribute_name_selected = isset($form_state['values']['simple_ldap_role_attribute_name']) ? $form_state['values']['simple_ldap_role_attribute_name'] : variable_get('simple_ldap_role_attribute_name', 'cn');
+      $attribute_member_selected = isset($form_state['values']['simple_ldap_role_attribute_member']) ? $form_state['values']['simple_ldap_role_attribute_member'] : variable_get('simple_ldap_role_attribute_member', 'member');
+      $attribute_member_format = variable_get('simple_ldap_role_attribute_member_format', 'dn');
+
+      // Generate a list of attributes for the selected objectclass.
+      $attributes = array();
+      foreach ($objectclass_selected as $objectclass) {
+        try {
+          $result = $server->schema->attributes($objectclass, TRUE);
+          foreach ($result as $attribute) {
+            $attributes[strtolower($attribute)] = $attribute;
+          }
+        } catch (SimpleLdapException $e) {
+          // Just absorb the exception. This means that an objectclass was
+          // specified that does not exist on the server. Just don't add any
+          // attributes to the list in this case.
+        }
+      }
+      asort($attributes);
+  }
 
   $form['role'] = array(
     '#type' => 'fieldset',
@@ -53,9 +94,6 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#default_value' => variable_get('simple_ldap_role_scope', 'sub'),
   );
 
-  // Get the selected objectclass.
-  $objectclass_selected = isset($form_state['values']['simple_ldap_role_objectclass']) ? $form_state['values']['simple_ldap_role_objectclass'] : variable_get('simple_ldap_role_objectclass', 'groupofnames');
-
   $form['role']['simple_ldap_role_objectclass'] = array(
     '#type' => 'select',
     '#title' => t('Role objectClass'),
@@ -65,25 +103,12 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#multiple' => TRUE,
     '#size' => 10,
     '#description' => t('Which LDAP objectClass should be used when searching for a role.'),
+    '#disabled' => $readonly,
     '#ajax' => array(
       'callback' => 'simple_ldap_role_objectclass_ajax',
       'wrapper' => 'simple-ldap-role-attributes',
     ),
   );
-
-  // Generate a list of attributes for the selected objectclass.
-  $attributes = array();
-  foreach ($objectclass_selected as $objectclass) {
-    $result = $server->schema->attributes($objectclass, TRUE);
-    foreach ($result as $attribute) {
-      $attributes[strtolower($attribute)] = $attribute;
-    }
-  }
-  asort($attributes);
-
-  // Get the selected name attribute.
-  $attribute_name_selected = isset($form_state['values']['simple_ldap_role_attribute_name']) ? $form_state['values']['simple_ldap_role_attribute_name'] : variable_get('simple_ldap_role_attribute_name', 'cn');
-
 
   $form['role']['simple_ldap_role_attribute_name'] = array(
     '#type' => 'select',
@@ -92,6 +117,7 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#options' => $attributes,
     '#required' => TRUE,
     '#description' => t('Which LDAP attribute should be mapped to a Drupal role name.') . ' ' . t('This is commonly "cn".'),
+    '#disabled' => $readonly,
   );
 
   // Set default value if it exists in the list of attributes. If a default
@@ -100,9 +126,6 @@ function simple_ldap_role_admin($form, &$form_state) {
     $form['role']['simple_ldap_role_attribute_name']['#default_value'] = $attribute_name_selected;
   }
 
-  // Get the selected member attribute.
-  $attribute_member_selected = isset($form_state['values']['simple_ldap_role_attribute_member']) ? $form_state['values']['simple_ldap_role_attribute_member'] : variable_get('simple_ldap_role_attribute_member', 'member');
-
   $form['role']['simple_ldap_role_attribute_member'] = array(
     '#type' => 'select',
     '#title' => t('Role member attribute'),
@@ -110,6 +133,7 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#options' => $attributes,
     '#required' => TRUE,
     '#description' => t('Which LDAP attribute defines the members of the role.') . ' ' . t('This is commonly "member".'),
+    '#disabled' => $readonly,
     '#ajax' => array(
       'callback' => 'simple_ldap_role_attribute_member_ajax',
       'wrapper' => 'simple-ldap-role-attribute-member-default',
@@ -165,7 +189,8 @@ function simple_ldap_role_admin($form, &$form_state) {
       'dn' => t('DN'),
       'name' => t('Name'),
     ),
-    '#default_value' => variable_get('simple_ldap_role_attribute_member_format', 'dn'),
+    '#default_value' => $attribute_member_format,
+    '#disabled' => $readonly,
   );
 
   $required = FALSE;
@@ -179,7 +204,7 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#type' => 'textfield',
     '#title' => t('Default group member') . $note . $readonly_note,
     '#default_value' => variable_get('simple_ldap_role_attribute_member_default'),
-    '#disabled' => !$required || $server->readonly,
+    '#disabled' => $server->readonly,
     '#description' => t('If the selected member attribute is a required attribute of the selected objectclass, then every LDAP group must have at least one member.') . ' ' . t('The value here will be used as that default member in the event that the group would otherwise be empty.') . ' ' . t('Leave this blank if the group should be deleted instead.'),
     '#prefix' => '<div id="simple-ldap-role-attribute-member-default">',
     '#suffix' => '</div>',
