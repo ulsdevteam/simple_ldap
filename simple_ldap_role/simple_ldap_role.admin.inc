@@ -48,7 +48,7 @@ function simple_ldap_role_admin($form, &$form_state) {
     case 'OpenLDAP':
     default:
       $readonly = FALSE;
-      $objectclass_selected = isset($form_state['values']['simple_ldap_role_objectclass']) ? $form_state['values']['simple_ldap_role_objectclass'] : variable_get('simple_ldap_role_objectclass', 'groupofnames');
+      $objectclass_selected = isset($form_state['values']['simple_ldap_role_objectclass']) ? $form_state['values']['simple_ldap_role_objectclass'] : variable_get('simple_ldap_role_objectclass', array('groupofnames'));
       $attribute_name_selected = isset($form_state['values']['simple_ldap_role_attribute_name']) ? $form_state['values']['simple_ldap_role_attribute_name'] : variable_get('simple_ldap_role_attribute_name', 'cn');
       $attribute_member_selected = isset($form_state['values']['simple_ldap_role_attribute_member']) ? $form_state['values']['simple_ldap_role_attribute_member'] : variable_get('simple_ldap_role_attribute_member', 'member');
       $attribute_member_format = variable_get('simple_ldap_role_attribute_member_format', 'dn');
