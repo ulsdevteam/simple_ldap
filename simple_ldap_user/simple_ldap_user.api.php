@@ -61,3 +61,28 @@ function hook_sync_user_to_ldap($user) {
   $ldap_user->employeeType = 'full-time';
   $ldap_user->save();
 }
+
+/**
+ * Alter user data before saving to Drupal.
+ *
+ * This hook is called when simple_ldap_user is doing an account synchronization
+ * from LDAP to Drupal, immediately before user_save() is called.
+ *
+ * @param array $edit
+ * @param StdClass $drupal_user
+ * @param SimpleLdapUser $ldap_user
+ */
+function hook_simple_ldap_user_to_drupal_alter($edit, $drupal_user, $ldap_user) {
+}
+
+/**
+ * Alter user data before saving to LDAP.
+ *
+ * This hook is called when simple_ldap_user is doing an account synchronization
+ * from Drupal to LDAP, immediately before SimpleLdapUser::save() is called.
+ *
+ * @param SimpleLdapUser $ldap_user
+ * @param StdClass $drupal_user
+ */
+function hook_simple_ldap_user_to_ldap_alter($ldap_user, $drupal_user) {
+}

@@ -449,7 +449,9 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
           $value = array();
           if (is_array($items)) {
             foreach ($items as $item) {
-              $value[] = $item['value'];
+              if (isset($item['value'])) {
+                $value[] = $item['value'];
+              }
             }
           }
           $drupal_values[] = $value;
@@ -508,6 +510,9 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
     }
     $ldap_user->dn = $attribute_rdn . '=' . $ldap_user->{$attribute_rdn}[0] . $basedn;
   }
+
+  // Allow altering the LDAP user object before saving
+  drupal_alter('simple_ldap_user_to_ldap', $ldap_user, $drupal_user);
 
   // Save any changes.
   try {
@@ -592,6 +597,9 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
       }
     }
   }
+
+  // Allow altering the Drupal user object before saving
+  drupal_alter('simple_ldap_user_to_drupal', $edit, $drupal_user, $ldap_user);
 
   // Save any changes.
   if (!empty($edit)) {
