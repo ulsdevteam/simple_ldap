@@ -92,11 +92,16 @@ function simple_ldap_admin() {
     '#collapsed' => TRUE,
   );
 
+  $form['advanced']['simple_ldap_opt_referrals'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Follow LDAP referrals'),
+    '#default_value' => variable_get('simple_ldap_opt_referrals', TRUE),
+  );
+
   $form['advanced']['simple_ldap_debug'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Enable debug logging.'),
+    '#title' => t('Enable watchdog debug logging.'),
     '#default_value' => variable_get('simple_ldap_debug', FALSE),
-    '#description' => t('Outputs debug logging to watchdog.'),
   );
 
   return system_settings_form($form);

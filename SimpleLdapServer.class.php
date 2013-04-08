@@ -663,6 +663,10 @@ class SimpleLdapServer {
       // Set the LDAP version.
       SimpleLdap::ldap_set_option($this->resource, LDAP_OPT_PROTOCOL_VERSION, $this->version);
 
+      // Set the advanced LDAP options.
+      $opt_referrals = variable_get('simple_ldap_opt_referrals', TRUE);
+      SimpleLdap::ldap_set_option($this->resource, LDAP_OPT_REFERRALS, (int) $opt_referrals);
+
       // StartTLS.
       if ($this->starttls) {
         SimpleLdap::ldap_start_tls($this->resource);

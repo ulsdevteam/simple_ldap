@@ -62,3 +62,10 @@ function simple_ldap_requirements($phase) {
 
   return $requirements;
 }
+
+/**
+ * Update configuration variables.
+ */
+function simple_ldap_update_7100(&$sandbox) {
+  variable_set('simple_ldap_opt_referrals', variable_get('simple_ldap_opt_referrals', TRUE));
+}
