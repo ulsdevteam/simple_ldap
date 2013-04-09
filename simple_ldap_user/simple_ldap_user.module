@@ -62,7 +62,7 @@ function simple_ldap_user_form_user_admin_account_alter(&$form, &$form_state, $f
       // Check whether the user is disabled (Active Directory only).
       // http://support.microsoft.com/kb/305144
       if ($ldap_user->server->type == 'Active Directory') {
-        if (isset($ldap_user->useraccountcontrol[0]) && (int)$ldap_user->useraccountcontrol[0] & 2) {
+        if (isset($ldap_user->useraccountcontrol[0]) && (int) $ldap_user->useraccountcontrol[0] & 2) {
           $form['accounts']['#options'][$uid]['status'] = 'blocked';
         }
       }
@@ -511,7 +511,7 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
     $ldap_user->dn = $attribute_rdn . '=' . $ldap_user->{$attribute_rdn}[0] . $basedn;
   }
 
-  // Allow altering the LDAP user object before saving
+  // Allow altering the LDAP user object before saving.
   drupal_alter('simple_ldap_user_to_ldap', $ldap_user, $drupal_user);
 
   // Save any changes.
@@ -598,7 +598,7 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
     }
   }
 
-  // Allow altering the Drupal user object before saving
+  // Allow altering the Drupal user object before saving.
   drupal_alter('simple_ldap_user_to_drupal', $edit, $drupal_user, $ldap_user);
 
   // Save any changes.

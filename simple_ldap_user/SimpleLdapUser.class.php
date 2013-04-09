@@ -256,7 +256,7 @@ class SimpleLdapUser {
     if ($this->move) {
       $this->server->delete($this->move);
     }
-    else if ($this->dn) {
+    elseif ($this->dn) {
       $this->server->delete($this->dn);
     }
     else {
