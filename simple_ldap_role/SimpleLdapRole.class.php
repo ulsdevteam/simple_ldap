@@ -32,10 +32,10 @@ class SimpleLdapRole {
     $this->server = SimpleLdapServer::singleton();
 
     // Get the LDAP configuration.
-    $basedn = variable_get('simple_ldap_role_basedn');
-    $scope = variable_get('simple_ldap_role_scope');
-    $attribute_name = variable_get('simple_ldap_role_attribute_name');
-    $attribute_member = variable_get('simple_ldap_role_attribute_member');
+    $basedn = simple_ldap_role_variable_get('simple_ldap_role_basedn');
+    $scope = simple_ldap_role_variable_get('simple_ldap_role_scope');
+    $attribute_name = simple_ldap_role_variable_get('simple_ldap_role_attribute_name');
+    $attribute_member = simple_ldap_role_variable_get('simple_ldap_role_attribute_member');
     $safe_name = preg_replace(array('/\(/', '/\)/'), array('\\\(', '\\\)'), $name);
     $filter = '(&(' . $attribute_name . '=' . $safe_name . ')' . self::filter() . ')';
 
@@ -106,7 +106,7 @@ class SimpleLdapRole {
    *   The value to assigned to the given attribute.
    */
   public function __set($name, $value) {
-    $attribute_name = variable_get('simple_ldap_role_attribute_name');
+    $attribute_name = simple_ldap_role_variable_get('simple_ldap_role_attribute_name');
     switch ($name) {
       case 'attributes':
       case 'exists':
@@ -179,15 +179,15 @@ class SimpleLdapRole {
 
     // Check if there is a default member, and make sure it is part of the
     // attribute array.
-    $attribute_member = variable_get('simple_ldap_role_attribute_member');
-    $attribute_member_default = variable_get('simple_ldap_role_attribute_member_default');
+    $attribute_member = simple_ldap_role_variable_get('simple_ldap_role_attribute_member');
+    $attribute_member_default = simple_ldap_role_variable_get('simple_ldap_role_attribute_member_default');
     if (!empty($attribute_member_default) && !in_array($attribute_member_default, $this->attributes[$attribute_member], TRUE)) {
       $this->attributes[$attribute_member][] = $attribute_member_default;
     }
 
     // Active Directory has some restrictions on what can be modified.
     if ($this->server->type == 'Active Directory') {
-      $attribute_name = variable_get('simple_ldap_role_attribute_name');
+      $attribute_name = simple_ldap_role_variable_get('simple_ldap_role_attribute_name');
       unset($this->attributes[$attribute_name]);
     }
 
@@ -292,9 +292,9 @@ class SimpleLdapRole {
     }
 
     // Get the module configuration.
-    $user_attribute_name = variable_get('simple_ldap_user_attribute_name');
-    $attribute_member = variable_get('simple_ldap_role_attribute_member');
-    $attribute_member_format = variable_get('simple_ldap_role_attribute_member_format');
+    $user_attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
+    $attribute_member = simple_ldap_role_variable_get('simple_ldap_role_attribute_member');
+    $attribute_member_format = simple_ldap_role_variable_get('simple_ldap_role_attribute_member_format');
 
     // Determine the member attribute format.
     if ($attribute_member_format == 'dn') {
@@ -321,9 +321,9 @@ class SimpleLdapRole {
     }
 
     // Get the module configuration.
-    $user_attribute_name = variable_get('simple_ldap_user_attribute_name');
-    $attribute_member = variable_get('simple_ldap_role_attribute_member');
-    $attribute_member_format = variable_get('simple_ldap_role_attribute_member_format');
+    $user_attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
+    $attribute_member = simple_ldap_role_variable_get('simple_ldap_role_attribute_member');
+    $attribute_member_format = simple_ldap_role_variable_get('simple_ldap_role_attribute_member_format');
 
     // Determine the member attribute format.
     if ($attribute_member_format == 'dn') {
@@ -356,8 +356,8 @@ class SimpleLdapRole {
    */
   public static function filter() {
     // Get the LDAP configuration.
-    $objectclass = variable_get('simple_ldap_role_objectclass', array('*'));
-    $extrafilter = variable_get('simple_ldap_role_filter');
+    $objectclass = simple_ldap_role_variable_get('simple_ldap_role_objectclass');
+    $extrafilter = simple_ldap_role_variable_get('simple_ldap_role_filter');
 
     // Construct the filter.
     $filter = '(&(objectclass=' . implode(')(objectclass=', $objectclass) . '))';

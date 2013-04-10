@@ -13,16 +13,16 @@ abstract class SimpleLdapRoleTestCase extends SimpleLdapUserTestCase {
    */
   public function setUp() {
     // Get the live simple_ldap_role configuration.
-    $basedn = variable_get('simple_ldap_role_basedn');
-    $scope = variable_get('simple_ldap_role_scope');
-    $objectclass = variable_get('simple_ldap_role_objectclass');
-    $attribute_name = variable_get('simple_ldap_role_attribute_name');
-    $attribute_member = variable_get('simple_ldap_role_attribute_member');
-    $attribute_member_format = variable_get('simple_ldap_role_attribute_member_format');
-    $attribute_member_default = variable_get('simple_ldap_role_attribute_member_default');
-    $filter = variable_get('simple_ldap_role_filter');
-    $source = variable_get('simple_ldap_role_source');
-    $sync = variable_get('simple_ldap_role_sync');
+    $basedn = simple_ldap_role_variable_get('simple_ldap_role_basedn');
+    $scope = simple_ldap_role_variable_get('simple_ldap_role_scope');
+    $objectclass = simple_ldap_role_variable_get('simple_ldap_role_objectclass');
+    $attribute_name = simple_ldap_role_variable_get('simple_ldap_role_attribute_name');
+    $attribute_member = simple_ldap_role_variable_get('simple_ldap_role_attribute_member');
+    $attribute_member_format = simple_ldap_role_variable_get('simple_ldap_role_attribute_member_format');
+    $attribute_member_default = simple_ldap_role_variable_get('simple_ldap_role_attribute_member_default');
+    $filter = simple_ldap_role_variable_get('simple_ldap_role_filter');
+    $source = simple_ldap_role_variable_get('simple_ldap_role_source');
+    $sync = simple_ldap_role_variable_get('simple_ldap_role_sync');
 
     // Create the simpletest sandbox.
     $modules = func_get_args();
@@ -88,9 +88,9 @@ class SimpleLdapRoleCreateDrupalRoleTestCase extends SimpleLdapRoleTestCase {
    */
   public function testCreateRole() {
     // Get module configurations.
-    $objectclass = variable_get('simple_ldap_role_objectclass');
-    $attribute_member = variable_get('simple_ldap_role_attribute_member');
-    $attribute_member_default = variable_get('simple_ldap_role_attribute_member_default');
+    $objectclass = simple_ldap_role_variable_get('simple_ldap_role_objectclass');
+    $attribute_member = simple_ldap_role_variable_get('simple_ldap_role_attribute_member');
+    $attribute_member_default = simple_ldap_role_variable_get('simple_ldap_role_attribute_member_default');
 
     // Generate a randome group name.
     $name = $this->randomName();
@@ -169,8 +169,8 @@ class SimpleLdapRoleUpdateDrupalRoleTestCase extends SimpleLdapRoleTestCase {
    */
   public function testUpdateRole() {
     // Get module configurations.
-    $attribute_name = variable_get('simple_ldap_role_attribute_name');
-    $attribute_member = variable_get('simple_ldap_role_attribute_member');
+    $attribute_name = simple_ldap_role_variable_get('simple_ldap_role_attribute_name');
+    $attribute_member = simple_ldap_role_variable_get('simple_ldap_role_attribute_member');
 
     // Load/Create a Drupal role with the same name as the test LDAP group.
     $drupal_role = user_role_load_by_name($this->ldapGroup->{$attribute_name}[0]);
@@ -229,8 +229,8 @@ class SimpleLdapRoleDeleteDrupalRoleTestCase extends SimpleLdapRoleTestCase {
    */
   public function testDeleteRole() {
     // Get module configurations.
-    $attribute_name = variable_get('simple_ldap_role_attribute_name');
-    $attribute_member = variable_get('simple_ldap_role_attribute_member');
+    $attribute_name = simple_ldap_role_variable_get('simple_ldap_role_attribute_name');
+    $attribute_member = simple_ldap_role_variable_get('simple_ldap_role_attribute_member');
 
     // Load/Create a drupal role with the same name as the test LDAP group.
     $drupal_role = user_role_load_by_name($this->ldapGroup->{$attribute_name}[0]);
@@ -273,10 +273,10 @@ class SimpleLdapRoleChangeDrupalUserRoleTestCase extends SimpleLdapRoleTestCase 
    */
   public function testChangeDrupalUserRole() {
     // Load configuration variables.
-    $user_attribute_name = variable_get('simple_ldap_user_attribute_name');
-    $role_attribute_name = variable_get('simple_ldap_role_attribute_name');
-    $role_attribute_member = variable_get('simple_ldap_role_attribute_member');
-    $role_attribute_member_format = variable_get('simple_ldap_role_attribute_member_format');
+    $user_attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
+    $role_attribute_name = simple_ldap_role_variable_get('simple_ldap_role_attribute_name');
+    $role_attribute_member = simple_ldap_role_variable_get('simple_ldap_role_attribute_member');
+    $role_attribute_member_format = simple_ldap_role_variable_get('simple_ldap_role_attribute_member_format');
 
     // Get the member attribute string to use as the comparison.
     switch ($role_attribute_member_format) {
@@ -381,12 +381,12 @@ class SimpleLdapRoleModifyLdapGroup extends SimpleLdapRoleTestCase {
    */
   public function testModifyLdapGroup() {
     // Load configuration variables.
-    $role_basedn = variable_get('simple_ldap_role_basedn');
-    $role_objectclass = variable_get('simple_ldap_role_objectclass');
-    $role_attribute_name = variable_get('simple_ldap_role_attribute_name');
-    $role_attribute_member = variable_get('simple_ldap_role_attribute_member');
-    $role_attribute_member_format = variable_get('simple_ldap_role_attribute_member_format');
-    $role_attribute_member_default = variable_get('simple_ldap_role_attribute_member_default');
+    $role_basedn = simple_ldap_role_variable_get('simple_ldap_role_basedn');
+    $role_objectclass = simple_ldap_role_variable_get('simple_ldap_role_objectclass');
+    $role_attribute_name = simple_ldap_role_variable_get('simple_ldap_role_attribute_name');
+    $role_attribute_member = simple_ldap_role_variable_get('simple_ldap_role_attribute_member');
+    $role_attribute_member_format = simple_ldap_role_variable_get('simple_ldap_role_attribute_member_format');
+    $role_attribute_member_default = simple_ldap_role_variable_get('simple_ldap_role_attribute_member_default');
 
     // Generate a new random role name.
     $new_role = $this->randomName();
@@ -453,12 +453,12 @@ class SimpleLdapRoleChangeLdapGroupMembership extends SimpleLdapRoleTestCase {
    */
   public function testChangeLdapGroupMembership() {
     // Load configuration variables.
-    $user_attribute_name = variable_get('simple_ldap_user_attribute_name');
-    $role_basedn = variable_get('simple_ldap_role_basedn');
-    $role_objectclass = variable_get('simple_ldap_role_objectclass');
-    $role_attribute_name = variable_get('simple_ldap_role_attribute_name');
-    $role_attribute_member = variable_get('simple_ldap_role_attribute_member');
-    $role_attribute_member_format = variable_get('simple_ldap_role_attribute_member_format');
+    $user_attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
+    $role_basedn = simple_ldap_role_variable_get('simple_ldap_role_basedn');
+    $role_objectclass = simple_ldap_role_variable_get('simple_ldap_role_objectclass');
+    $role_attribute_name = simple_ldap_role_variable_get('simple_ldap_role_attribute_name');
+    $role_attribute_member = simple_ldap_role_variable_get('simple_ldap_role_attribute_member');
+    $role_attribute_member_format = simple_ldap_role_variable_get('simple_ldap_role_attribute_member_format');
 
     // Initialize a user account object.
     $account = new stdClass();

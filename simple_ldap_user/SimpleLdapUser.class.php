@@ -29,16 +29,16 @@ class SimpleLdapUser {
     $this->server = SimpleLdapServer::singleton();
 
     // Get the LDAP configuration.
-    $base_dn = variable_get('simple_ldap_user_basedn');
-    $scope = variable_get('simple_ldap_user_scope');
-    $attribute_name = variable_get('simple_ldap_user_attribute_name', 'cn');
-    $attribute_mail = variable_get('simple_ldap_user_attribute_mail', 'mail');
+    $base_dn = simple_ldap_user_variable_get('simple_ldap_user_basedn');
+    $scope = simple_ldap_user_variable_get('simple_ldap_user_scope');
+    $attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
+    $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
     $safe_name = preg_replace(array('/\(/', '/\)/'), array('\\\(', '\\\)'), $name);
     $filter = '(&(|(' . $attribute_name . '=' . $safe_name . ')(' . $attribute_mail . '=' . $safe_name . '))' . self::filter() . ')';
 
     // List of attributes to fetch from the LDAP server.
     $attributes = array($attribute_name, $attribute_mail);
-    $attribute_map = simple_ldap_user_attribute_map();
+    $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
     foreach ($attribute_map as $attribute) {
       if (isset($attribute['ldap'])) {
         $attributes[] = $attribute['ldap'];
@@ -110,7 +110,7 @@ class SimpleLdapUser {
    *   The value to assigned to the given attribute.
    */
   public function __set($name, $value) {
-    $attribute_pass = variable_get('simple_ldap_user_attribute_pass');
+    $attribute_pass = simple_ldap_user_variable_get('simple_ldap_user_attribute_pass');
 
     switch ($name) {
       // Read-only values.
@@ -135,7 +135,7 @@ class SimpleLdapUser {
       // intentionally falls through to default:.
       case $attribute_pass:
         if (isset(self::$hash[$value])) {
-          $hash = variable_get('simple_ldap_user_password_hash');
+          $hash = simple_ldap_user_variable_get('simple_ldap_user_password_hash');
           $value = SimpleLdap::hash(self::$hash[$value], $hash);
         }
         else {
@@ -207,8 +207,8 @@ class SimpleLdapUser {
 
     // Active Directory has some restrictions on what can be modified.
     if ($this->server->type == 'Active Directory') {
-      $attribute_pass = variable_get('simple_ldap_user_attribute_pass');
-      $attribute_rdn = variable_get('simple_ldap_user_attribute_rdn');
+      $attribute_pass = simple_ldap_user_variable_get('simple_ldap_user_attribute_pass');
+      $attribute_rdn = simple_ldap_user_variable_get('simple_ldap_user_attribute_rdn');
       // Passwords can only be changed over LDAPs.
       if (stripos($this->server->host, 'ldaps://') === FALSE) {
         unset($this->attributes[$attribute_pass]);
@@ -278,8 +278,8 @@ class SimpleLdapUser {
    */
   public static function filter() {
     // Get the relevant configurations.
-    $objectclass = variable_get('simple_ldap_user_objectclass', array('*'));
-    $extrafilter = variable_get('simple_ldap_user_filter');
+    $objectclass = simple_ldap_user_variable_get('simple_ldap_user_objectclass');
+    $extrafilter = simple_ldap_user_variable_get('simple_ldap_user_filter');
 
     // Construct the filter.
     $filter = '(&(objectclass=' . implode(')(objectclass=', $objectclass) . '))';

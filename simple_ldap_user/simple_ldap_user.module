@@ -104,7 +104,7 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
     case 'user_profile_form':
       // Disable mapped fields if LDAP Server is read-only.
       $server = SimpleLdapServer::singleton();
-      $attribute_map = simple_ldap_user_attribute_map();
+      $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
 
       // Name, Mail, and Password are special attributes.
       $form['account']['name']['#disabled'] = $server->readonly;
@@ -166,9 +166,9 @@ function simple_ldap_user_user_login(&$edit, $account) {
   if ($account->uid == 1) {
     return;
   }
-  $sync = variable_get('simple_ldap_user_sync');
+  $sync = simple_ldap_user_variable_get('simple_ldap_user_sync');
   if ($sync == 'hook_user_login') {
-    switch (simple_ldap_user_source()) {
+    switch (simple_ldap_user_variable_get('simple_ldap_user_source')) {
       case 'ldap':
         simple_ldap_user_sync_user_to_drupal($account);
         break;
@@ -202,8 +202,8 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
 
     if ($ldap_user->exists) {
       // Force an initial sync from LDAP to drupal.
-      $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
-      $attribute_map = simple_ldap_user_attribute_map();
+      $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
+      $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
 
       // Get the user's email address.
       $edit['mail'] = $ldap_user->{$attribute_mail}[0];
@@ -306,13 +306,13 @@ function simple_ldap_user_user_delete($account) {
  * a user object is handled.
  */
 function simple_ldap_user_user_load($users) {
-  $sync = variable_get('simple_ldap_user_sync');
+  $sync = simple_ldap_user_variable_get('simple_ldap_user_sync');
   if ($sync == 'hook_user_load') {
     foreach ($users as $user) {
       if ($user->uid == 1) {
         continue;
       }
-      switch (simple_ldap_user_source()) {
+      switch (simple_ldap_user_variable_get('simple_ldap_user_source')) {
         case 'ldap':
           simple_ldap_user_sync_user_to_drupal($user);
           break;
@@ -361,8 +361,8 @@ function simple_ldap_user_load_or_create_by_name($name) {
 
   // If the user doesn't already exist in Drupal, create them.
   if (!$drupal_user) {
-    $attribute_name = variable_get('simple_ldap_user_attribute_name');
-    $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
+    $attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
+    $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
     $edit = array(
       'name' => $ldap_user->{strtolower($attribute_name)}[0],
       'mail' => $ldap_user->{strtolower($attribute_mail)}[0],
@@ -372,41 +372,6 @@ function simple_ldap_user_load_or_create_by_name($name) {
   }
 
   return $drupal_user;
-}
-
-/**
- * Returns the configured data sync direction.
- *
- * The sync direction is dependent on both the configurations of simple_ldap and
- * simple_ldap_user.
- */
-function simple_ldap_user_source() {
-  $server = SimpleLdapServer::singleton();
-
-  // If the LDAP server is set to read-only, force ldap->drupal sync.
-  if ($server->readonly) {
-    return 'ldap';
-  }
-
-  // Get the sync config from simple_ldap_user, defaulting to ldap->drupal.
-  return variable_get('simple_ldap_user_source', 'ldap');
-}
-
-/**
- * Returns the attribute map, if configured.
- */
-function simple_ldap_user_attribute_map() {
-  $attribute_map = variable_get('simple_ldap_user_attribute_map', array());
-  foreach ($attribute_map as $key => $value) {
-    // LDAP likes lowercase.
-    $attribute_map[$key]['ldap'] = strtolower($attribute_map[$key]['ldap']);
-
-    // Make sure the Drupal attribute is an array.
-    if (!is_array($attribute_map[$key]['drupal'])) {
-      $attribute_map[$key]['drupal'] = array($attribute_map[$key]['drupal']);
-    }
-  }
-  return $attribute_map;
 }
 
 /**
@@ -420,10 +385,10 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
   }
 
   // simple_ldap_user configuration.
-  $attribute_name = variable_get('simple_ldap_user_attribute_name');
-  $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
-  $attribute_pass = variable_get('simple_ldap_user_attribute_pass');
-  $attribute_map = simple_ldap_user_attribute_map();
+  $attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
+  $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
+  $attribute_pass = simple_ldap_user_variable_get('simple_ldap_user_attribute_pass');
+  $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
 
   // Load the LDAP user.
   $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
@@ -497,7 +462,7 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
   }
 
   // Set the DN.
-  $attribute_rdn = variable_get('simple_ldap_user_attribute_rdn');
+  $attribute_rdn = simple_ldap_user_variable_get('simple_ldap_user_attribute_rdn');
   if (empty($attribute_rdn)) {
     $attribute_rdn = $attribute_name;
   }
@@ -512,7 +477,7 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
     }
     else {
       // Default to using the configured basedn.
-      $basedn = ',' . variable_get('simple_ldap_user_basedn');
+      $basedn = ',' . simple_ldap_user_variable_get('simple_ldap_user_basedn');
     }
     $ldap_user->dn = $attribute_rdn . '=' . $ldap_user->{$attribute_rdn}[0] . $basedn;
   }
@@ -533,9 +498,9 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
  */
 function simple_ldap_user_sync_user_to_drupal($drupal_user) {
   // simple_ldap_user configuration.
-  $attribute_name = variable_get('simple_ldap_user_attribute_name');
-  $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
-  $attribute_map = simple_ldap_user_attribute_map();
+  $attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
+  $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
+  $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
 
   // Load the LDAP user, force a cache reset.
   $ldap_user = SimpleLdapUser::singleton($drupal_user->name, TRUE);
@@ -666,4 +631,84 @@ function simple_ldap_user_export_user($uid, $context) {
   $user = user_load($uid);
   simple_ldap_user_sync_user_to_ldap($user);
   $context['message'] = 'Exporting ' . $user->name;
+}
+
+/**
+ * Returns the value for the specified variable.
+ *
+ * This function takes into account the configured LDAP server type, and
+ * attempts to determine a reasonable default value to try to use in the event
+ * that the module has not yet been configured.
+ */
+function simple_ldap_user_variable_get($name, $default = NULL, $force_default = FALSE) {
+  // Allow variable name shorthand by prepending 'simple_ldap_user_' to $name if
+  // it is not already there.
+  if (strpos($name, 'simple_ldap_user_') !== 0) {
+    $name = 'simple_ldap_user_' . $name;
+  }
+
+  // Get an LDAP server object.
+  $server = SimpleLdapServer::singleton();
+
+  // Handle special variables.
+  switch ($name) {
+    case 'simple_ldap_user_source':
+      // If the LDAP server is set to read-only, force LDAP->Drupal sync.
+      if ($server->readonly) {
+        return 'ldap';
+      }
+      break;
+
+    case 'simple_ldap_user_attribute_map':
+      // Load the attribute map from settings.php.
+      $attribute_map = variable_get($name, array());
+      foreach ($attribute_map as $key => $value) {
+        // LDAP likes lowercase.
+        $attribute_map[$key]['ldap'] = strtolower($attribute_map[$key]['ldap']);
+
+        // Make sure the Drupal attribute is an array.
+        if (!is_array($attribute_map[$key]['drupal'])) {
+          $attribute_map[$key]['drupal'] = array($attribute_map[$key]['drupal']);
+        }
+      }
+      return $attribute_map;
+  }
+
+  // Define defaults that differ based on LDAP server type.
+  switch ($server->type) {
+    case 'Active Directory':
+      $defaults = array(
+        'simple_ldap_user_objectclass' => array('user'),
+        'simple_ldap_user_attribute_name' => 'samaccountname',
+        'simple_ldap_user_attribute_mail' => 'mail',
+        'simple_ldap_user_attribute_pass' => 'unicodepwd',
+        'simple_ldap_user_password_hash' => 'unicode',
+        'simple_ldap_user_attribute_rdn' => 'cn',
+      );
+      break;
+
+    default:
+      $defaults = array(
+        'simple_ldap_user_objectclass' => array('inetorgperson'),
+        'simple_ldap_user_attribute_name' => 'cn',
+        'simple_ldap_user_attribute_mail' => 'mail',
+        'simple_ldap_user_attribute_pass' => 'userpassword',
+        'simple_ldap_user_password_hash' => 'salted sha',
+      );
+  }
+
+  // Define defaults that do not depend on LDAP server type.
+  $defaults['simple_ldap_user_basedn'] = $server->basedn;
+  $defaults['simple_ldap_user_scope'] = 'sub';
+  $defaults['simple_ldap_user_source'] = 'ldap';
+  $defaults['simple_ldap_user_sync'] = 'hook_user_load';
+
+  // Determine the default value for the given variable.
+  $default = isset($defaults[$name]) ? $defaults[$name] : $default;
+
+  if ($force_default) {
+    return $default;
+  }
+
+  return variable_get($name, $default);
 }

@@ -33,25 +33,25 @@ function simple_ldap_role_admin($form, &$form_state) {
   switch ($server->type) {
     case 'Active Directory':
       $readonly = TRUE;
-      $objectclass_selected = array('group');
-      $attribute_name_selected = 'cn';
-      $attribute_member_selected = 'member';
-      $attribute_member_format = 'dn';
+      $objectclass_selected = simple_ldap_role_variable_get('simple_ldap_role_objectclass', NULL, TRUE);
+      $attribute_name_selected = simple_ldap_role_variable_get('simple_ldap_role_attribute_name', NULL, TRUE);
+      $attribute_member_selected = simple_ldap_role_variable_get('simple_ldap_role_attribute_member', NULL, TRUE);
+      $attribute_member_format = simple_ldap_role_variable_get('simple_ldap_role_attribute_member_format', NULL, TRUE);
 
       // Generate a list of attributes for the selected objectclass.
       $attributes = array(
-        'cn' => 'cn',
-        'member' => 'member',
+        $attribute_name_selected => $attribute_name_selected,
+        $attribute_member_selected => $attribute_member_selected,
       );
       break;
 
     case 'OpenLDAP':
     default:
       $readonly = FALSE;
-      $objectclass_selected = isset($form_state['values']['simple_ldap_role_objectclass']) ? $form_state['values']['simple_ldap_role_objectclass'] : variable_get('simple_ldap_role_objectclass', array('groupofnames'));
-      $attribute_name_selected = isset($form_state['values']['simple_ldap_role_attribute_name']) ? $form_state['values']['simple_ldap_role_attribute_name'] : variable_get('simple_ldap_role_attribute_name', 'cn');
-      $attribute_member_selected = isset($form_state['values']['simple_ldap_role_attribute_member']) ? $form_state['values']['simple_ldap_role_attribute_member'] : variable_get('simple_ldap_role_attribute_member', 'member');
-      $attribute_member_format = variable_get('simple_ldap_role_attribute_member_format', 'dn');
+      $objectclass_selected = isset($form_state['values']['simple_ldap_role_objectclass']) ? $form_state['values']['simple_ldap_role_objectclass'] : simple_ldap_role_variable_get('simple_ldap_role_objectclass');
+      $attribute_name_selected = isset($form_state['values']['simple_ldap_role_attribute_name']) ? $form_state['values']['simple_ldap_role_attribute_name'] : simple_ldap_role_variable_get('simple_ldap_role_attribute_name');
+      $attribute_member_selected = isset($form_state['values']['simple_ldap_role_attribute_member']) ? $form_state['values']['simple_ldap_role_attribute_member'] : simple_ldap_role_variable_get('simple_ldap_role_attribute_member');
+      $attribute_member_format = simple_ldap_role_variable_get('simple_ldap_role_attribute_member_format');
 
       // Generate a list of attributes for the selected objectclass.
       $attributes = array();
@@ -78,7 +78,7 @@ function simple_ldap_role_admin($form, &$form_state) {
   $form['role']['simple_ldap_role_basedn'] = array(
     '#type' => 'textfield',
     '#title' => t('Base DN'),
-    '#default_value' => variable_get('simple_ldap_role_basedn', $server->basedn),
+    '#default_value' => simple_ldap_role_variable_get('simple_ldap_role_basedn'),
     '#required' => TRUE,
     '#description' => t('The Base DN that will be searched for roles.'),
   );
@@ -91,7 +91,7 @@ function simple_ldap_role_admin($form, &$form_state) {
       'one' => t('One-level') . ' - ' . t('Do not include children of the base DN while searching for roles.'),
     ),
     '#required' => TRUE,
-    '#default_value' => variable_get('simple_ldap_role_scope', 'sub'),
+    '#default_value' => simple_ldap_role_variable_get('simple_ldap_role_scope'),
   );
 
   $form['role']['simple_ldap_role_objectclass'] = array(
@@ -156,7 +156,7 @@ function simple_ldap_role_admin($form, &$form_state) {
   $form['advanced']['simple_ldap_role_filter'] = array(
     '#type' => 'textfield',
     '#title' => t('Search filter'),
-    '#default_value' => variable_get('simple_ldap_role_filter'),
+    '#default_value' => simple_ldap_role_variable_get('simple_ldap_role_filter'),
     '#description' => t('This filter will be combined with the normal search filter to find groups.') . ' ' . t('This can be used to require a certain attribute be present, for example.'),
   );
 
@@ -167,7 +167,7 @@ function simple_ldap_role_admin($form, &$form_state) {
       'ldap' => t('LDAP'),
       'drupal' => t('Drupal'),
     ),
-    '#default_value' => simple_ldap_role_source(),
+    '#default_value' => simple_ldap_role_variable_get('simple_ldap_role_source'),
     '#disabled' => $server->readonly,
     '#description' => t('This determines the behavior of the data sync in the event of a conflict between LDAP and Drupal.'),
   );
@@ -179,7 +179,7 @@ function simple_ldap_role_admin($form, &$form_state) {
       'hook_user_load' => t('Every time a user object is loaded from the database.') . ' (' . t('More real-time, best if there are frequent changes.') . ')',
       'hook_user_login' => t('Every time a user logs in.') . ' (' . t('Less LDAP traffic, best if changes are rare.') . ')',
     ),
-    '#default_value' => variable_get('simple_ldap_role_sync', 'hook_user_load'),
+    '#default_value' => simple_ldap_role_variable_get('simple_ldap_role_sync'),
   );
 
   $form['advanced']['simple_ldap_role_attribute_member_format'] = array(
@@ -203,7 +203,7 @@ function simple_ldap_role_admin($form, &$form_state) {
   $form['advanced']['simple_ldap_role_attribute_member_default'] = array(
     '#type' => 'textfield',
     '#title' => t('Default group member') . $note . $readonly_note,
-    '#default_value' => variable_get('simple_ldap_role_attribute_member_default'),
+    '#default_value' => simple_ldap_role_variable_get('simple_ldap_role_attribute_member_default'),
     '#disabled' => $server->readonly,
     '#description' => t('If the selected member attribute is a required attribute of the selected objectclass, then every LDAP group must have at least one member.') . ' ' . t('The value here will be used as that default member in the event that the group would otherwise be empty.') . ' ' . t('Leave this blank if the group should be deleted instead.'),
     '#prefix' => '<div id="simple-ldap-role-attribute-member-default">',
