@@ -413,6 +413,12 @@ function simple_ldap_user_attribute_map() {
  * Synchronizes Drupal user properties to LDAP.
  */
 function simple_ldap_user_sync_user_to_ldap($drupal_user) {
+  // Don't even try to sync if the server is read-only.
+  $server = SimpleLdapUser::singleton();
+  if ($server->readonly) {
+    return;
+  }
+
   // simple_ldap_user configuration.
   $attribute_name = variable_get('simple_ldap_user_attribute_name');
   $attribute_mail = variable_get('simple_ldap_user_attribute_mail');
