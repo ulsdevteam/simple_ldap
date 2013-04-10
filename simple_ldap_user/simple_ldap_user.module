@@ -414,7 +414,7 @@ function simple_ldap_user_attribute_map() {
  */
 function simple_ldap_user_sync_user_to_ldap($drupal_user) {
   // Don't even try to sync if the server is read-only.
-  $server = SimpleLdapUser::singleton();
+  $server = SimpleLdapServer::singleton();
   if ($server->readonly) {
     return;
   }
