@@ -13,12 +13,14 @@ class SimpleLdapSSO {
    */
   protected $dn;
 
+  // This attribute is intentionally private.
+  private $hashedSid;
+
   /**
    * The hashed sid, as stored on LDAP.
    *
    * @var string
    */
-  private $hashedSid;
   private function getHashedSid() {
     if (!isset($this->server) || !$this->server instanceof SimpleLdapServer) {
       throw new Exception(t('Unable to get hashed SID. LDAP server does not exist.'));
@@ -43,12 +45,14 @@ class SimpleLdapSSO {
    */
   protected $server;
 
+  // This attribute is intentionally private.
+  private $sidAttribute;
+
   /**
    * The attribute name where the sid will be stored.
    *
    * @var string
    */
-  private $sidAttribute;
   public function getSidAttribute() {
     if (!isset($this->sidAttribute)) {
       $this->sidAttribute = variable_get('simple_ldap_sso_attribute_sid', FALSE);
@@ -127,6 +131,8 @@ class SimpleLdapSSO {
 
   /**
    * Hash an sid, using the current hashing method.
+   *
+   * This method is intentionally private.
    */
   private function hashSid($sid) {
     $algorithm = variable_get('simple_ldap_sso_hashing_algorithm', 'sha');

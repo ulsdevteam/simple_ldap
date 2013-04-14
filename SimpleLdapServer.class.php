@@ -338,6 +338,7 @@ class SimpleLdapServer {
    *   Specifies how aliases should be handled during the search.
    *
    * @return array
+   *   Search results.
    *
    * @throw SimpleLdapException
    */
@@ -535,7 +536,7 @@ class SimpleLdapServer {
   /**
    * Modify an LDAP entry.
    *
-   * @param string @dn
+   * @param string $dn
    *   The distinguished name of an LDAP entry.
    * @param array $attributes
    *   An array of attributes to modify
@@ -753,7 +754,7 @@ class SimpleLdapServer {
         $this->basedn = $this->rootdse['namingcontexts'][0];
         return $this->basedn;
       }
-    } catch (SimpleLdapException $e) { }
+    } catch (SimpleLdapException $e) {}
 
     // Unable to determine the baseDN.
     return FALSE;
@@ -785,7 +786,7 @@ class SimpleLdapServer {
         $this->type = 'Active Directory';
         return $this->type;
       }
-    } catch (SimpleLdapException $e) { }
+    } catch (SimpleLdapException $e) {}
 
     // Default to generic LDAPv3.
     $this->type = 'LDAP';

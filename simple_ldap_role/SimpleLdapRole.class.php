@@ -121,7 +121,7 @@ class SimpleLdapRole {
             $this->move = $this->dn;
             $this->dn = $value;
             $this->dirty = TRUE;
-          } catch (SimpleLdapException $e) { }
+          } catch (SimpleLdapException $e) {}
         }
         break;
 
@@ -234,7 +234,6 @@ class SimpleLdapRole {
             // what happened. Creating the LDAP group will have to wait until
             // there is a member of the role.
             return FALSE;
-            break;
 
           default:
             throw $e;

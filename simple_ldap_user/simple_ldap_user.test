@@ -195,11 +195,11 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     variable_del('simple_ldap_user_attribute_map');
 
     // Clean up the LDAP entries that were added for testing.
-    foreach ($this->ldapUser as $ldapUser) {
+    foreach ($this->ldapUser as $lu) {
       // Create a new SimpleLdapUser object, which performs a new search based
       // on the name attribute. This accounts for the possibility that the LDAP
       // entry has changed since it was created.
-      $ldap_user = new SimpleLdapUser($ldapUser->{$attribute_name}[0]);
+      $ldap_user = new SimpleLdapUser($lu->{$attribute_name}[0]);
       $ldap_user->delete();
       $this->assertFalse($ldap_user->exists, t(':dn was removed from LDAP', array(':dn' => $ldap_user->dn)));
     }
@@ -1052,8 +1052,7 @@ class SimpleLdapUserPasswordResetTestCase extends SimpleLdapUserTestCase {
   }
 
   /**
-   * Tests that a user can request a password reset before a Drupal user is
-   * created.
+   * Tests password reset before a Drupal user is created.
    */
   public function testLdapNoDrupalPasswordReset() {
     // Get the configuration.
@@ -1236,7 +1235,7 @@ class SimpleLdapUserMassImportExportTestCase extends SimpleLdapUserTestCase {
     // created specifically for this test.
     $filter = '(&(' . $attribute_name . '=*)' . SimpleLdapUser::filter() . ')';
     $ldap_users = SimpleLdap::clean($server->search($basedn, $filter, $scope, array('dn', $attribute_name)));
-    foreach($ldap_users as $ldap_user) {
+    foreach ($ldap_users as $ldap_user) {
       $edit['users[' . $ldap_user[$attribute_name][0] . ']'] = FALSE;
     }
     // Select the users that were created for this test.

@@ -429,7 +429,7 @@ class SimpleLdapRoleModifyLdapGroup extends SimpleLdapRoleTestCase {
     $drupal_role = user_role_load_by_name($new_role . $new_role);
     $this->assertTrue($drupal_role, t('The :group LDAP group exists as a Drupal role.', array(':group' => $new_role . $new_role)));
 
-    // Cleanup
+    // Cleanup.
     $ldap_group->delete();
   }
 

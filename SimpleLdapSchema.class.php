@@ -37,7 +37,7 @@ class SimpleLdapSchema {
       if (isset($this->server->rootdse['subschemasubentry'])) {
         $this->dn = $this->server->rootdse['subschemasubentry'][0];
       }
-    } catch (SimpleLdapException $e) { }
+    } catch (SimpleLdapException $e) {}
 
   }
 

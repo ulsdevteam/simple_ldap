@@ -127,7 +127,7 @@ class SimpleLdapUser {
             $this->move = $this->dn;
             $this->dn = $value;
             $this->dirty = TRUE;
-          } catch (SimpleLdapException $e) { }
+          } catch (SimpleLdapException $e) {}
         }
         break;
 

@@ -24,7 +24,7 @@ function simple_ldap_sso_admin() {
     '#access' => variable_get('simple_ldap_readonly'),
     '#type' => 'fieldset',
     '#title' => t('Read/Write LDAP Credentials'),
-    '#description' => t('Since the Simple LDAP module is currently in Read Only mode for this site, you must specify separate read/write credentials to connect to LDAP with.')
+    '#description' => t('Since the Simple LDAP module is currently in Read Only mode for this site, you must specify separate read/write credentials to connect to LDAP with.'),
   );
   $form['credentials']['simple_ldap_sso_binddn'] = array(
     '#type' => 'textfield',
@@ -116,6 +116,9 @@ function simple_ldap_sso_admin() {
   return system_settings_form($form);
 }
 
+/**
+ * Returns an array of LDAP attributes.
+ */
 function simple_ldap_sso_get_attribute_options() {
   // Initialize a Simple LDAP Server object. Used for dropdown options.
   $server = SimpleLdapServer::singleton();
@@ -137,8 +140,9 @@ function simple_ldap_sso_get_attribute_options() {
 }
 
 /**
- * Element validate for the encryption salt variable. If the submitted value is
- * empty and a previous value exists, it is preserved.
+ * Element validate for the encryption salt variable.
+ *
+ * If the submitted value is empty and a previous value exists, it is preserved.
  */
 function simple_ldap_sso_encryption_key_element_validate($element, &$form_state, $form) {
   if (empty($element['#value']) && $existing_salt = variable_get('simple_ldap_sso_encryption_key')) {

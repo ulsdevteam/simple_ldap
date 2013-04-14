@@ -15,7 +15,7 @@ function simple_ldap_user_admin($form, &$form_state) {
 
   // Verify LDAP server connectivity.
   if (!$server->bind()) {
-    drupal_set_message(t('Unable to bind to the LDAP server.') . ' ' . t(l('Check the server configuration.', 'admin/config/people/simple_ldap')), 'warning');
+    drupal_set_message(t('Unable to bind to the LDAP server.') . ' ' . l(t('Check the server configuration.'), 'admin/config/people/simple_ldap'), 'warning');
     return $form;
   }
 

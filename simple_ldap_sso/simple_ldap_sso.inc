@@ -22,8 +22,9 @@ function simple_ldap_sso_configured() {
 }
 
 /**
- * Return an array of not configuration errors, for use in hook_requirements()
- * and simple_ldap_sso_configured().
+ * Return an array of not configuration errors.
+ *
+ * For use in hook_requirements() and simple_ldap_sso_configured().
  */
 function simple_ldap_configuration_errors() {
   $errors = array();
@@ -94,7 +95,7 @@ function simple_ldap_sso_detect_sid() {
         $t_args = array();
         watchdog(__FUNCTION__, $message, $t_args, WATCHDOG_ALERT);
       }
-  }
+    }
 }
 
 /**
@@ -152,8 +153,9 @@ function simple_ldap_sso_populate_session() {
  *
  * @param string $cookie_value
  *   Optional cookie value to read the data from. If left blank, the cookie will
- *   be read from $_COOKIE. This argument likely will only be used during 
+ *   be read from $_COOKIE. This argument likely will only be used during
  *   testing.
+ *
  * @return mixed
  *   An array of data, or FALSE if it was unable to be read.
  */
@@ -199,7 +201,7 @@ function simple_ldap_sso_validate_user(array $data) {
     // We can't call user_save() in here, because it's too early in the
     // bootstrap. Instead, we'll just write the record to the user table
     // directly.
-    require_once(DRUPAL_ROOT . '/includes/common.inc');
+    require_once DRUPAL_ROOT . '/includes/common.inc';
     $account = new stdClass();
     $account->uid = db_next_id(db_query('SELECT MAX(uid) FROM {users}')->fetchField());
     $account->created = REQUEST_TIME;
@@ -255,6 +257,7 @@ function simple_ldap_sso_decrypt($string) {
  *   A string of text to encrypt or decrypt.
  * @param bool $encrypt
  *   TRUE if encrypting, FALSE if decrypting.
+ *
  * @return string
  *   A string of encrypted or decrypted text.
  */
@@ -384,5 +387,3 @@ function simple_ldap_sso_session_is_valid() {
 function simple_ldap_sso_session_needs_validation() {
   $_SESSION['simple_ldap_sso_needs_validation'] = TRUE;
 }
-
-

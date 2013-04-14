@@ -68,8 +68,11 @@ function hook_sync_user_to_ldap($user) {
  * from LDAP to Drupal, immediately before user_save() is called.
  *
  * @param array $edit
+ *   Array of changes to apply to the Drupal user by user_save().
  * @param StdClass $drupal_user
+ *   The Drupal user object to be saved.
  * @param SimpleLdapUser $ldap_user
+ *   The SimpleLdapUser object that matches the Drupal user object.
  */
 function hook_simple_ldap_user_to_drupal_alter($edit, $drupal_user, $ldap_user) {
 }
@@ -81,7 +84,9 @@ function hook_simple_ldap_user_to_drupal_alter($edit, $drupal_user, $ldap_user) 
  * from Drupal to LDAP, immediately before SimpleLdapUser::save() is called.
  *
  * @param SimpleLdapUser $ldap_user
+ *   The SimpleLdapUser object to be saved.
  * @param StdClass $drupal_user
+ *   The Drupal user object that matches the SimpleLdapUser object.
  */
 function hook_simple_ldap_user_to_ldap_alter($ldap_user, $drupal_user) {
 }

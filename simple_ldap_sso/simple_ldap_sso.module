@@ -19,51 +19,16 @@ function simple_ldap_sso_help($path, $arg) {
       );
 
       $output = '<p>';
-      $output .= t('<strong>The current cookie domain is %cookie_domain.'      .
-        '</strong> The cookie domain must be the same for all sites for '      .
-        'single-sign-on to work. To set the cookie domain, see your '          .
-        'settings.php file inside of your Drupal directory.', $t_args);
+      $output .= t('<strong>The current cookie domain is %cookie_domain.</strong>', $t_args) . ' ' .
+        t('The cookie domain must be the same for all sites for single-sign-on to work.') . ' ' .
+        t('To set the cookie domain, see your settings.php file inside of your Drupal directory.');
       $output .= '</p>';
       return $output;
+
     case 'admin/help#simple_ldap_sso':
       // TODO.
       return '';
   }
-}
-
-/**
- * Implements hook_requirements().
- */
-function simple_ldap_sso_requirements($phase) {
-  // Only check at runtime.
-  if ($phase != 'runtime') {
-    return;
-  }
-
-  $errors = simple_ldap_configuration_errors();
-
-  $items['simple_ldap_sso_configured'] = array(
-    'title' => t('Simple LDAP SSO'),
-    'value' => $errors ? t('Not Configured') : t('Configured'),
-    'description' => '',
-    'severity' => $errors ? REQUIREMENT_ERROR : REQUIREMENT_OK,
-  );
-
-  if ($errors) {
-    $t_args = array('!url' => url('admin/config/people/simple_ldap/sso'));
-    $items['simple_ldap_sso_configured']['description'] = theme('item_list', array('items' => $errors));
-    $items['simple_ldap_sso_configured']['description'] .= t('Please visit the module’s <a href="!url">configuration form</a> to configure Simple LDAP SSO.', $t_args);
-  }
-
-  return $items;
-}
-
-/**
- * Implements hook_enable().
- */
-function simple_ldap_sso_enable() {
-  $path = drupal_get_path('module', 'simple_ldap_sso') . '/simple_ldap_sso.session.inc';
-  variable_set('session_inc', $path);
 }
 
 /**
@@ -72,7 +37,6 @@ function simple_ldap_sso_enable() {
 function simple_ldap_sso_init() {
   // Check for the presence of an SSO cookie, and check it's contents against
   // LDAP. If it doesn't validate, destroy the session by logging the user out.
-
   global $user;
   // Do nothing for anonymous users.
   if (!user_is_logged_in()
@@ -82,7 +46,7 @@ function simple_ldap_sso_init() {
     || !simple_ldap_sso_configured()
     // If no validation needs to occur, just return.
     || !simple_ldap_sso_does_session_need_validation()) {
-      return;
+    return;
   }
 
   // If we don't have a valid SSO cookie, destroy the session and return.
@@ -130,13 +94,6 @@ function simple_ldap_sso_menu() {
 }
 
 /**
- * Implements hook_disable().
- */
-function simple_ldap_sso_disable() {
-  variable_del('session_inc');
-}
-
-/**
  * Implements hook_user_login().
  */
 function simple_ldap_sso_user_login(array &$edit, stdClass $account) {
@@ -154,8 +111,10 @@ function simple_ldap_sso_user_login(array &$edit, stdClass $account) {
 }
 
 /**
- * Shutdown function, to set the cookie with data from the sessions table, and
- * store the session ID on LDAP.
+ * Shutdown function.
+ *
+ * Sets the cookie with data from the sessions table, and store the session ID
+ * on LDAP.
  */
 function simple_ldap_sso_login_shutdown() {
   global $is_https, $user;
@@ -175,7 +134,7 @@ function simple_ldap_sso_login_shutdown() {
   $sid = $data[$column];
 
   try {
-    // And save the session id to LDAP
+    // And save the session id to LDAP.
     simple_ldap_sso_ldap_save_sid($user->name, $sid);
     // Now set the cookie.
     simple_ldap_sso_set_cookie($data);

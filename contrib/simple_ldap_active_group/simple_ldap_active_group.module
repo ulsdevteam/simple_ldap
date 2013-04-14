@@ -31,7 +31,7 @@ function simple_ldap_active_group_form_alter(&$form, &$form_state, $form_id) {
             '#type' => 'checkbox',
             '#title' => t('Delete LDAP entries, even if they do not match the filter'),
             '#default_value' => variable_get('simple_ldap_active_group_delete_filtered', FALSE),
-            '#description' => t('If this is enabled, a user will be deleted from LDAP when deleted from Drupal, even if the user\'s DN does not match the specified search filter.'),
+            '#description' => t("If this is enabled, a user will be deleted from LDAP when deleted from Drupal, even if the user's DN does not match the specified search filter."),
           );
         }
       }
