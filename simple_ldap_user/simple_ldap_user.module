@@ -378,9 +378,14 @@ function simple_ldap_user_load_or_create_by_name($name) {
  * Synchronizes Drupal user properties to LDAP.
  */
 function simple_ldap_user_sync_user_to_ldap($drupal_user) {
-  // Don't even try to sync if the server is read-only.
+  // Don't try to sync if the server is read-only.
   $server = SimpleLdapServer::singleton();
   if ($server->readonly) {
+    return;
+  }
+
+  // Don't try to sync anonymous or user 1.
+  if ($drupal_user->uid == 0 || $drupal_user->uid == 1) {
     return;
   }
 
