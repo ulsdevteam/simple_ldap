@@ -1,0 +1,6 @@
+name = Simple LDAP Delete Blocked User
+description = Deletes a user from LDAP when set to Blocked in Drupal. This keeps the directory clean, and when restoring the account to Active, the user will be resynced to LDAP by the Simple LDAP User module.
+package = LDAP Helpers
+dependencies[] = simple_ldap_user
+core = 7.x
+
