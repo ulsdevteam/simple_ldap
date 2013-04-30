@@ -421,10 +421,11 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
         case '#':
           // Get the value using Field API.
           $drupal_attribute = substr($drupal_attribute, 1);
-          $items = field_get_items('user', $drupal_user, $drupal_attribute);
+          $field = field_view_field('user', $drupal_user, $drupal_attribute);
+
           $value = array();
-          if (is_array($items)) {
-            foreach ($items as $item) {
+          if (is_array($field['#items'])) {
+            foreach ($field['#items'] as $item) {
               if (isset($item['value'])) {
                 $value[] = $item['value'];
               }
@@ -543,7 +544,7 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
         case '#':
           // Get the Drupal field values and metadata.
           $drupal_attribute = substr($drupal_attribute, 1);
-          $items = field_get_items('user', $drupal_user, $drupal_attribute);
+          $field = field_view_field('user', $drupal_user, $drupal_attribute);
           $info = field_info_field($drupal_attribute);
           $language = field_language('user', $drupal_user, $drupal_attribute);
 
@@ -552,7 +553,7 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
           for ($i = 0; $i < $ldap_user->{$attribute['ldap']}['count']; $i++) {
             if ($i < $info['cardinality'] || $info['cardinality'] == FIELD_CARDINALITY_UNLIMITED) {
               $edit[$drupal_attribute][$language][$i]['value'] = $ldap_user->{$attribute['ldap']}[$i];
-              if ($items[$i]['value'] != $ldap_user->{$attribute['ldap']}[$i]) {
+              if (isset($field['#items'][$i]['value']) && $field['#items'][$i]['value'] != $ldap_user->{$attribute['ldap']}[$i]) {
                 $dirty = TRUE;
               }
             }
