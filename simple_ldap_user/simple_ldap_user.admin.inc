@@ -281,7 +281,7 @@ function simple_ldap_user_import($form, &$form_state) {
   $server = SimpleLdapServer::singleton();
   $basedn = simple_ldap_user_variable_get('simple_ldap_user_basedn');
   $scope = simple_ldap_user_variable_get('simple_ldap_user_scope');
-  $attribute_name = strtolower(variable_get('simple_ldap_user_attribute_name'));
+  $attribute_name = strtolower(simple_ldap_user_variable_get('simple_ldap_user_attribute_name'));
   $filter = '(&(' . $attribute_name . '=*)' . SimpleLdapUser::filter() . ')';
 
   // Get a list of users that would be imported.
