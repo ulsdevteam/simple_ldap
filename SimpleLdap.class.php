@@ -59,7 +59,7 @@ class SimpleLdap {
         // Remove empty values.
         foreach ($value as $k => $v) {
           if (empty($v)) {
-            unset($value[$k]);
+            unset($attributes[$key][$k]);
           }
         }
 
