@@ -68,7 +68,7 @@ class SimpleLdap {
         unset($attributes[$key]['count']);
 
         // Remove attributes with no values.
-        if ($strip_empty_array && count($value) == 0) {
+        if ($strip_empty_array && count($attributes[$key]) == 0) {
           unset($attributes[$key]);
         }
       }
