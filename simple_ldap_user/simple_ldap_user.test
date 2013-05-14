@@ -180,6 +180,10 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
       // If no exception is thrown by save() then the save was successful, but
       // show the DN to make the tester feel better.
       $this->assertTrue($this->ldapUser[$i]->exists, t(':dn was added to LDAP', array(':dn' => $this->ldapUser[$i]->dn)));
+
+      // Verify that the LDAP user can bind.
+      $result = $server->bind($this->ldapUser[$i]->dn, $this->userPassword[$i]);
+      $this->assertTrue($result, t('Successful bind with :dn using password :pw', array(':dn' => $this->ldapUser[$i]->dn, ':pw' => $this->userPassword[$i])));
     }
 
   }
@@ -405,6 +409,10 @@ class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserTestCase {
     $account->name = $this->ldapUser[0]->{$attribute_name}[0];
     $account->pass_raw = $this->userPassword[0] . 'invalid';
 
+    // Verify that the test user exists in LDAP.
+    $ldap_user = new SimpleLdapUser($account->name);
+    $this->assertTrue($ldap_user->exists, t(':name exists in LDAP.', array(':name' => $account->name)));
+
     // Verify that the test user does not exist in Drupal.
     $drupal_user = user_load_by_name($this->ldapUser[0]->{$attribute_name}[0]);
     $this->assertIdentical($drupal_user, FALSE, t('The test user does not exist in Drupal.'));
@@ -425,7 +433,7 @@ class SimpleLdapUserAuthenticationWebTestCase extends SimpleLdapUserTestCase {
     $account = $this->drupalUser[0];
     $account->pass_raw = $account->pass_raw . 'invalid';
 
-    // Verify that the user odes not exist in LDAP (by random chance).
+    // Verify that the user does not exist in LDAP (by random chance).
     $ldap_user = new SimpleLdapUser($account->name);
     $this->assertFalse($ldap_user->exists, t('The user account does not exist in LDAP.'));
 
@@ -897,7 +905,8 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserTestCase {
         }
         try {
           $server->modify($ldap_user->dn, array($attribute['ldap'] => $value), 'replace');
-          $this->assert(TRUE, t('Modified @attr LDAP attribute to :value.', array('@attr' => $attribute['ldap'], ':value' => $value)));
+          $entry = $server->entry($ldap_user->dn);
+          $this->assertEqual($value, $entry[0][$attribute['ldap']][0], t('Modified @attr LDAP attribute to :value.', array('@attr' => $attribute['ldap'], ':value' => $value)));
         } catch (SimpleLdapException $e) {
           $this->error($e->getMessage());
         }
