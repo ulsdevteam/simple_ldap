@@ -46,12 +46,25 @@ class SimpleLdapUser {
     }
 
     // Include the userAccountControl attribute for Active Directory.
-    if ($this->server->type == 'Active Directory') {
-      $attributes[] = 'useraccountcontrol';
-    }
+    try {
+      if ($this->server->type == 'Active Directory') {
+        $attributes[] = 'useraccountcontrol';
+      }
+    } catch (SimpleLdapException $e) {}
 
     // Attempt to load the user from the LDAP server.
-    $result = $this->server->search($base_dn, $filter, $scope, $attributes, 0, 1);
+    try {
+      $result = $this->server->search($base_dn, $filter, $scope, $attributes, 0, 1);
+    } catch (SimpleLdapException $e) {
+      if ($e->getCode() == -1) {
+        $result = array('count' => 0);
+      }
+      else {
+        throw $e;
+      }
+    }
+
+    // Populate the attribute array.
     if ($result['count'] == 1) {
       $this->dn = $result[0]['dn'];
       foreach ($attributes as $attribute) {
