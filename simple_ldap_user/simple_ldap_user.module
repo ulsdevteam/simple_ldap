@@ -190,11 +190,23 @@ function simple_ldap_user_user_login(&$edit, $account) {
  */
 function simple_ldap_user_user_presave(&$edit, $account, $category) {
   // Do not overwrite the user status in the database.
-  if (isset($account->simple_ldap_user_status)) {
-    $account->status = $account->simple_ldap_user_status;
+  if (isset($account->simple_ldap_user_drupal_status)) {
+    // If status is in the edit array, we need to be sure we're not
+    // unintentionally saving the LDAP value to the database. To check this, we
+    // see if $edit['status'] matches $account->status. If it does, set
+    // $edit['status'] to the simple_ldap_user_drupal_status value.
+    if (isset($edit['status']) && $edit['status'] == $account->status) {
+      $edit['status'] = $account->simple_ldap_user_drupal_status;
+    }
+    // Now set the $account->status back to the value in the database, just to
+    // be safe. This ensures that if $edit['status'] is empty, we don't mess up
+    // what's in the database with what is on the user object.
+    $account->status = $account->simple_ldap_user_drupal_status;
   }
-  if (isset($account->original) && isset($account->original->simple_ldap_user_status)) {
-    $account->original->status = $account->simple_ldap_user_status;
+  // To make sure we've covered all our bases, we also set $account->original's
+  // status back to what is in the database as well.
+  if (isset($account->original) && isset($account->original->simple_ldap_user_drupal_status)) {
+    $account->original->status = $account->simple_ldap_user_drupal_status;
   }
 
   if ($account->is_new && isset($edit['name'])) {
@@ -272,7 +284,14 @@ function simple_ldap_user_user_update(&$edit, $account, $category) {
   // Don't do anything if the hook was called via hook_sync_user_to_drupal().
   if (empty($account->hook_sync_user_to_drupal)) {
     $ldap_user = SimpleLdapUser::singleton($account->name);
-    if ((isset($edit['status']) && $edit['status']) || $ldap_user->exists) {
+    $enabled = isset($edit['status']) ? $edit['status'] : NULL;
+    // In hook_user_presave, we may have messed with the $edit['status'] and
+    // $account->status values, setting them to the database values, not what
+    // LDAP had set status to. Set those back to the LDAP values now.
+    if (isset($account->simple_ldap_user_ldap_status)) {
+      $enabled = $account->status = $account->simple_ldap_user_ldap_status;
+    }
+    if ($enabled || $ldap_user->exists) {
       module_invoke_all('sync_user_to_ldap', $account);
     }
   }

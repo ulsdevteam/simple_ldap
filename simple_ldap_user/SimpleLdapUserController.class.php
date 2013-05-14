@@ -44,22 +44,28 @@ class SimpleLdapUserController extends UserController {
 
       if (!$ldap_user->exists) {
         // Block the user if it does not exist in LDAP.
-        $users[$uid]->simple_ldap_user_status = $drupal_user->status;
-        $users[$uid]->status = 0;
+        $this->blockUser($drupal_user);
       }
 
       // Active Directory uses a bitmask to specify certain flags on an account,
       // including whether it is enabled. http://support.microsoft.com/kb/305144
       if ($ldap_user->server->type == 'Active Directory') {
         if (isset($ldap_user->useraccountcontrol[0]) && (int) $ldap_user->useraccountcontrol[0] & 2) {
-          $users[$uid]->simple_ldap_user_status = $drupal_user->status;
-          $users[$uid]->status = 0;
+          $this->blockUser($drupal_user);
         }
       }
-
     }
 
     return $users;
   }
 
+  /**
+   * Block a user, setting status to 0. This will store the current status as
+   * stored in the database into a separate value, for use in user hooks.
+   */
+  protected function blockUser(stdClass $account) {
+    $account->simple_ldap_user_drupal_status = $account->status;
+    $account->simple_ldap_user_ldap_status = 0;
+    $account->status = 0;
+  }
 }
