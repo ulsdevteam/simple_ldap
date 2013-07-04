@@ -78,7 +78,7 @@ function simple_ldap_sso_init() {
   // If the user needs syncing, do it now.
   if (simple_ldap_sso_user_needs_sync()) {
     // We sync the user from LDAP to Drupal.
-    simple_ldap_user_sync_user_to_drupal($user);
+    simple_ldap_user_sync_user($user);
   }
 }
 

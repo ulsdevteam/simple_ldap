@@ -168,15 +168,7 @@ function simple_ldap_user_user_login(&$edit, $account) {
   }
   $sync = simple_ldap_user_variable_get('simple_ldap_user_sync');
   if ($sync == 'hook_user_login') {
-    switch (simple_ldap_user_variable_get('simple_ldap_user_source')) {
-      case 'ldap':
-        simple_ldap_user_sync_user_to_drupal($account);
-        break;
-
-      case 'drupal':
-        simple_ldap_user_sync_user_to_ldap($account);
-        break;
-    }
+    simple_ldap_user_sync_user($account);
   }
 }
 
@@ -327,19 +319,11 @@ function simple_ldap_user_user_delete($account) {
 function simple_ldap_user_user_load($users) {
   $sync = simple_ldap_user_variable_get('simple_ldap_user_sync');
   if ($sync == 'hook_user_load') {
-    foreach ($users as $user) {
-      if ($user->uid == 1) {
+    foreach ($users as $account) {
+      if ($account->uid == 1) {
         continue;
       }
-      switch (simple_ldap_user_variable_get('simple_ldap_user_source')) {
-        case 'ldap':
-          simple_ldap_user_sync_user_to_drupal($user);
-          break;
-
-        case 'drupal':
-          simple_ldap_user_sync_user_to_ldap($user);
-          break;
-      }
+      simple_ldap_user_sync_user($account);
     }
   }
 }
@@ -391,6 +375,21 @@ function simple_ldap_user_load_or_create_by_name($name) {
   }
 
   return $drupal_user;
+}
+
+/**
+ * Synchronize a user from or to LDAP, depending on the settings.
+ */
+function simple_ldap_user_sync_user($drupal_user) {
+  switch (simple_ldap_user_variable_get('simple_ldap_user_source')) {
+    case 'ldap':
+      simple_ldap_user_sync_user_to_drupal($drupal_user);
+      break;
+
+    case 'drupal':
+      simple_ldap_user_sync_user_to_ldap($drupal_user);
+      break;
+  }
 }
 
 /**

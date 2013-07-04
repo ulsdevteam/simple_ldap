@@ -122,30 +122,35 @@ function simple_ldap_sso_populate_session() {
   // checked in hook_init against the LDAP stored value during hook_init(). If
   // it is found to not be valid there, the session we create here is destroyed,
   // a watchdog error is logged, and the user is logged out.
-  if ($data = simple_ldap_sso_get_cookie_data()) {
-    $key = array(
-      'sid' => $data['sid'],
-      'ssid' => $data['ssid'],
-    );
-
-    if ($data['uid'] == 1) {
-      // Do nothing for user 1.
-      return FALSE;
-    }
-
-    // Unset the name field, as we don't need that here.
-    unset($data['name']);
-
-    // Empty out the session data.
-    $data['session'] = '';
-
-    $query = db_merge('sessions')
-      ->key($key)
-      ->fields($data);
-
-    return $query->execute();
+  if (!($data = simple_ldap_sso_get_cookie_data())) {
+    return FALSE;
   }
-  return FALSE;
+  $key = array(
+    'sid' => $data['sid'],
+    'ssid' => $data['ssid'],
+  );
+
+  if ($data['uid'] == 1) {
+    // Do nothing for user 1.
+    return FALSE;
+  }
+
+  // Unset the name field, as we don't need that here.
+  unset($data['name']);
+
+  // Empty out the session data.
+  $data['session'] = '';
+
+  // If the user sync method is hook_user_login, queue a sync.
+  if (simple_ldap_user_variable_get('simple_ldap_user_sync') == 'hook_user_login') {
+    simple_ldap_sso_queue_user_sync();
+  }
+
+  $query = db_merge('sessions')
+    ->key($key)
+    ->fields($data);
+
+  return $query->execute();
 }
 
 /**
@@ -210,6 +215,7 @@ function simple_ldap_sso_validate_user(array $data) {
     drupal_write_record('users', $account);
     $uid = isset($account->uid) ? $account->uid : FALSE;
 
+    // Always queue a sync from LDAP to Drupal if the user was just created.
     simple_ldap_sso_queue_user_sync();
   }
 
@@ -407,8 +413,7 @@ function simple_ldap_sso_session_needs_validation() {
 }
 
 /**
- * Queue a user to be synced from LDAP. This occurs when the user account didn't
- * exist on this site before navigating here.
+ * Queue a user to be synced from LDAP.
  */
 function simple_ldap_sso_queue_user_sync() {
   // Set the static variable to TRUE for simple_ldap_sso_user_needs_sync().
@@ -416,7 +421,7 @@ function simple_ldap_sso_queue_user_sync() {
 }
 
 /**
- * Check if this user needs to be synced from LDAP.
+ * Check if this user needs to be synced.
  */
 function simple_ldap_sso_user_needs_sync() {
   return drupal_static(__FUNCTION__, FALSE);
