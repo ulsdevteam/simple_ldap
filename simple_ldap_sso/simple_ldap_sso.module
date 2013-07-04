@@ -74,6 +74,12 @@ function simple_ldap_sso_init() {
 
   // If we got this far, the session is valid in LDAP. Mark it so.
   simple_ldap_sso_session_is_valid();
+
+  // If the user needs syncing, do it now.
+  if (simple_ldap_sso_user_needs_sync()) {
+    // We sync the user from LDAP to Drupal.
+    simple_ldap_user_sync_user_to_drupal($user);
+  }
 }
 
 /**

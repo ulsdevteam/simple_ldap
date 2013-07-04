@@ -209,6 +209,8 @@ function simple_ldap_sso_validate_user(array $data) {
     $account->status = 1;
     drupal_write_record('users', $account);
     $uid = isset($account->uid) ? $account->uid : FALSE;
+
+    simple_ldap_sso_queue_user_sync();
   }
 
   return $uid ? $uid : FALSE;
@@ -402,4 +404,20 @@ function simple_ldap_sso_session_is_valid() {
  */
 function simple_ldap_sso_session_needs_validation() {
   $_SESSION['simple_ldap_sso_needs_validation'] = TRUE;
+}
+
+/**
+ * Queue a user to be synced from LDAP. This occurs when the user account didn't
+ * exist on this site before navigating here.
+ */
+function simple_ldap_sso_queue_user_sync() {
+  // Set the static variable to TRUE for simple_ldap_sso_user_needs_sync().
+  drupal_static('simple_ldap_sso_user_needs_sync', TRUE);
+}
+
+/**
+ * Check if this user needs to be synced from LDAP.
+ */
+function simple_ldap_sso_user_needs_sync() {
+  return drupal_static(__FUNCTION__, FALSE);
 }
