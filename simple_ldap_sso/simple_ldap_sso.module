@@ -79,7 +79,9 @@ function simple_ldap_sso_init() {
   if (simple_ldap_sso_user_needs_sync()
     // Only sync the user if the source is LDAP, to avoid writing to LDAP.
     && simple_ldap_user_variable_get('simple_ldap_user_source') == 'ldap') {
-      simple_ldap_user_sync_user($user);
+      // Load up the full user object so that fields are present.
+      $account = user_load($user->uid);
+      simple_ldap_user_sync_user($account);
   }
 }
 
