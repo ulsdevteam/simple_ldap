@@ -69,8 +69,27 @@ class SimpleLdapUser {
       $this->dn = $result[0]['dn'];
       foreach ($attributes as $attribute) {
         $attribute = strtolower($attribute);
-        if (isset($result[0][$attribute])) {
-          $this->attributes[$attribute] = $result[0][$attribute];
+        // Search for the attribute in the LDAP schema.
+        $schema_attribute = $this->server->schema->get('attributeTypes', $attribute);
+
+        // Check whether the attribute or any of its aliases are present in the
+        // LDAP user.
+        $found = FALSE;
+        if (isset($result[0][$schema_attribute['name']])) {
+          $found = $schema_attribute['name'];
+        }
+        if (!$found) {
+          foreach($schema_attribute['aliases'] as $alias) {
+            if (isset($result[0][$alias])) {
+              $found = $alias;
+              break;
+            }
+          }
+        }
+
+        // Assign the attribute value to the SimpleLdapUser object.
+        if ($found) {
+          $this->attributes[$attribute] = $result[0][$found];
         }
       }
       $this->exists = TRUE;
