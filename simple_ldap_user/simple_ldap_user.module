@@ -242,6 +242,32 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
       }
     }
   }
+
+  //If account updated and username changed, RDN default to drupal name and ldap
+  //entry already exists from elsewhere, reset new changed username to its previous value.
+  if (isset($account->original)) {
+
+    //New name edited or programmatically set ?
+    $new_username = '';
+    if (!empty($edit['name']) && $account->original->name !== $edit['name']) {
+      $new_username = $edit['name'];
+    }
+    elseif ($account->original->name !== $account->name) {
+      $new_username = $account->name;
+    }
+
+    if ($new_username) {
+
+      $ldap_user = SimpleLdapUser::singleton($new_username);
+      $attribute_rdn = simple_ldap_user_variable_get('simple_ldap_user_attribute_rdn');
+      if (empty($attribute_rdn) && $ldap_user->exists) {
+
+        $account->name = $account->original->name;
+        $edit['name'] = $account->original->name;
+        drupal_set_message(t('The new username %name could not be changed because an LDAP entry already exists. Previous name have been keep and no LDAP modification have been done.', array('%name' => $new_username)), 'error');
+      }
+    }
+  }
 }
 
 /**
@@ -490,6 +516,15 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
     $attribute_rdn = $attribute_name;
   }
   if ($ldap_user->{$attribute_rdn}['count'] > 0) {
+
+    //If drupal username have changed and is used for RDN, retrieve old ldap
+    //user already loaded by controller and set previous DN temporary to move it.
+    if (isset($drupal_user->original) && $drupal_user->original->name !== $drupal_user->name
+        && $attribute_rdn === $attribute_name) {
+      $original_ldap_user = SimpleLdapUser::singleton($drupal_user->original->name);
+      $ldap_user->dn = $original_ldap_user->dn;
+    }
+
     if ($ldap_user->dn) {
       // Reconstruct an existing DN.
       $parts = SimpleLdap::ldap_explode_dn($ldap_user->dn);
