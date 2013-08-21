@@ -10,6 +10,7 @@ class SimpleLdapUser {
   protected $attributes = array();
   protected $dn = FALSE;
   protected $exists = FALSE;
+  protected $mapObject;
   protected $server;
 
   // Internal variables.
@@ -27,6 +28,8 @@ class SimpleLdapUser {
   public function __construct($name) {
     // Load the LDAP server object.
     $this->server = SimpleLdapServer::singleton();
+    // Load up the map.
+    $this->mapObject = SimpleLdapUserMap::singleton();
 
     // Get the LDAP configuration.
     $base_dn = simple_ldap_user_variable_get('simple_ldap_user_basedn');
@@ -38,8 +41,7 @@ class SimpleLdapUser {
 
     // List of attributes to fetch from the LDAP server.
     $attributes = array($attribute_name, $attribute_mail);
-    $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
-    foreach ($attribute_map as $attribute) {
+    foreach ($this->mapObject->map as $attribute) {
       if (isset($attribute['ldap'])) {
         $attributes[] = $attribute['ldap'];
       }
@@ -69,27 +71,8 @@ class SimpleLdapUser {
       $this->dn = $result[0]['dn'];
       foreach ($attributes as $attribute) {
         $attribute = strtolower($attribute);
-        // Search for the attribute in the LDAP schema.
-        $schema_attribute = $this->server->schema->get('attributeTypes', $attribute);
-
-        // Check whether the attribute or any of its aliases are present in the
-        // LDAP user.
-        $found = FALSE;
-        if (isset($result[0][$schema_attribute['name']])) {
-          $found = $schema_attribute['name'];
-        }
-        if (!$found) {
-          foreach($schema_attribute['aliases'] as $alias) {
-            if (isset($result[0][$alias])) {
-              $found = $alias;
-              break;
-            }
-          }
-        }
-
-        // Assign the attribute value to the SimpleLdapUser object.
-        if ($found) {
-          $this->attributes[$attribute] = $result[0][$found];
+        if (isset($result[0][$attribute])) {
+          $this->attributes[$attribute] = $result[0][$attribute];
         }
       }
       $this->exists = TRUE;
@@ -114,6 +97,7 @@ class SimpleLdapUser {
       case 'dn':
       case 'exists':
       case 'server':
+      case 'mapObject':
         return $this->$name;
 
       default:

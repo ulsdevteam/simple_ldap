@@ -210,10 +210,8 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_sync'),
   );
 
-  // Generate a table to display the attribute map if one is configured.
-  $table = '';
-  $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
-  if (!empty($attribute_map)) {
+  $map_object = SimpleLdapUserMap::singleton();
+  if ($attribute_map = $map_object->map) {
     $table = '<table>';
     $table .= '<thead><tr><th>' . t('LDAP attribute') . '</th><th>' . t('Drupal attribute') . '</th></tr></thead>';
     $table .= '<tbody>';
@@ -226,30 +224,22 @@ function simple_ldap_user_admin($form, &$form_state) {
       $class = $class == 'odd' ? 'even' : 'odd';
     }
     $table .= '</tbody></table>';
-  }
-
-  $form['advanced']['simple_ldap_user_attribute_map'] = array(
-    '#type' => 'item',
-    '#title' => t('Attribute map'),
-    '#description' => $table . t('Additional attribute maps can be specified in @file using @variable.', array('@file' => 'settings.php', '@variable' => '$conf[\'simple_ldap_user_attribute_map\']')) . ' ' . t('See @readme for more details', array('@readme' => 'README.txt')),
-  );
-
-  $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
-  if (!empty($attribute_map)) {
-
-    // Generate a list of attribute names from the attribute map. This pulls
-    // from the schema to make the human-readable version have the right case.
-    $options = array();
-    foreach ($attribute_map as $attribute) {
-      $attribute_type = $server->schema->get('attributeTypes', $attribute['ldap']);
-      $options[$attribute['ldap']] = $attribute_type['name'];
-    }
-    asort($options);
+    $t_args = array(
+      '@file' => 'settings.php',
+      '@variable' => '$conf[\'simple_ldap_user_attribute_map\']',
+      '@readme' => 'README.txt',
+    );
+    $form['advanced']['simple_ldap_user_attribute_map'] = array(
+      '#type' => 'item',
+      '#title' => t('Attribute map'),
+      '#description' => t('Additional attribute maps can be specified in @file using @variable. See @readme for more details', $t_args),
+      '#markup' => $table,
+    );
 
     $form['advanced']['simple_ldap_user_attribute_rdn'] = array(
       '#type' => 'select',
       '#title' => t('Relative Distinguished Name (RDN) attribute'),
-      '#options' => $options,
+      '#options' => $map_object->getFormOptions(),
       '#empty_value' => '',
       '#default_value' => $attribute_rdn_selected,
       '#description' => t('Any of the mapped attributes can be used as the RDN value when provisioning a new LDAP user entry.') . ' ' . t('If set to "None", the Username attribute specified above will be used.'),
