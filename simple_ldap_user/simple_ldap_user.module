@@ -118,6 +118,10 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
       }
       break;
 
+    case 'user_register_form':
+      array_unshift($form['#validate'], 'simple_ldap_user_register_form_validate');
+      break;
+
     default:
   }
 }
@@ -304,6 +308,30 @@ function simple_ldap_user_user_load($users) {
         continue;
       }
       simple_ldap_user_sync_user($account);
+    }
+  }
+}
+
+
+/**
+ * Check the name and email both belong to the same LDAP account, or no 
+ * account at all.
+ */
+function simple_ldap_user_register_form_validate($form, &$form_state) {
+  $ldap_user_by_name = SimpleLdapUser::singleton($form_state['values']['name']);
+  $ldap_user_by_mail = SimpleLdapUser::singleton($form_state['values']['mail']);
+  $name_dn = $ldap_user_by_name->dn;
+  $mail_dn = $ldap_user_by_mail->dn;
+
+  if ($name_dn !== $mail_dn) {
+    if (empty($mail_dn)) {
+      form_set_error('name', t('A user with that username is already registered, but not with that email address.'));
+    }
+    elseif (empty($name_dn)) {
+      form_set_error('mail', t('A user with that email address is already registerd, but not with that username.'));
+    }
+    else {
+      form_set_error('name', t('Both the username and email address are in use, but not with the same account.'));
     }
   }
 }
