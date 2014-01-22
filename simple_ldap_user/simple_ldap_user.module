@@ -277,6 +277,10 @@ function simple_ldap_user_user_update(&$edit, $account, $category) {
  * @throw SimpleLdapException
  */
 function simple_ldap_user_user_delete($account) {
+  if (empty(simple_ldap_user_variable_get('simple_ldap_user_delete_from_ldap'))) {
+    return;
+  }
+
   $ldap_user = SimpleLdapUser::singleton($account->name);
   try {
     $ldap_user->delete();
@@ -583,6 +587,7 @@ function simple_ldap_user_variable_get($name, $default = NULL, $force_default = 
   $defaults['simple_ldap_user_scope'] = 'sub';
   $defaults['simple_ldap_user_source'] = 'ldap';
   $defaults['simple_ldap_user_sync'] = 'hook_user_load';
+  $defaults['simple_ldap_user_delete_from_ldap'] = '1';
 
   // Determine the default value for the given variable.
   $default = isset($defaults[$name]) ? $defaults[$name] : $default;

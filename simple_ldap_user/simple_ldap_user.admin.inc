@@ -210,6 +210,16 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_sync'),
   );
 
+  $form['advanced']['simple_ldap_user_delete_from_ldap'] = array(
+    '#type' => 'radios',
+    '#title' => t('Delete from LDAP on user delete?'),
+    '#options' => array(
+      '0' => t('Never'),
+      '1' => t('Always'),
+    ),
+    '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_delete_from_ldap'),
+  );
+
   $map_object = SimpleLdapUserMap::singleton();
   if ($attribute_map = $map_object->map) {
     $table = '<table>';

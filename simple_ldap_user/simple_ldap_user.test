@@ -26,7 +26,8 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     $password_hash = simple_ldap_user_variable_get('simple_ldap_user_password_hash');
     $filter = simple_ldap_user_variable_get('simple_ldap_user_filter');
     $source = simple_ldap_user_variable_get('simple_ldap_user_source');
-    $sync = simple_ldap_user_variable_get('simple_ldap_user_sync');
+    $sync = simple_ldap_user_variable_get('simple_ldap_user_sync'); 
+    $delete_ldap_user = simple_ldap_user_variable_get('simple_ldap_user_delete_from_ldap');
 
     // Make sure the variables from settings.php are written to the database.
     // Otherwise subsequent tests will not be able to read them. These are
@@ -140,6 +141,7 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     variable_set('simple_ldap_user_filter', $filter);
     variable_set('simple_ldap_user_source', $source);
     variable_set('simple_ldap_user_sync', $sync);
+    variable_set('simple_ldap_user_delete_from_ldap', $delete_ldap_user);
 
     // Get the fully qualified attribute map.
     $mapObject = SimpleLdapUserMap::singleton();
@@ -1104,6 +1106,9 @@ class SimpleLdapUserDeleteUserTestCase extends SimpleLdapUserTestCase {
     // Disable email verification and admin approval.
     variable_set('user_email_verification', FALSE);
     variable_set('user_register', USER_REGISTER_VISITORS);
+
+    // Make sure the system is set to delete from LDAP
+    variable_set('simple_ldap_user_delete_from_ldap', 1);
 
     // Generate user registration formdata.
     $edit['name'] = $name = $this->randomName();
