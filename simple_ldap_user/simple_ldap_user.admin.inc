@@ -299,6 +299,7 @@ function simple_ldap_user_import($form, &$form_state) {
     '#title' => t('Import these users') . ' (' . count($users) . ')',
     '#options' => $users,
     '#default_value' => array_keys($users),
+    '#checkall' => TRUE,
   );
 
   $form['submit'] = array(
