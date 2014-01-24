@@ -102,8 +102,14 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
       break;
 
     case 'user_profile_form':
+      // Disable mapped fields if LDAP Server is read-only.
       $server = SimpleLdapServer::singleton();
-      $map_object = SimpleLdapUserMap::singleton();
+      $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
+
+      // Name, Mail, and Password are special attributes.
+      $form['account']['name']['#disabled'] = $server->readonly;
+      $form['account']['mail']['#disabled'] = $server->readonly;
+      $form['account']['pass']['#disabled'] = $server->readonly;
 
       // Active Directory has some additional restrictions.
       if ($server->type == 'Active Directory') {
@@ -111,10 +117,21 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
         $form['account']['pass']['#disabled'] = stripos($server->host, 'ldaps://') === FALSE;
       }
 
-      // If the server is read/write, then break early to bypass disabling
-      // of any properties or fields.
-      if ($server->readonly) {
-        $map_object->disableMappedFormFields($form);
+      // Other mapped fields.
+      foreach ($attribute_map as $attribute) {
+        foreach ($attribute['drupal'] as $drupal_attribute) {
+          $type = substr($drupal_attribute, 0, 1);
+          switch ($type) {
+            case '#':
+              // Use Field API.
+              $form[substr($drupal_attribute, 1)]['#disabled'] = $server->readonly;
+              break;
+
+            default:
+              // Use the user object directly.
+              $form['account'][$drupal_attribute]['#disabled'] = $server->readonly;
+          }
+        }
       }
       break;
 
@@ -193,7 +210,40 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
 
     if ($ldap_user->exists) {
       // Force an initial sync from LDAP to drupal.
-      $ldap_user->mapObject->mapFromLdapToDrupal($ldap_user, $edit, $account);
+      $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
+      $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
+
+      // Get the user's email address.
+      $edit['mail'] = $ldap_user->{$attribute_mail}[0];
+
+      // Get the remaining mapped attributes.
+      foreach ($attribute_map as $attribute) {
+
+        // Skip drupal-to-ldap many-to-one mappings.
+        if (count($attribute['drupal']) > 1) {
+          break;
+        }
+
+        // Get the field type.
+        $drupal_attribute = reset($attribute['drupal']);
+        $type = substr($drupal_attribute, 0, 1);
+
+        switch ($type) {
+          // Use Field API.
+          case '#':
+            // Strip the type character from the attribute name.
+            $drupal_attribute = substr($drupal_attribute, 1);
+
+            for ($i = 0; $i < $ldap_user->{$attribute['ldap']}['count']; $i++) {
+              $edit[$drupal_attribute][LANGUAGE_NONE][$i]['value'] = $ldap_user->{$attribute['ldap']}[$i];
+            }
+            break;
+
+          // Use the user object directly.
+          default:
+            $edit[$drupal_attribute] = $ldap_user->{$attribute['ldap']}[0];
+        }
+      }
     }
   }
 
@@ -419,6 +469,7 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
   $attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
   $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
   $attribute_pass = simple_ldap_user_variable_get('simple_ldap_user_attribute_pass');
+  $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
 
   // Load the LDAP user.
   $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
@@ -429,8 +480,67 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
   // Password is a special attribute.
   $ldap_user->$attribute_pass = $drupal_user->pass;
 
-  // Perform additional property and field mappings based on the user map.
-  $ldap_user->mapObject->mapFromDrupalToLdap($drupal_user, $ldap_user);
+  // Synchronize the fields in the attribute map.
+  foreach ($attribute_map as $attribute) {
+
+    // Initialize the Drupal value array.
+    $drupal_values = array();
+
+    // Parse the drupal attribute name.
+    foreach ($attribute['drupal'] as $drupal_attribute) {
+
+      // Get the field type.
+      $type = substr($drupal_attribute, 0, 1);
+
+      // Get the Drupal value(s) based on the field type.
+      switch ($type) {
+        case '#':
+          // Get the value using Field API.
+          $drupal_attribute = substr($drupal_attribute, 1);
+          $items = field_get_items('user', $drupal_user, $drupal_attribute);
+          $value = array();
+          if (is_array($items)) {
+            foreach ($items as $item) {
+              if (isset($item['value'])) {
+                $value[] = $item['value'];
+              }
+            }
+          }
+          $drupal_values[] = $value;
+          break;
+
+        default:
+          // Get the value directly from the user object.
+          $drupal_values[] = array($drupal_user->$drupal_attribute);
+      }
+    }
+
+    // Merge the $drupal_values array into uniform values for the LDAP server.
+    // This is needed to account for drupal attributes of mixed types.
+    // First, find the largest value array.
+    $size = 0;
+    foreach ($drupal_values as $drupal_value) {
+      $count = count($drupal_value);
+      if ($count > $size) {
+        $size = $count;
+      }
+    }
+
+    // Then, generate the ldap array.
+    $ldap_values = array();
+    for ($i = 0; $i < $size; $i++) {
+      $ldap_values[$i] = '';
+      foreach ($drupal_values as $values) {
+        if (isset($values[$i])) {
+          $ldap_values[$i] .= ' ' . $values[$i];
+        }
+      }
+      $ldap_values[$i] = trim($ldap_values[$i]);
+    }
+
+    // Finally, add the values to the LDAP user.
+    $ldap_user->{$attribute['ldap']} = $ldap_values;
+  }
 
   // Set the DN.
   $attribute_rdn = simple_ldap_user_variable_get('simple_ldap_user_attribute_rdn');
@@ -477,6 +587,11 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
  * Synchronizes LDAP attributes to Drupal user properties.
  */
 function simple_ldap_user_sync_user_to_drupal($drupal_user) {
+  // simple_ldap_user configuration.
+  $attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
+  $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
+  $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
+
   // Load the LDAP user, force a cache reset.
   $ldap_user = SimpleLdapUser::singleton($drupal_user->name, TRUE);
 
@@ -488,7 +603,61 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
   // Initialize array of attribute changes.
   $edit = array();
 
-  $ldap_user->mapObject->mapFromLdapToDrupal($ldap_user, $edit, $drupal_user);
+  // Mail is a special attribute.
+  if (isset($ldap_user->{$attribute_mail}[0]) && $drupal_user->mail != $ldap_user->{$attribute_mail}[0]) {
+    $edit['mail'] = $ldap_user->{$attribute_mail}[0];
+  }
+
+  // Synchronize the fields in the attribute map.
+  foreach ($attribute_map as $attribute) {
+
+    // Skip drupal-to-ldap many-to-one mappings.
+    if (count($attribute['drupal']) > 1) {
+      continue;
+    }
+
+    // Get the drupal field name and type.
+    $drupal_attribute = reset($attribute['drupal']);
+    $drupal_attribute_trimmed = substr($drupal_attribute, 1);
+    $type = substr($drupal_attribute, 0, 1);
+
+    if (isset($drupal_user->$drupal_attribute) || isset($drupal_user->$drupal_attribute_trimmed)) {
+      switch ($type) {
+
+        // Update the value in drupal using Field API.
+        case '#':
+          // Get the Drupal field values and metadata.
+          $drupal_attribute = substr($drupal_attribute, 1);
+          $items = field_get_items('user', $drupal_user, $drupal_attribute);
+          $info = field_info_field($drupal_attribute);
+          $language = field_language('user', $drupal_user, $drupal_attribute);
+
+          // Synchronize.
+          $dirty = FALSE;
+          for ($i = 0; $i < $ldap_user->{$attribute['ldap']}['count']; $i++) {
+            if ($i < $info['cardinality'] || $info['cardinality'] == FIELD_CARDINALITY_UNLIMITED) {
+              $edit[$drupal_attribute][$language][$i]['value'] = $ldap_user->{$attribute['ldap']}[$i];
+              if ($items[$i]['value'] != $ldap_user->{$attribute['ldap']}[$i]) {
+                $dirty = TRUE;
+              }
+            }
+          }
+
+          // Check if any changes were actually made.
+          if (!$dirty) {
+            unset($edit[$drupal_attribute]);
+          }
+          break;
+
+        // Update the value directly on the user object.
+        case 'default':
+        default:
+          if (isset($ldap_user->{$attribute['ldap']}[0]) && $drupal_user->$drupal_attribute != $ldap_user->{$attribute['ldap']}[0]) {
+            $edit[$drupal_attribute] = $ldap_user->{$attribute['ldap']}[0];
+          }
+      }
+    }
+  }
 
   // Allow altering the Drupal user object before saving.
   drupal_alter('simple_ldap_user_to_drupal', $edit, $drupal_user, $ldap_user);
@@ -583,7 +752,15 @@ function simple_ldap_user_variable_get($name, $default = NULL, $force_default = 
     case 'simple_ldap_user_attribute_map':
       // Load the attribute map from settings.php.
       $attribute_map = variable_get($name, array());
+      foreach ($attribute_map as $key => $value) {
+        // LDAP likes lowercase.
+        $attribute_map[$key]['ldap'] = strtolower($attribute_map[$key]['ldap']);
 
+        // Make sure the Drupal attribute is an array.
+        if (!is_array($attribute_map[$key]['drupal'])) {
+          $attribute_map[$key]['drupal'] = array($attribute_map[$key]['drupal']);
+        }
+      }
       return $attribute_map;
   }
 

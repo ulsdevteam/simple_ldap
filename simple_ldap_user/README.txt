@@ -17,18 +17,18 @@ This variable is an array of arrays, where each of the arrays have the
 following items:
 
 * drupal - The field name on the Drupal user. This must be the machine name of
-	   the field. To specify Field module fields, prefix the field name with a
-	   hash, e.g. '#field_foo'. If no hash prefix is found, it is assumed that the
-	   field is a property of the user itself, such as name, pass, mail, etc.
+	   the field.
 
-	   This can also be an array of drupal properties or fields. If the array
-	   contains more than one entry, synchronization for that map only works in
-	   the drupal->ldap direction, and the fields are concatenated with a space
-	   separator.
+	   This can also be an array of drupal fields. If the array contains
+	   more than one entry, synchronization for that map only works in the
+	   drupal->ldap direction, and the fields are concatenated with a
+	   space separator.
 
-	   Note: If you are mapping a Field module field that does not store its data
-	   in a 'value' column, you need to specify the name of the column in the
-	   mapping itself using square brackets. See the Country example below.
+           A field type can be specified by prefixing the field name. If no
+	   prefix is given, it is assumed that the field is a direct user
+	   object attribute, such as uid, name, or pass.
+
+	   # - Custom fields added to the user object via the Field API.
 
 * ldap - The LDAP attribute on the LDAP user.
 
@@ -52,12 +52,6 @@ $conf['simple_ldap_user_attribute_map'] = array(
   array(
     'drupal' => '#field_last_name',
     'ldap' => 'sn',
-  ),
-
-  // Country example.
-  array(
-    'drupal' => '#field_country[iso2]',
-    'ldap' => 'localityName',
   ),
 
   // Timezone example (saved directly to users table, note there is no '#').
