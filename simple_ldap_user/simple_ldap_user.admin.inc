@@ -281,6 +281,94 @@ function simple_ldap_user_objectclass_ajax($form, $form_state) {
   );
 }
 
+
+/**
+ * Admin form for mapping Drupal user attributes to LDAP attributes
+ */
+function simple_ldap_user_profile_map_form($form, $form_state) {
+  $form = array();
+
+  // Get an LDAP server object.
+  $server = SimpleLdapServer::singleton();
+
+  // Verify LDAP server connectivity.
+  if (!$server->bind()) {
+    drupal_set_message(t('Unable to bind to the LDAP server.') . ' ' . l(t('Check the server configuration.'), 'admin/config/people/simple_ldap'), 'warning');
+    return $form;
+  }
+
+  // Pull the available LDAP schemas from the server
+  $schema = $server->schema;
+
+  // Pull the Object Classes selected for users.
+  $classes = array();
+  $user_object_classes = variable_get('simple_ldap_user_objectclass', array());
+  foreach ($user_object_classes as $class) {
+    if (empty($class)) {
+      continue;
+    }
+    $classes = $schema->superclass($class, TRUE);
+    array_push($classes, $class);
+  }
+  $classes = array_unique($classes);
+
+  // Pull the fields defined for user profiles
+  // ToDo: Support user profile modules
+  $user_fields = simple_ldap_user_user_fields();
+
+  // Build a list of available LDAP attributes, grouped by Object Class
+  $options[''] = ' - None - ';
+  foreach ($classes as $class) { 
+    if ($class == 'top') {
+      continue;
+    }
+    // Add a * to must attributes, to indiciate it must be set.
+    foreach($schema->must($class) as $attribute) {
+      $options[$class][strtolower($attribute)] = $attribute . '*';
+    }
+
+    // Add the may attributes later.
+    foreach($schema->may($class) as $attribute) {
+      $options[$class][strtolower($attribute)] = $attribute;
+    }
+  }
+
+  // Finally, build the form 
+  $form['header'] = array(
+    '#type' => 'markup',
+    '#markup' => t('<p>Select LDAP attributes to map to the Drupal user fields below.  LDAP attributes marked with an askterisk (*) are required by the LDAP schema and must be assigned to a Drupal fields.  LDAP attributes should be mapped to at most one Drupal fields.</p><p>Username, Email and Password mappings are also done on the User tab.</p>'),
+  );
+  foreach($user_fields as $key => $field) {
+    $form['simple_ldap_user_attribute_' . $key] = array(
+      '#type' => 'select',
+      '#title' => $field['label'],
+      '#description' => $field['description'],
+      '#options' => $options,
+      '#required' => $field['required'],
+      '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_attribute_' . $key),
+    );
+  }
+
+  $form['#submit'][] = 'simple_ldap_user_profile_map_form_submit';
+
+  return system_settings_form($form);
+}
+
+function simple_ldap_user_profile_map_form_submit($form, &$form_state) {
+  $user_fields = array_keys(simple_ldap_user_user_fields());
+  $attribute_map = array();
+  foreach ($form_state['values'] as $key => $value) {
+    if ((strpos($key, 'simple_ldap_user_attribute_') !== FALSE) && !empty($value)) {
+      $attr = substr($key, 27);
+      $attribute_map[] = array(
+        'drupal' => $attr,
+        'ldap' => $value,
+      );
+    }
+  }
+  variable_set('simple_ldap_user_attribute_map', $attribute_map);
+}
+
 /**
  * Form to handle mass user import.
  */

@@ -7,3 +7,4 @@ configure = admin/config/people/simple_ldap/user
 files[] = SimpleLdapUser.class.php
 files[] = SimpleLdapUserController.class.php
 files[] = simple_ldap_user.test
+files[] = simple_ldap_user.ldap_handlers.inc

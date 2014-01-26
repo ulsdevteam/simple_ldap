@@ -166,9 +166,9 @@ class SimpleLdapUser {
       // Look up the raw password from the internal reverse hash map. This
       // intentionally falls through to default:.
       case $attribute_pass:
-        if (isset(self::$hash[$value])) {
-          $hash = simple_ldap_user_variable_get('simple_ldap_user_password_hash');
-          $value = SimpleLdap::hash(self::$hash[$value], $hash);
+        if (isset(self::$hash[$value[0]])) {
+          $algorithm = simple_ldap_user_variable_get('simple_ldap_user_password_hash');
+          $value = SimpleLdap::hash(self::$hash[$value[0]], $algorithm);
         }
         else {
           // A plain text copy of the password is not available. Do not
