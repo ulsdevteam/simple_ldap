@@ -37,24 +37,29 @@ class SimpleLdapUser {
     $filter = '(&(|(' . $attribute_name . '=' . $safe_name . ')(' . $attribute_mail . '=' . $safe_name . '))' . self::filter() . ')';
 
     // List of attributes to fetch from the LDAP server.
-    $attributes = array($attribute_name, $attribute_mail);
+    // Using key => value autmatically dedups the list.
+    $attributes = array(
+      $attribute_name => $attribute_name, 
+      $attribute_mail => $attribute_mail
+    );
     $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
-    foreach ($attribute_map as $attribute) {
-      if (isset($attribute['ldap'])) {
-        $attributes[] = $attribute['ldap'];
-      }
+    foreach(array_keys($attribute_map) as $ldap) {
+      $attributes[$ldap] = $ldap;
     }
+
+    // ldap_search can't handle key'd arrays.
+    $attributes = array_values($attributes);
 
     // Include the userAccountControl attribute for Active Directory.
     try {
       if ($this->server->type == 'Active Directory') {
-        $attributes[] = 'useraccountcontrol';
+        $attributes['useraccountcontrol'] = 'useraccountcontrol';
       }
     } catch (SimpleLdapException $e) {}
 
     // Attempt to load the user from the LDAP server.
     try {
-      $result = $this->server->search($base_dn, $filter, $scope, $attributes, 0, 1);
+      $result = $this->server->search($base_dn, $filter, $scope, array_values($attributes), 0, 1);
     } catch (SimpleLdapException $e) {
       if ($e->getCode() == -1) {
         $result = array('count' => 0);
@@ -71,7 +76,6 @@ class SimpleLdapUser {
         $attribute = strtolower($attribute);
         // Search for the attribute in the LDAP schema.
         $schema_attribute = $this->server->schema->get('attributeTypes', $attribute);
-
         // Check whether the attribute or any of its aliases are present in the
         // LDAP user.
         $found = FALSE;
@@ -248,6 +252,7 @@ class SimpleLdapUser {
       unset($this->attributes[$attribute_rdn]);
     }
 
+    unset($this->attributes['street']);
     if ($this->exists) {
       // Update existing entry.
       $this->server->modify($this->dn, $this->attributes);

@@ -228,10 +228,10 @@ function simple_ldap_user_admin($form, &$form_state) {
     $table .= '<thead><tr><th>' . t('LDAP attribute') . '</th><th>' . t('Drupal attribute') . '</th></tr></thead>';
     $table .= '<tbody>';
     $class = 'odd';
-    foreach ($attribute_map as $item) {
+    foreach ($attribute_map as $ldap_item => $item) {
       $table .= '<tr class="' . $class . '">';
-      $table .= '<td>' . $item['ldap'] . '</td>';
-      $table .= '<td>' . implode(' ', $item['drupal']) . '</td>';
+      $table .= '<td>' . $ldap_item . '</td>';
+      $table .= '<td>' . implode(' ', $item) . '</td>';
       $table .= '</tr>';
       $class = $class == 'odd' ? 'even' : 'odd';
     }
@@ -250,9 +250,9 @@ function simple_ldap_user_admin($form, &$form_state) {
     // Generate a list of attribute names from the attribute map. This pulls
     // from the schema to make the human-readable version have the right case.
     $options = array();
-    foreach ($attribute_map as $attribute) {
-      $attribute_type = $server->schema->get('attributeTypes', $attribute['ldap']);
-      $options[$attribute['ldap']] = $attribute_type['name'];
+    foreach ($attribute_map as $ldap_attr => $drupal_field) {
+      $attribute_type = $server->schema->get('attributeTypes', $ldap_attr);
+      $options[$ldap_attr] = $attribute_type['name'];
     }
     asort($options);
 
@@ -360,10 +360,7 @@ function simple_ldap_user_profile_map_form_submit($form, &$form_state) {
   foreach ($form_state['values'] as $key => $value) {
     if ((strpos($key, 'simple_ldap_user_attribute_') !== FALSE) && !empty($value)) {
       $attr = substr($key, 27);
-      $attribute_map[] = array(
-        'drupal' => $attr,
-        'ldap' => $value,
-      );
+      $attribute_map[$value][] = $attr;
     }
   }
   variable_set('simple_ldap_user_attribute_map', $attribute_map);

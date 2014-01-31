@@ -948,16 +948,23 @@ function simple_ldap_user_variable_get($name, $default = NULL, $force_default = 
 
     case 'simple_ldap_user_attribute_map':
       // Load the attribute map from settings.php.
-      $attribute_map = variable_get($name, array());
-      foreach ($attribute_map as $key => $value) {
-        // LDAP likes lowercase.
-        $attribute_map[$key]['ldap'] = strtolower($attribute_map[$key]['ldap']);
+      static $attribute_map = array();
 
+      // Return a pre-cooked map
+      if (!empty($attribute_map)) {
+        return $attribute_map;
+      }
+
+      $attribute_map = variable_get($name, array());
+      // LDAP likes lowercase.
+      array_change_key_case($attribute_map, CASE_LOWER);
+      foreach ($attribute_map as $key => $value) {
         // Make sure the Drupal attribute is an array.
-        if (!is_array($attribute_map[$key]['drupal'])) {
-          $attribute_map[$key]['drupal'] = array($attribute_map[$key]['drupal']);
+        if (!is_array($attribute_map[$key])) {
+          $attribute_map[$key] = array($value);
         }
       }
+
       return $attribute_map;
   }
 
