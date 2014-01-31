@@ -116,6 +116,7 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
       // Disable mapped fields if LDAP Server is read-only.
       $server = SimpleLdapServer::singleton();
       $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
+      $user_fields = simple_ldap_user_user_fields();
 
       // Name, Mail, and Password are special attributes.
       $form['account']['name']['#disabled'] = $server->readonly;
@@ -129,18 +130,21 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
       }
 
       // Other mapped fields.
-      foreach ($attribute_map as $attribute) {
-        foreach ($attribute['drupal'] as $drupal_attribute) {
-          $type = substr($drupal_attribute, 0, 1);
-          switch ($type) {
-            case '#':
+      foreach ($attribute_map as $ldap_attr_name => $drupal_fields) {
+        foreach ($drupal_fields as $drupal_field_name) {
+          switch ($user_fields[$drupal_field_name]['module']) {
+            case 'field':
               // Use Field API.
-              $form[substr($drupal_attribute, 1)]['#disabled'] = $server->readonly;
+              $form[$drupal_field_name]['#disabled'] = $server->readonly;
+              break;
+
+            case 'user':
+              // Use the user object directly.
+              $form['account'][$drupal_field_name]['#disabled'] = $server->readonly;
               break;
 
             default:
-              // Use the user object directly.
-              $form['account'][$drupal_attribute]['#disabled'] = $server->readonly;
+              watchdog('Simple LDAP', 'Can\'t disable field from unknown module %module. (not supported yet)', array('%module' => $field['module']), WATCHDOG_WARNING);
           }
         }
       }
