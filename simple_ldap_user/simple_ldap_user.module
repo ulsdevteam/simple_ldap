@@ -178,7 +178,7 @@ function simple_ldap_user_menu_alter(&$items) {
  *   including raw username and password.
  */
 function simple_ldap_user_user_login(&$edit, $account) {
-  if ($account->uid == 1) {
+  if (property_exists($account, 'uid') && ($account->uid == 1)) {
     return;
   }
   $sync = simple_ldap_user_variable_get('simple_ldap_user_sync');
