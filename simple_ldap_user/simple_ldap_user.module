@@ -670,7 +670,7 @@ function simple_ldap_user_get_data_handlers($reset = FALSE) {
 /**
  * Translate a single LDAP Attribute to the mapped Drupal user entity field.
  */
-function simple_ldap_user_translate_ldap_attr_to_drupal(&$edit, $account, $ldap_attr, $drupal_field) {
+function simple_ldap_user_translate_ldap_attr_to_drupal(&$edit, $account, $ldap_attr_data, $drupal_field) {
   $items = field_get_items('user', $account, $drupal_field);
   $info = field_info_field($drupal_field);
   $language = field_language('user', $account, $drupal_field);
@@ -678,39 +678,106 @@ function simple_ldap_user_translate_ldap_attr_to_drupal(&$edit, $account, $ldap_
   $handlers = simple_ldap_user_get_data_handlers();
   $field_type = $info['type'];
 
-  if ($field_type) {
-    $handler = (array_key_exists($field_type, $handlers)) ? $handlers[$field_type] : $handlers['#default'];
-    if (!empty($handler['file'])) {
-      require_once $handler['file'];
-    }
-    $handler['import_callback']($edit, $info, $items, $ldap_attr, $language);
+  $handler = (array_key_exists($field_type, $handlers)) ? $handlers[$field_type] : $handlers['#default'];
+  if (!empty($handler['file'])) {
+    require_once $handler['file'];
   }
-//  else {
-//    dpm("Can't do plaid!");
-//  }
+  $handler['import_callback']($edit, $info, $items, $ldap_attr_data, $language);
 }
 
-function simple_ldap_user_base_field_to_ldap(&$value, $account, $attr) {
-  switch ($attr) {
-  case 'access':
-  case 'login':
-  case 'created':
-    $tz = date_default_timezone_get();
-    date_default_timezone_set('UTC');
-    $value[] = date('YmdHis', $account->$attr) . 'Z';
-    date_default_timezone_set($tz);
-    break;
-  case 'picture':
-    $file = file_load($account->picture);
-    if (!empty($file)) {
-      $value[] = file_get_contents($file->uri);
-    }
-    else {
-      $value[] = NULL;
-    }
-    break;
-  default:
-    $value[] = $account->$attr;
+/**
+ * Convert a field defined by the user module to a format suitable for LDAP
+ *
+ * @param array $ldap_edit
+ *    An array of values to be handed to LDAP.  Similar in function to user_save()'s $edit
+ *    parameter, but different in syntax.
+ *
+ * @param object $account
+ *    The Drupal user object being written to LDAP
+ *
+ * @param string $drupal_field_name
+ *    The name of the field to be converted.
+ */
+function simple_ldap_user_base_field_to_ldap(&$ldap_edit, $account, $drupal_field_name) {
+  switch ($drupal_field_name) {
+    case 'access':
+    case 'login':
+    case 'created':
+      $tz = date_default_timezone_get();
+      date_default_timezone_set('UTC');
+      $ldap_edit[] = date('YmdHis', $account->$drupal_field_name) . 'Z';
+      date_default_timezone_set($tz);
+      break;
+    case 'picture':
+      $file = file_load($account->picture);
+      if (!empty($file)) {
+        $ldap_edit[] = file_get_contents($file->uri);
+      }
+      else {
+        $ldap_edit[] = NULL;
+      }
+      break;
+    case 'status':
+      $ldap_edit[] = ($account->status) ? "1" : "0";
+      break;
+    default:
+      $ldap_edit[] = $account->$drupal_field_name;
+  }
+}
+
+function simple_ldap_user_base_field_to_drupal(&$edit, $drupal_user, $ldap_user, $drupal_field_name, $ldap_attr) {
+  @$ldap_value = $ldap_user->{$ldap_attr}[0];
+  switch ($drupal_field_name) {
+    case 'access':
+    case 'login':
+    case 'created':
+      // translate timestamp
+      $tz = date_default_timezone_get();
+      $timestamp = strtotime($ldap_value);
+      if (!property_exists($drupal_user, $drupal_field_name) || ($drupal_user->$drupal_field_name != $timestamp)) {
+        $edit[$drupal_field_name] = strtotime($ldap_value);
+      }
+      date_default_timezone_set($tz);
+      break;
+
+    case 'picture':
+      @$drupal_image = $drupal_user->$drupal_field_name;
+
+      // Skip if both are empty
+      if (empty($drupal_image) && empty($ldap_value)) {
+        break;
+      }
+
+      // Skip if both are identical
+      if (!empty($drupal_image) && 
+          ($drupal_image->filesize == strlen($ldap_value)) &&
+          (md5($ldap_value) == md5(file_get_contents($drupal_image->uri)))
+        ) {
+        break;
+      }
+
+      // Otherwise, create a FID
+      $name_field = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
+      $filename = file_default_scheme() . '://' . variable_get('user_picture_path', 'pictures') . '/' . $ldap_user->{$name_field}[0] . '.jpg';
+      $file_obj = file_save_data($ldap_value, $filename, FILE_EXISTS_RENAME);
+      $edit[$drupal_field_name] = $file_obj;
+      break;
+
+    case 'status':
+      $status = (empty($ldap_value) || ($ldap_value == 'FALSE')) ? 0 : 1;
+      if (!property_exists($drupal_user, 'status') || ($drupal_user->status != $status)) {
+        $edit['status'] = $status;
+      }
+      break;
+
+    // All plain string fields fall to here.
+    default:
+      if (
+          isset($ldap_value) && 
+          (!property_exists($drupal_user, $drupal_field_name) || ($drupal_user->$drupal_field_name != $ldap_value))
+         ) {
+        $edit[$drupal_field_name] = $ldap_value;
+      }
   }
 }
 
@@ -822,36 +889,41 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
   $edit = array();
 
   // Synchronize the fields in the attribute map.
-  foreach ($attribute_map as $attribute) {
-
+  foreach ($attribute_map as $ldap_attr => $drupal_fields) {
     // Skip drupal-to-ldap many-to-one mappings.
-    if (count($attribute['drupal']) > 1) {
+    if (count($drupal_fields) > 1) {
+      // TODO: Fix this
       continue;
     }
 
-    // Get the drupal field name and type.
-    $drupal_attribute = reset($attribute['drupal']);
-
-    if (isset($drupal_user->$drupal_attribute)) {
-      if (!array_key_exists($drupal_attribute, $user_fields)) {
+    foreach($drupal_fields as $key => $drupal_field_name) {
+      // Skip special items like #delimeter
+      if (!is_int($key)) {
         continue;
       }
 
-      $field = $user_fields[$drupal_attribute];
+      // Skip the password field
+      if ($drupal_field_name == 'pass') {
+        continue;
+      }
+
+      // Skip if not in user field list
+      if (!array_key_exists($drupal_field_name, $user_fields)) {
+        continue;
+      }
+
+      $field = $user_fields[$drupal_field_name];
       switch ($field['module']) {
 
         // Update the value in drupal using Field API.
         case 'field':
           // Get the Drupal field values and metadata.
-          $drupal_attribute = substr($drupal_attribute, 1);
-          simple_ldap_user_translate_ldap_attr_to_drupal($edit, $drupal_user, $ldap_user->{$attribute['ldap']}, $drupal_attribute);
+          simple_ldap_user_translate_ldap_attr_to_drupal($edit, $drupal_user, $ldap_user->$ldap_attr, $drupal_field_name);
           break;
 
         // Update the value directly on the user object.
         case 'user':
-          if (isset($ldap_user->{$attribute['ldap']}[0]) && $drupal_user->$drupal_attribute != $ldap_user->{$attribute['ldap']}[0]) {
-            $edit[$drupal_attribute] = $ldap_user->{$attribute['ldap']}[0];
-          }
+          simple_ldap_user_base_field_to_drupal($edit, $drupal_user, $ldap_user, $drupal_field_name, $ldap_attr);
           break;
 
         default:
