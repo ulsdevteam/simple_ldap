@@ -799,35 +799,34 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
   $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
 
   // Synchronize the fields in the attribute map.
-  foreach ($attribute_map as $attribute) {
+  foreach ($attribute_map as $ldap_attr_name => $drupal_fields) {
 
     // Initialize the Drupal value array.
     $drupal_values = array();
 
     // Parse the drupal attribute name.
-    foreach ($attribute['drupal'] as $drupal_attribute) {
+    foreach ($drupal_fields as $drupal_field_name) {
       // Get the Drupal value(s) based on the field type.
-      if (!array_key_exists($drupal_attribute, $user_fields)) {
+      if (!array_key_exists($drupal_field_name, $user_fields)) {
         continue;
       }
 
-      switch ($user_fields[$drupal_attribute]['module']) {
+      switch ($user_fields[$drupal_field_name]['module']) {
         case 'field':
-          simple_ldap_user_translate_drupal_attr_to_ldap($drupal_values, $drupal_user, $drupal_attribute);
+          simple_ldap_user_translate_drupal_attr_to_ldap($drupal_values, $drupal_user, $drupal_field_name);
           break;
 
         case 'user':
           // Get the value directly from the user object.
-          simple_ldap_user_base_field_to_ldap($drupal_values, $drupal_user, $drupal_attribute);
+          simple_ldap_user_base_field_to_ldap($drupal_values, $drupal_user, $drupal_field_name);
           break;
 
         default:
           watchdog('Simple LDAP', 'Field from unknown module %module. (not supported yet)', array('%module' => $field['module']), WATCHDOG_WARNING);
       }
     }
-
     // Finally, add the values to the LDAP user.
-    $ldap_user->{$attribute['ldap']} = $drupal_values;
+    $ldap_user->{$ldap_attr_name} = $drupal_values;
   }
 
   // Set the DN.
