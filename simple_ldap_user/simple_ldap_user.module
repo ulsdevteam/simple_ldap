@@ -851,7 +851,7 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
   }
 
   // Allow altering the LDAP user object before saving.
-  drupal_alter('simple_ldap_user_to_ldap', $ldap_user, $drupal_user);
+  drupal_alter('simple_ldap_user_to_ldap', $drupal_user, $ldap_user);
 
   // Save any changes.
   try {
