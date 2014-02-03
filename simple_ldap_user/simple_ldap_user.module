@@ -630,12 +630,9 @@ function simple_ldap_user_simple_ldap_data_handlers() {
  * not simple strings copied out to LDAP.
  * 
  */
-function simple_ldap_user_translate_drupal_attr_to_ldap($attr, $account) {
-  $user_base_fields = array('uid', 'name', 'pass', 'mail', 'picture', 'theme','signature','signature_format','created','access','login','status','timezone','language','init', 'data');
-
+function simple_ldap_user_translate_drupal_attr_to_ldap(&$value, $account, $attr) {
   $handlers = simple_ldap_user_get_data_handlers();
   $field_info = field_info_field($attr);
-  $value = array();
 
   if (!empty($field_info['type'])) {
     // Get the value using Field API.
@@ -646,8 +643,6 @@ function simple_ldap_user_translate_drupal_attr_to_ldap($attr, $account) {
     }
     $handler['export_callback']($value, $field_info, $items);
   }
-
-  return $value;
 }
 
 /**
@@ -818,10 +813,7 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
 
       switch ($user_fields[$drupal_attribute]['module']) {
         case 'field':
-          $drupal_values = array_merge(
-            $drupal_values, 
-            simple_ldap_user_translate_drupal_attr_to_ldap($drupal_attribute, $drupal_user)
-          );
+          simple_ldap_user_translate_drupal_attr_to_ldap($drupal_values, $drupal_user, $drupal_attribute);
           break;
 
         case 'user':
