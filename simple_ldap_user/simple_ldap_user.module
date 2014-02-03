@@ -209,7 +209,7 @@ function simple_ldap_user_user_login(&$edit, $account) {
  */
 function simple_ldap_user_user_presave(&$edit, $account, $category) {
   // Skip for UID 1 .
-  if ($account->uid == 1) { 
+  if (property_exists($account,'uid') && ($account->uid == 1)) { 
     return;
   }
 
@@ -240,38 +240,60 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
       // Force an initial sync from LDAP to drupal.
       $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
       $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
+      $user_fields = simple_ldap_user_user_fields();
 
       // Get the user's email address.
       $edit['mail'] = $ldap_user->{$attribute_mail}[0];
 
       // Get the remaining mapped attributes.
-      foreach ($attribute_map as $attribute) {
 
+      // ---- TODO: REFACTOR - This code is copy/pasted from simple_ldap_user_sync_user_to_drupal() below. ---
+      // TODO: Do we need this copy at all?
+
+      // Synchronize the fields in the attribute map.
+      foreach ($attribute_map as $ldap_attr => $drupal_fields) {
         // Skip drupal-to-ldap many-to-one mappings.
-        if (count($attribute['drupal']) > 1) {
-          break;
+        if (count($drupal_fields) > 1) {
+          // TODO: Fix this
+          continue;
         }
 
-        // Get the field type.
-        $drupal_attribute = reset($attribute['drupal']);
-        $type = substr($drupal_attribute, 0, 1);
+        foreach($drupal_fields as $key => $drupal_field_name) {
+          // Skip special items like #delimeter
+          if (!is_int($key)) {
+            continue;
+          }
 
-        switch ($type) {
-          // Use Field API.
-          case '#':
-            // Strip the type character from the attribute name.
-            $drupal_attribute = substr($drupal_attribute, 1);
+          // Skip the password field
+          if ($drupal_field_name == 'pass') {
+            continue;
+          }
 
-            for ($i = 0; $i < $ldap_user->{$attribute['ldap']}['count']; $i++) {
-              $edit[$drupal_attribute][LANGUAGE_NONE][$i]['value'] = $ldap_user->{$attribute['ldap']}[$i];
-            }
-            break;
+          // Skip if not in user field list
+          if (!array_key_exists($drupal_field_name, $user_fields)) {
+            continue;
+          }
 
-          // Use the user object directly.
-          default:
-            $edit[$drupal_attribute] = $ldap_user->{$attribute['ldap']}[0];
+          $field = $user_fields[$drupal_field_name];
+          switch ($field['module']) {
+
+            // Update the value in drupal using Field API.
+            case 'field':
+              // Get the Drupal field values and metadata.
+              simple_ldap_user_translate_ldap_attr_to_drupal($edit, $account, $ldap_user->$ldap_attr, $drupal_field_name);
+              break;
+
+            // Update the value directly on the user object.
+            case 'user':
+              simple_ldap_user_base_field_to_drupal($edit, $account, $ldap_user, $drupal_field_name, $ldap_attr);
+              break;
+
+            default:
+              watchdog('Simple LDAP', 'Field from unknown module %module. (not supported yet)', array('%module' => $field['module']), WATCHDOG_WARNING);
+          }
         }
       }
+      // --- END TODO:REFACTOR ---
     }
   }
 
