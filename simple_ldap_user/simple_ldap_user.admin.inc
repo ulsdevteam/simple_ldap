@@ -338,8 +338,15 @@ function simple_ldap_user_profile_map_form($form, $form_state) {
     '#type' => 'markup',
     '#markup' => t('<p>Select LDAP attributes to map to the Drupal user fields below.  LDAP attributes marked with an askterisk (*) are required by the LDAP schema and must be assigned to a Drupal fields.  LDAP attributes should be mapped to at most one Drupal fields.</p><p>Username, Email and Password mappings are also done on the User tab.</p>'),
   );
+  $form['attributes'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Drupal Fields to LDAP Attributes'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+
   foreach($user_fields as $key => $field) {
-    $form['simple_ldap_user_attribute_' . $key] = array(
+    $form['attributes']['simple_ldap_user_attribute_' . $key] = array(
       '#type' => 'select',
       '#title' => $field['label'],
       '#description' => $field['description'],
@@ -349,9 +356,36 @@ function simple_ldap_user_profile_map_form($form, $form_state) {
     );
   }
 
+  $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
+  $delimiter_options = array(
+    'array' => t('Multivalue field (array)'),
+    'crlf' => t('Multiline field (\\n)'),
+    'dollar' => t('Dollar sign ($)'),
+  );
+
+  foreach ($attribute_map as $key => $value) {
+    if (is_array($value) && count($value) > 1) {
+      $form['delimiters']['simple_ldap_user_attribute_delimiter_' . $key] = array(
+        '#type' => 'select',
+        '#title' => $key,
+        '#options' => $delimiter_options,
+        '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_attribute_delimiter_' . $key),
+      );
+    }
+  }
+  if (!empty($form['delimiters'])) {
+    $form['delimiters'] += array(
+      '#type' => 'fieldset',
+      '#title' => t('Multiple Value Field Delimiters'),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+    );
+  }
+
+  $form = system_settings_form($form);
   $form['#submit'][] = 'simple_ldap_user_profile_map_form_submit';
 
-  return system_settings_form($form);
+  return $form;
 }
 
 function simple_ldap_user_profile_map_form_submit($form, &$form_state) {
@@ -359,10 +393,25 @@ function simple_ldap_user_profile_map_form_submit($form, &$form_state) {
   $attribute_map = array();
   foreach ($form_state['values'] as $key => $value) {
     if ((strpos($key, 'simple_ldap_user_attribute_') !== FALSE) && !empty($value)) {
-      $attr = substr($key, 27);
-      $attribute_map[$value][] = $attr;
+      $field = substr($key, 27);
+      $attribute_map[$value][] = $field;
+    }
+    if ((strpos($key, 'simple_ldap_user_attribute_delimiter_') !== FALSE) && !empty($value)) {
+      $attr = substr($key, 37);
+      $attribute_map[$attr]['#delimiter'] = $value;
     }
   }
+
+  // Remove #delimter from singleton values    
+  foreach($attribute_map as $key => &$values) {
+    if (array_key_exists('#delimiter', $values)) {
+      if (count($values) == 2) {
+        unset($values['#delimiter']);
+        variable_del('simple_ldap_user_attribute_delimiter_' . $key);
+      }
+    }
+  }
+
   variable_set('simple_ldap_user_attribute_map', $attribute_map);
 }
 
