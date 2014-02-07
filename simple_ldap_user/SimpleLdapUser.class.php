@@ -13,7 +13,7 @@ class SimpleLdapUser {
   protected $server;
 
   // Internal variables.
-  protected $dirty = FALSE;
+  protected $dirty = array();
   protected $move = FALSE;
 
   /**
@@ -164,7 +164,7 @@ class SimpleLdapUser {
             // Save the old DN, so a move operation can be done during save().
             $this->move = $this->dn;
             $this->dn = $value;
-            $this->dirty = TRUE;
+            $this->dirty['dn'] = 'dn';
           } catch (SimpleLdapException $e) {}
         }
         break;
@@ -188,6 +188,10 @@ class SimpleLdapUser {
           $value = array($value);
         }
 
+        if (!array_key_exists('count', $value)) {
+          $value['count'] = count($value);
+        }
+
         // Make sure $this->attributes[$name] is an array.
         if (!isset($this->attributes[$name])) {
           $this->attributes[$name] = array();
@@ -200,7 +204,7 @@ class SimpleLdapUser {
         // If there are any differences, update the current value.
         if (!empty($diff1) || !empty($diff2)) {
           $this->attributes[$name] = $value;
-          $this->dirty = TRUE;
+          $this->dirty[$name] = $name;
         }
 
     }
@@ -234,7 +238,7 @@ class SimpleLdapUser {
    */
   public function save() {
     // If there is nothing to save, return "success".
-    if (!$this->dirty) {
+    if (empty($this->dirty)) {
       return TRUE;
     }
 
@@ -267,7 +271,7 @@ class SimpleLdapUser {
       } catch (SimpleLdapException $e) {
         if ($e->getCode() == 68) {
           // An "already exists" error was returned, try to do a modify instead.
-          $this->server->modify($this->dn, $this->attributes);
+          $this->server->modify($this->dn, array_values($this->dirty));
         }
         else {
           throw $e;
@@ -277,7 +281,7 @@ class SimpleLdapUser {
 
     // No exceptions were thrown, so the save was successful.
     $this->exists = TRUE;
-    $this->dirty = FALSE;
+    $this->dirty = array();
     $this->move = FALSE;
     return TRUE;
   }
@@ -304,7 +308,7 @@ class SimpleLdapUser {
 
     // There were no exceptions thrown, so the entry was successfully deleted.
     $this->exists = FALSE;
-    $this->dirty = FALSE;
+    $this->dirty = array();
     $this->move = FALSE;
     return TRUE;
   }
