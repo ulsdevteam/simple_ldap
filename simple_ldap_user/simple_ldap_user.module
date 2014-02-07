@@ -131,7 +131,11 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
 
       // Other mapped fields.
       foreach ($attribute_map as $ldap_attr_name => $drupal_fields) {
-        foreach ($drupal_fields as $drupal_field_name) {
+        foreach ($drupal_fields as $index => $drupal_field_name) {
+          // Skip #delimeter and other special entries
+          if (!is_int($index)) {
+            continue;
+          }
           switch ($user_fields[$drupal_field_name]['module']) {
             case 'field':
               // Use Field API.
@@ -742,8 +746,8 @@ function simple_ldap_user_base_field_to_ldap(&$ldap_edit, $account, $drupal_fiel
   }
 }
 
-function simple_ldap_user_base_field_to_drupal(&$edit, $drupal_user, $ldap_user, $drupal_field_name, $ldap_attr) {
-  @$ldap_value = $ldap_user->{$ldap_attr}[0];
+function simple_ldap_user_base_field_to_drupal(&$edit, $drupal_user, $ldap_values, $drupal_field_name) {
+  @$ldap_value = $ldap_values[0];
   switch ($drupal_field_name) {
     case 'access':
     case 'login':
@@ -848,6 +852,10 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
       }
     }
     // Finally, add the values to the LDAP user.
+    if (!empty($drupal_fields['#delimiter'])) {
+      $drupal_values = implode($drupal_fields['#delimiter'], $drupal_values);
+    }
+
     $ldap_user->{$ldap_attr_name} = $drupal_values;
   }
 
@@ -904,9 +912,17 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
   // Synchronize the fields in the attribute map.
   foreach ($attribute_map as $ldap_attr => $drupal_fields) {
     // Skip drupal-to-ldap many-to-one mappings.
-    if (count($drupal_fields) > 1) {
-      // TODO: Fix this
-      continue;
+
+    $one_to_many = FALSE;
+    if (count($drupal_fields) > 2) {
+      if (array_key_exists('#delimiter', $drupal_fields)) {
+        $values = explode($drupal_fields['#delimiter'], $ldap_user->{$ldap_attr}[0]);
+        $values['count'] = count($values);
+        $one_to_many = TRUE;
+      }
+    }
+    else {
+      $values = $ldap_user->$ldap_attr;
     }
 
     foreach($drupal_fields as $key => $drupal_field_name) {
@@ -925,18 +941,21 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
         continue;
       }
 
+      // Map one at a time if mapping across multiple fields
+      $map_values = ($one_to_many) ? array($values[$key], 'count' => 1) : $values;
+
       $field = $user_fields[$drupal_field_name];
       switch ($field['module']) {
 
         // Update the value in drupal using Field API.
         case 'field':
           // Get the Drupal field values and metadata.
-          simple_ldap_user_translate_ldap_attr_to_drupal($edit, $drupal_user, $ldap_user->$ldap_attr, $drupal_field_name);
+          simple_ldap_user_translate_ldap_attr_to_drupal($edit, $drupal_user, $map_values, $drupal_field_name);
           break;
 
         // Update the value directly on the user object.
         case 'user':
-          simple_ldap_user_base_field_to_drupal($edit, $drupal_user, $ldap_user, $drupal_field_name, $ldap_attr);
+          simple_ldap_user_base_field_to_drupal($edit, $drupal_user, $map_values, $drupal_field_name);
           break;
 
         default:

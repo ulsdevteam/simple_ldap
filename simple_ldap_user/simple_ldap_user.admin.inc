@@ -359,17 +359,17 @@ function simple_ldap_user_profile_map_form($form, $form_state) {
   $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
   $delimiter_options = array(
     'array' => t('Multivalue field (array)'),
-    'crlf' => t('Multiline field (\\n)'),
+    'cr' => t('Multiline field (\\r)'),
     'dollar' => t('Dollar sign ($)'),
   );
 
   foreach ($attribute_map as $key => $value) {
     if (is_array($value) && count($value) > 1) {
-      $form['delimiters']['simple_ldap_user_attribute_delimiter_' . $key] = array(
+      $form['delimiters']['simple_ldap_user_delimiter_' . $key] = array(
         '#type' => 'select',
         '#title' => $key,
         '#options' => $delimiter_options,
-        '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_attribute_delimiter_' . $key),
+        '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_delimiter_' . $key),
       );
     }
   }
@@ -396,18 +396,23 @@ function simple_ldap_user_profile_map_form_submit($form, &$form_state) {
       $field = substr($key, 27);
       $attribute_map[$value][] = $field;
     }
-    if ((strpos($key, 'simple_ldap_user_attribute_delimiter_') !== FALSE) && !empty($value)) {
-      $attr = substr($key, 37);
-      $attribute_map[$attr]['#delimiter'] = $value;
+    if ((strpos($key, 'simple_ldap_user_delimiter_') !== FALSE) && !empty($value)) {
+      $attr = substr($key, 27);
+      if ($value == 'array') {
+        unset($attribute_map[$attr]['#delimiter']);
+      } 
+      else {
+        $attribute_map[$attr]["#delimiter"] = ($value == 'cr') ? "\r" : '$';
+      }
     }
   }
 
-  // Remove #delimter from singleton values    
+  // Remove #delimiter from singleton values    
   foreach($attribute_map as $key => &$values) {
     if (array_key_exists('#delimiter', $values)) {
       if (count($values) == 2) {
         unset($values['#delimiter']);
-        variable_del('simple_ldap_user_attribute_delimiter_' . $key);
+        variable_del('simple_ldap_user_delimiter_' . $key);
       }
     }
   }
