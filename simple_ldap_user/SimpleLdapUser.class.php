@@ -258,7 +258,6 @@ class SimpleLdapUser {
       unset($this->attributes[$attribute_rdn]);
     }
 
-    unset($this->attributes['street']);
     if ($this->exists) {
       // Update existing entry.
       $this->server->modify($this->dn, $this->attributes);
