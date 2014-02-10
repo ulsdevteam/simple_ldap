@@ -108,8 +108,8 @@ function simple_ldap_user_translate_term_ldap_to_drupal(&$edit, $info, $items, $
 
   // Don't save if the existing list matches the LDAP list
   if (($items == $tids) || count($items) == count($tids)) {
-    $local_tids = array_map('_simple_ldap_user_tid_value', $items);
-    $ldap_tids = array_map('_simple_ldap_user_tid_value', $tids);
+    $local_tids = array_map('_simple_ldap_user_tid_value', empty($items) ? array() : $items);
+    $ldap_tids = array_map('_simple_ldap_user_tid_value', empty($tids) ? array() : $tids);
 
     sort($local_tids);
     sort($ldap_tids);
