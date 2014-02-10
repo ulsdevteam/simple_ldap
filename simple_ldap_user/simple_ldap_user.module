@@ -1036,10 +1036,18 @@ function simple_ldap_user_export_user($uid, $context) {
  * that the module has not yet been configured.
  */
 function simple_ldap_user_variable_get($name, $default = NULL, $force_default = FALSE) {
+  // Cache certain variables
+  static $cache = array();
+
   // Allow variable name shorthand by prepending 'simple_ldap_user_' to $name if
   // it is not already there.
   if (strpos($name, 'simple_ldap_user_') !== 0) {
     $name = 'simple_ldap_user_' . $name;
+  }
+
+  // Returned cached value if present
+  if (array_key_exists($name, $cache)) {
+    return $cache[$name];
   }
 
   // Get an LDAP server object.
@@ -1056,13 +1064,6 @@ function simple_ldap_user_variable_get($name, $default = NULL, $force_default = 
 
     case 'simple_ldap_user_attribute_map':
       // Load the attribute map from settings.php.
-      static $attribute_map = array();
-
-      // Return a pre-cooked map
-      if (!empty($attribute_map)) {
-        return $attribute_map;
-      }
-
       $attribute_map = variable_get($name, array());
       // LDAP likes lowercase.
       array_change_key_case($attribute_map, CASE_LOWER);
@@ -1073,6 +1074,7 @@ function simple_ldap_user_variable_get($name, $default = NULL, $force_default = 
         }
       }
 
+      $cache[$name] = $attribute_map;
       return $attribute_map;
   }
 
