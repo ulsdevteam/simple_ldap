@@ -1028,6 +1028,26 @@ function simple_ldap_user_export_user($uid, $context) {
   $context['message'] = 'Exporting ' . $user->name;
 }
 
+function simple_ldap_user_parent_objectclasses($classes) {
+  if (!is_array($classes)) {
+    $classes = array($classes);
+  }
+
+  // Pull the available LDAP schemas from the server
+  $server = SimpleLdapServer::singleton();
+  $schema = $server->schema;
+
+  foreach ($classes as $class) {
+    if (empty($class)) {
+      continue;
+    }
+    $result[] = $class;
+    $result = array_merge($result, $schema->superclass($class, TRUE));
+  }
+
+  return array_unique(array_map('strtolower', $result));
+}
+
 /**
  * Returns the value for the specified variable.
  *
