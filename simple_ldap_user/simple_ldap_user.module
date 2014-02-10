@@ -779,7 +779,7 @@ function simple_ldap_user_base_field_to_drupal(&$edit, $drupal_user, $ldap_value
 
       // Otherwise, create a FID
       $name_field = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
-      $filename = file_default_scheme() . '://' . variable_get('user_picture_path', 'pictures') . '/' . $ldap_user->{$name_field}[0] . '.jpg';
+      $filename = file_default_scheme() . '://' . variable_get('user_picture_path', 'pictures') . '/' . preg_replace('/\W+/', '_', $drupal_user->name) . '.jpg';
       $file_obj = file_save_data($ldap_value, $filename, FILE_EXISTS_RENAME);
       $edit[$drupal_field_name] = $file_obj;
       break;
@@ -942,6 +942,7 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
       }
 
       // Map one at a time if mapping across multiple fields
+      // TODO: $values may not have enough entries. 
       $map_values = ($one_to_many) ? array($values[$key], 'count' => 1) : $values;
 
       $field = $user_fields[$drupal_field_name];
