@@ -300,17 +300,9 @@ function simple_ldap_user_profile_map_form($form, $form_state) {
   // Pull the available LDAP schemas from the server
   $schema = $server->schema;
 
-  // Pull the Object Classes selected for users.
-  $classes = array();
-  $user_object_classes = variable_get('simple_ldap_user_objectclass', array());
-  foreach ($user_object_classes as $class) {
-    if (empty($class)) {
-      continue;
-    }
-    $classes = $schema->superclass($class, TRUE);
-    array_push($classes, $class);
-  }
-  $classes = array_unique($classes);
+  // Pull the LDAP objectClasses selected for users, plus any parent classes.
+  $classes = simple_ldap_user_variable_get('simple_ldap_user_objectclass');
+  $classes = simple_ldap_user_parent_objectclasses($classes);
 
   // Pull the fields defined for user profiles
   // ToDo: Support user profile modules
