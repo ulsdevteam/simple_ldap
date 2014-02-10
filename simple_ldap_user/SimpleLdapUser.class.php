@@ -164,7 +164,7 @@ class SimpleLdapUser {
             // Save the old DN, so a move operation can be done during save().
             $this->move = $this->dn;
             $this->dn = $value;
-            $this->dirty['dn'] = 'dn';
+            $this->dirty['dn'] = $value;
           } catch (SimpleLdapException $e) {}
         }
         break;
@@ -204,7 +204,7 @@ class SimpleLdapUser {
         // If there are any differences, update the current value.
         if (!empty($diff1) || !empty($diff2)) {
           $this->attributes[$name] = $value;
-          $this->dirty[$name] = $name;
+          $this->dirty[$name] = $value;
         }
 
     }
@@ -259,8 +259,8 @@ class SimpleLdapUser {
     }
 
     if ($this->exists) {
-      // Update existing entry.
-      $this->server->modify($this->dn, $this->attributes);
+      // Update existing entry, writing out only changed values
+      $this->server->modify($this->dn, $this->dirty);
     }
     else {
       // Create new entry.
@@ -270,7 +270,8 @@ class SimpleLdapUser {
       } catch (SimpleLdapException $e) {
         if ($e->getCode() == 68) {
           // An "already exists" error was returned, try to do a modify instead.
-          $this->server->modify($this->dn, array_values($this->dirty));
+          // We don't know what is dirty, so write the whole record
+          $this->server->modify($this->dn, $this->attributes);
         }
         else {
           throw $e;
