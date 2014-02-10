@@ -265,7 +265,7 @@ class SimpleLdapUser {
     else {
       // Create new entry.
       try {
-        $this->attributes['objectclass'] = array_values(simple_ldap_user_variable_get('simple_ldap_user_objectclass'));
+        $this->attributes['objectclass'] = simple_ldap_user_parent_objectclasses(simple_ldap_user_variable_get('simple_ldap_user_objectclass'));
         $this->server->add($this->dn, $this->attributes);
       } catch (SimpleLdapException $e) {
         if ($e->getCode() == 68) {
