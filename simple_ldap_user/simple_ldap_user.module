@@ -914,9 +914,12 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
     // Skip drupal-to-ldap many-to-one mappings.
 
     $one_to_many = FALSE;
+    $values = array();
     if (count($drupal_fields) > 2) {
       if (array_key_exists('#delimiter', $drupal_fields)) {
-        $values = explode($drupal_fields['#delimiter'], $ldap_user->{$ldap_attr}[0]);
+        if (array_key_exists(0, $ldap_user->{$ldap_attr})) {
+          $values = explode($drupal_fields['#delimiter'], $ldap_user->{$ldap_attr}[0]);
+        }
         $values['count'] = count($values);
         $one_to_many = TRUE;
       }
