@@ -946,7 +946,12 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
 
       // Map one at a time if mapping across multiple fields
       // TODO: $values may not have enough entries. 
-      $map_values = ($one_to_many) ? array($values[$key], 'count' => 1) : $values;
+      if ($one_to_many) {
+        $map_values = (array_key_exists($key, $values)) ? array($values[$key], 'count' => 1) : array('count' => 0);
+      }
+      else {
+        $map_values = $values;
+      }
 
       $field = $user_fields[$drupal_field_name];
       switch ($field['module']) {
