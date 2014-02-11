@@ -165,7 +165,11 @@ class SimpleLdapSchema {
       }
     }
 
-    throw new SimpleLdapException('The requested entry does not exist: ' . $attribute . ', ' . $name);
+    watchdog('Simple LDAP', 'The requested entry %attribute (@name) does not exist.', array('%attribute' => $attribute, '@name' => $name), WATCHDOG_ERROR);
+    if (user_access('administer site configuration')) {
+      drupal_set_message(t('The requested entry %attribute (@name) does not exist.', array('%attribute' => $attribute, '@name' => $name)), 'error');
+    }
+    //throw new SimpleLdapException('The requested entry does not exist: ' . $attribute . ', ' . $name);
   }
 
   /**
