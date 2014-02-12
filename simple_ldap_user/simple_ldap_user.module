@@ -243,61 +243,14 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
     if ($ldap_user->exists) {
       // Force an initial sync from LDAP to drupal.
       $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
-      $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
-      $user_fields = simple_ldap_user_user_fields();
 
       // Get the user's email address.
       $edit['mail'] = $ldap_user->{$attribute_mail}[0];
 
       // Get the remaining mapped attributes.
 
-      // ---- TODO: REFACTOR - This code is copy/pasted from simple_ldap_user_sync_user_to_drupal() below. ---
-      // TODO: Do we need this copy at all?
-
-      // Synchronize the fields in the attribute map.
-      foreach ($attribute_map as $ldap_attr => $drupal_fields) {
-        // Skip drupal-to-ldap many-to-one mappings.
-        if (count($drupal_fields) > 1) {
-          // TODO: Fix this
-          continue;
-        }
-
-        foreach($drupal_fields as $key => $drupal_field_name) {
-          // Skip special items like #delimeter
-          if (!is_int($key)) {
-            continue;
-          }
-
-          // Skip the password field
-          if ($drupal_field_name == 'pass') {
-            continue;
-          }
-
-          // Skip if not in user field list
-          if (!array_key_exists($drupal_field_name, $user_fields)) {
-            continue;
-          }
-
-          $field = $user_fields[$drupal_field_name];
-          switch ($field['module']) {
-
-            // Update the value in drupal using Field API.
-            case 'field':
-              // Get the Drupal field values and metadata.
-              simple_ldap_user_translate_ldap_attr_to_drupal($edit, $account, $ldap_user->$ldap_attr, $drupal_field_name);
-              break;
-
-            // Update the value directly on the user object.
-            case 'user':
-              simple_ldap_user_base_field_to_drupal($edit, $account, $ldap_user, $drupal_field_name, $ldap_attr);
-              break;
-
-            default:
-              watchdog('Simple LDAP', 'Field from unknown module %module. (not supported yet)', array('%module' => $field['module']), WATCHDOG_WARNING);
-          }
-        }
-      }
-      // --- END TODO:REFACTOR ---
+      // Process the LDAP user to generate the edit array that gets passed to user_save();
+      simple_ldap_user_generte_edit_ldap_to_drupal($edit, $ldap_user, $account);
     }
   }
 
@@ -895,19 +848,42 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
  * Synchronizes LDAP attributes to Drupal user properties.
  */
 function simple_ldap_user_sync_user_to_drupal($drupal_user) {
-  $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
-  $user_fields = simple_ldap_user_user_fields();
+  // Skip UID 1
+  if (property_exists($drupal_user, 'uid') && ($drupal_user->uid == 1)) {
+    return;
+  }
 
   // Load the LDAP user, force a cache reset.
   $ldap_user = SimpleLdapUser::singleton($drupal_user->name, TRUE);
 
   // Nothing to sync.
-  if (!$ldap_user->exists || (isset($drupal_user->uid) && $drupal_user->uid == 1)) {
+  if (!$ldap_user->exists) {
     return;
   }
 
   // Initialize array of attribute changes.
   $edit = array();
+
+  // Process the LDAP user to generate the edit array that gets passed to user_save();
+  simple_ldap_user_generte_edit_ldap_to_drupal($edit, $ldap_user, $drupal_user);
+
+  // Save any changes.
+  if (!empty($edit)) {
+    if (!isset($drupal_user->original)) {
+      // This avoids an infinite load/save loop.
+      $drupal_user->original = clone $drupal_user;
+    }
+    $drupal_user->hook_sync_user_to_drupal = TRUE;
+    $drupal_user = user_save($drupal_user, $edit);
+  }
+
+  // Synchronized user.
+  return $drupal_user;
+}
+
+function simple_ldap_user_generte_edit_ldap_to_drupal(&$edit, $ldap_user, $account) {
+  $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
+  $user_fields = simple_ldap_user_user_fields();
 
   // Synchronize the fields in the attribute map.
   foreach ($attribute_map as $ldap_attr => $drupal_fields) {
@@ -959,12 +935,12 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
         // Update the value in drupal using Field API.
         case 'field':
           // Get the Drupal field values and metadata.
-          simple_ldap_user_translate_ldap_attr_to_drupal($edit, $drupal_user, $map_values, $drupal_field_name);
+          simple_ldap_user_translate_ldap_attr_to_drupal($edit, $account, $map_values, $drupal_field_name);
           break;
 
         // Update the value directly on the user object.
         case 'user':
-          simple_ldap_user_base_field_to_drupal($edit, $drupal_user, $map_values, $drupal_field_name);
+          simple_ldap_user_base_field_to_drupal($edit, $account, $map_values, $drupal_field_name);
           break;
 
         default:
@@ -974,20 +950,7 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
   }
 
   // Allow altering the Drupal user object before saving.
-  drupal_alter('simple_ldap_user_to_drupal', $edit, $drupal_user, $ldap_user);
-
-  // Save any changes.
-  if (!empty($edit)) {
-    if (!isset($drupal_user->original)) {
-      // This avoids an infinite load/save loop.
-      $drupal_user->original = clone $drupal_user;
-    }
-    $drupal_user->hook_sync_user_to_drupal = TRUE;
-    $drupal_user = user_save($drupal_user, $edit);
-  }
-
-  // Synchronized user.
-  return $drupal_user;
+  drupal_alter('simple_ldap_user_to_drupal', $edit, $account, $ldap_user);
 }
 
 /**
