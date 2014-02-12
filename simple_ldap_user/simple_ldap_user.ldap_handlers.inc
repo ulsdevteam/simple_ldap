@@ -123,11 +123,17 @@ function simple_ldap_user_translate_term_ldap_to_drupal(&$edit, $info, $items, $
 
 function simple_ldap_user_translate_term_drupal_to_ldap(&$value, $field_info, $items) {
   if (is_array($items)) {
+    $tids = array();
+    // Collect the TIDs.
     foreach ($items as $item) {
-      $terms = taxonomy_term_load_multiple($items);
-      foreach ($terms as $term) {
-        $value[] = $term->name;
-      }
+      $tids = array_merge($tids, array_values($item));
+    }
+    // Load the terms by TID
+    $terms = taxonomy_term_load_multiple($tids);
+
+    // Save the term.
+    foreach ($terms as $term) {
+      $value[] = $term->name;
     }
   }  
 }
