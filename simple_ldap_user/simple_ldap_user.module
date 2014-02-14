@@ -683,12 +683,12 @@ function simple_ldap_user_base_field_to_ldap(&$ldap_edit, $account, $drupal_fiel
       date_default_timezone_set($tz);
       break;
     case 'picture':
-      $file = file_load($account->picture);
+      $file = file_load(empty($account->picture) ? 0 : $account->picture);
       if (!empty($file)) {
         $ldap_edit[] = file_get_contents($file->uri);
       }
       else {
-        $ldap_edit[] = NULL;
+        $ldap_edit[] = 0;
       }
       break;
     case 'status':
