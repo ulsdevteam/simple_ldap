@@ -587,6 +587,11 @@ function simple_ldap_user_simple_ldap_data_handlers() {
       'export_callback' => 'simple_ldap_user_translate_url_drupal_to_ldap',
       'file' => $handlers_file,
     ),
+    'datetime' => array(
+      'import_callback' => 'simple_ldap_user_translate_datetime_ldap_to_drupal',
+      'export_callback' => 'simple_ldap_user_translate_datetime_drupal_to_ldap',
+      'file' => $handlers_file,
+    ),
     '#default' => array(
       'import_callback' => 'simple_ldap_user_default_import_handler',
       'export_callback' => 'simple_ldap_user_default_export_handler',

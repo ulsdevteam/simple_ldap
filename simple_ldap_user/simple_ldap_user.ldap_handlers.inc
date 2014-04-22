@@ -55,6 +55,39 @@ function simple_ldap_user_translate_basic_drupal_to_ldap(&$value, $field_info, $
   }  
 }
 
+function simple_ldap_user_translate_datetime_ldap_to_drupal(&$edit, $info, $items, $ldap_attr, $language) {
+  // Synchronize types that go in ['value'] and are strings
+  $dirty = FALSE;
+  for ($i = 0; $i < $ldap_attr['count']; $i++) {
+    if ($i < $info['cardinality'] || $info['cardinality'] == FIELD_CARDINALITY_UNLIMITED) {
+      $formatted_time = date('Y-m-d H:i:s', strtotime($ldap_attr[$i]));
+      $edit[$info['field_name']][$language][$i] = array(
+        'value' => $formatted_time,
+        'timezone' => 'UTC',
+        'timezone_db' => 'UTC',
+      );
+
+      if ($items[$i]['value'] != $formatted_time) {
+        $dirty = TRUE;
+      }
+    }
+  }
+
+  // Check if any changes were actually made.
+  if (!$dirty) {
+    unset($edit[$info['field_name']]);
+  }
+}
+
+function simple_ldap_user_translate_datetime_drupal_to_ldap(&$value, $field_info, $items) {
+  if (is_array($items)) {
+    foreach ($items as $item) {
+      if (isset($item['value'])) {
+        $value[] = date('YmdHis', $item['value']) . 'Z';
+      }
+    }
+  }  
+}
 
 function simple_ldap_user_translate_file_ldap_to_drupal(&$edit, $info, $items, $ldap_attr, $language) {
   $dirty = FALSE;
@@ -137,7 +170,6 @@ function simple_ldap_user_translate_term_drupal_to_ldap(&$value, $field_info, $i
     }
   }  
 }
-
 
 // Helper function used by array_map() above.
 function _simple_ldap_user_tid_value($val) {
