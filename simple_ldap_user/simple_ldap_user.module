@@ -260,10 +260,10 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
 
     //New name edited or programmatically set ?
     $new_username = '';
-    if (!empty($edit['name']) && $account->original->name !== $edit['name']) {
+    if (!empty($edit['name']) && strcasecmp($account->original->name, $edit['name']) != 0) {
       $new_username = $edit['name'];
     }
-    elseif ($account->original->name !== $account->name) {
+    elseif (strcasecmp($account->original->name, $account->name) != 0) {
       $new_username = $account->name;
     }
 
