@@ -689,7 +689,7 @@ function simple_ldap_user_base_field_to_ldap(&$ldap_edit, $account, $drupal_fiel
       break;
     case 'picture':
       if (is_object($account->picture)) {
-        $file = account->picture;
+        $file = $account->picture;
       }
       else {
         $file = file_load(empty($account->picture) ? 0 : $account->picture);
