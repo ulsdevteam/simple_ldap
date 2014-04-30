@@ -33,11 +33,14 @@ function _simple_ldap_user_drush_found($authname, $user, $ldap_user) {
 }
 
 function _simple_ldap_user_drush_missing($authname, $user) {
-  simple_ldap_user_export_user($user['uid']);
+  $context = array();
+  simple_ldap_user_export_user($user['uid'], $context);
   drush_log(dt('Provisioning @user', array('@user' => $user['name'])), 'ok');
 }
 
 function simple_ldap_user_drush_scan_all($found_callback = NULL, $not_found_callback = NULL) {
+  $user_total_count = db_query("SELECT COUNT(*) AS count FROM {users}")->fetchAssoc();
+  $user_total_count = $user_total_count['count'];
   $sql = "SELECT * FROM {users} u";
 
   $result = db_query($sql);
@@ -54,6 +57,9 @@ function simple_ldap_user_drush_scan_all($found_callback = NULL, $not_found_call
     }
 
     $user_count++;
+    if (($user_count % 1024) == 0) {
+      printf("%d%% complete...\r", (int)(100*$user_count / $user_total_count));
+    }
 
     $authname = db_query("SELECT authname FROM {authmap} WHERE uid=:uid", array(':uid' => $user['uid']))->fetchAssoc();
     $ldap_user = SimpleLdapUser::singleton($user['name']);
@@ -72,7 +78,9 @@ function simple_ldap_user_drush_scan_all($found_callback = NULL, $not_found_call
       }
       $missing_count++;
     }
+    SimpleLdapUser::reset($user['name']);
   }
+  printf("100%% complete...\nDone\n");
 
   if ($missing_count > 0) {
     drush_log(dt('Found @found with LDAP records.', array('@found' => format_plural($found_count, '1 user', '@count users'))), 'warning');
