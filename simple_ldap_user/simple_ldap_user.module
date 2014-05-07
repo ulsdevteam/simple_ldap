@@ -702,7 +702,8 @@ function simple_ldap_user_base_field_to_ldap(&$ldap_edit, $account, $drupal_fiel
       }
       break;
     case 'status':
-      $ldap_edit[] = ($account->status) ? "1" : "0";
+      $status = (property_exists($account, 'simple_ldap_user_drupal_status')) ? $account->simple_ldap_user_drupal_status : $account->status;
+      $ldap_edit[] = ($status) ? "1" : "0";
       break;
     default:
       $ldap_edit[] = $account->$drupal_field_name;
