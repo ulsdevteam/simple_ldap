@@ -1003,12 +1003,13 @@ function simple_ldap_user_export($users) {
 
 /**
  * Batch process function for mass user export.
+ * &$context comes from batch_set().
  */
-function simple_ldap_user_export_user($uid, $context) {
+function simple_ldap_user_export_user($uid, &$context) {
   // Sync user to LDAP.
-  $user = user_load($uid);
-  simple_ldap_user_sync_user_to_ldap($user);
-  $context['message'] = 'Exporting ' . $user->name;
+  $account = user_load($uid);
+  simple_ldap_user_sync_user_to_ldap($account);
+  unset($account);
 }
 
 function simple_ldap_user_parent_objectclasses($classes) {

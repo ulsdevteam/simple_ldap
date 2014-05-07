@@ -1,4 +1,12 @@
 <?php
+// From http://stackoverflow.com/a/2510540
+function _formatBytes($size, $precision = 2)
+{
+    $base = log($size) / log(1024);
+    $suffixes = array('', 'k', 'M', 'G', 'T');   
+
+    return round(pow(1024, $base - floor($base)), $precision) . $suffixes[floor($base)];
+}
 
 /**
  * Implementation of hook_drush_command()
@@ -27,14 +35,14 @@ function simple_ldap_user_drush_export_all() {
 
 function _simple_ldap_user_drush_found($authname, $user, $ldap_user) {
   if (empty($authname)) {
-    $account = user_load($user['uid']);
+    $account = user_load($user['uid'], TRUE);
     user_set_authmaps($account, array('authname_simple_ldap' => $ldap_user->dn));
   }
 }
 
 function _simple_ldap_user_drush_missing($authname, $user) {
-  $context = array();
-  simple_ldap_user_export_user($user['uid'], $context);
+  $dummy_context = array();
+  simple_ldap_user_export_user($user['uid'], $dummy_context);
   drush_log(dt('Provisioning @user', array('@user' => $user['name'])), 'ok');
 }
 
@@ -58,7 +66,8 @@ function simple_ldap_user_drush_scan_all($found_callback = NULL, $not_found_call
 
     $user_count++;
     if (($user_count % 1024) == 0) {
-      printf("%d%% complete...\r", (int)(100*$user_count / $user_total_count));
+      printf("  %d%% complete (%s)...\r", (int)(100*$user_count / $user_total_count), _formatBytes(memory_get_usage()));
+      gc_collect_cycles();
     }
 
     $authname = db_query("SELECT authname FROM {authmap} WHERE uid=:uid", array(':uid' => $user['uid']))->fetchAssoc();
@@ -78,9 +87,11 @@ function simple_ldap_user_drush_scan_all($found_callback = NULL, $not_found_call
       }
       $missing_count++;
     }
-    SimpleLdapUser::reset($user['name']);
+    SimpleLdapUser::reset();
+    unset($user);
+    unset($ldap_user);
   }
-  printf("100%% complete...\nDone\n");
+  printf("100%% complete (%s / %s)...\nDone\n", _formatBytes(memory_get_usage()), _formatBytes(memory_get_peak_usage()));
 
   if ($missing_count > 0) {
     drush_log(dt('Found @found with LDAP records.', array('@found' => format_plural($found_count, '1 user', '@count users'))), 'warning');
@@ -89,5 +100,4 @@ function simple_ldap_user_drush_scan_all($found_callback = NULL, $not_found_call
   } else {
     drush_log(dt('Found all @found', array('@found' => format_plural($found_count, '1 user', '@count users'))), 'ok');
   }
-
 }
