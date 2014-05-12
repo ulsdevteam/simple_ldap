@@ -232,40 +232,62 @@ function user_hash_password($password, $count_log2 = 0) {
 function user_check_password($password, $account) {
   // Use normal authentication for User1.
   if ($account->uid == 1) {
-    if (substr($account->pass, 0, 2) == 'U$') {
-      // This may be an updated password from user_update_7000(). Such hashes
-      // have 'U' added as the first character and need an extra md5().
-      $stored_hash = substr($account->pass, 1);
-      $password = md5($password);
-    }
-    else {
-      $stored_hash = $account->pass;
-    }
-
-    $type = substr($stored_hash, 0, 3);
-    switch ($type) {
-      case '$S$':
-        // A normal Drupal 7 password using sha512.
-        $hash = _password_crypt('sha512', $password, $stored_hash);
-        break;
-
-      case '$H$':
-        // phpBB3 uses "$H$" for the same thing as "$P$".
-      case '$P$':
-        // A phpass password generated using md5.  This is an
-        // imported password or from an earlier Drupal version.
-        $hash = _password_crypt('md5', $password, $stored_hash);
-        break;
-
-      default:
-        return FALSE;
-    }
-    return ($hash && $stored_hash == $hash);
+    return user_check_drupal_password($password, $account);
   }
+
+  $fallback = simple_ldap_user_variable_get('simple_ldap_user_auth_fallback');
 
   // Use LDAP authentication for everyone else.
   $ldap_user = SimpleLdapUser::singleton($account->name);
-  return $ldap_user->authenticate($password);
+  if ($ldap_user->exists && !empty($ldap_user->pass)) {
+    return $ldap_user->authenticate($password);
+  }
+
+  $valid_password = FALSE;
+
+  // If the user is in LDAP, but has no password set AND we are set to fallback to Drupal, check Drupal.
+  if ($ldap_user->exists && empty($ldap_user->pass) && in_array($fallback, array('nopass', 'norecord_nopass'))) {
+    $valid_password = user_check_drupal_password($password, $account);
+  }
+  // If the user is NOT in LDAP at all, AND we are set to fallback to Drupal, check Drupal
+  elseif (!$ldap_user->exists && in_array($fallback, array('norecord', 'norecord_nopass'))) {
+    $valid_password = user_check_drupal_password($password, $account);
+  }
+
+  // Could not authenticate, return FALSE
+  return $valid_password;
+}
+
+function user_check_drupal_password($password, $account) {
+  if (substr($account->pass, 0, 2) == 'U$') {
+    // This may be an updated password from user_update_7000(). Such hashes
+    // have 'U' added as the first character and need an extra md5().
+    $stored_hash = substr($account->pass, 1);
+    $password = md5($password);
+  }
+  else {
+    $stored_hash = $account->pass;
+  }
+
+  $type = substr($stored_hash, 0, 3);
+  switch ($type) {
+    case '$S$':
+      // A normal Drupal 7 password using sha512.
+      $hash = _password_crypt('sha512', $password, $stored_hash);
+      break;
+
+    case '$H$':
+      // phpBB3 uses "$H$" for the same thing as "$P$".
+    case '$P$':
+      // A phpass password generated using md5.  This is an
+      // imported password or from an earlier Drupal version.
+      $hash = _password_crypt('md5', $password, $stored_hash);
+      break;
+
+    default:
+      return FALSE;
+  }
+  return ($hash && $stored_hash == $hash);
 }
 
 /**
@@ -295,4 +317,27 @@ function user_needs_new_hash($account) {
   $count_log2 = _password_enforce_log2_boundaries(variable_get('password_count_log2', DRUPAL_HASH_COUNT));
   // Check whether the iteration count used differs from the standard number.
   return (_password_get_count_log2($account->pass) !== $count_log2);
+}
+
+/**
+ * Add a fall-back option when authenticating against LDAP.
+ */
+function simple_ldap_user_form_simple_ldap_user_admin_alter(&$form, &$form_state, $form_id) {
+  $form['advanced']['simple_ldap_user_auth_fallback'] = array(
+    '#type' => 'radios',
+    '#title' => t('Authentication'),
+    '#options' => array(
+      'never' => t('LDAP only (recommended)'),
+      'nopass' => t('LDAP, fallback to Drupal if LDAP password is empty'),
+      'norecord' => t('LDAP, fallback to Drupal if no LDAP record exists'),
+      'norecord_nopass' => t('LDAP, fallback to Drupal if no LDAP record exists or LDAP password is empty'),
+    ),
+    '#description' => t('How should Simple LDAP authenticate users.  Must select a User Password Attribute above to set this option.'),
+    '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_auth_fallback'),
+    '#states' => array(
+      'disabled' => array(
+        ':input[name="simple_ldap_user_attribute_pass"]' => array('value' => 0),
+      ),
+    ),
+  );
 }

@@ -8,6 +8,9 @@
  * Simple LDAP User configuration form.
  */
 function simple_ldap_user_admin($form, &$form_state) {
+  // If we're the one's doing password management, we have a hook_form_FORM_ID_alter() to include. 
+  require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
+
   $form = array();
 
   // Get an LDAP server object.
@@ -241,6 +244,7 @@ function simple_ldap_user_admin($form, &$form_state) {
   $form['advanced']['simple_ldap_user_attribute_map'] = array(
     '#type' => 'item',
     '#title' => t('Attribute map'),
+    '#weight' => 10,
     '#description' => $table . t('Additional attribute maps can be specified in @file using @variable.', array('@file' => 'settings.php', '@variable' => '$conf[\'simple_ldap_user_attribute_map\']')) . ' ' . t('See @readme for more details', array('@readme' => 'README.txt')),
   );
 
@@ -280,7 +284,6 @@ function simple_ldap_user_objectclass_ajax($form, $form_state) {
     $form['user']['simple_ldap_user_attribute_pass'],
   );
 }
-
 
 /**
  * Admin form for mapping Drupal user attributes to LDAP attributes
