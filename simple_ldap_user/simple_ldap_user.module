@@ -1111,7 +1111,8 @@ function simple_ldap_user_variable_get($name, $default = NULL, $force_default = 
   $defaults['simple_ldap_user_source'] = 'ldap';
   $defaults['simple_ldap_user_sync'] = 'hook_user_load';
   $defaults['simple_ldap_user_delete_from_ldap'] = '1';
-  $defaults['simple_ldap_user_auth_fallback'] = 'never';
+  $defaults['simple_ldap_user_auth_fallback'] = array();
+  $defaults['simple_ldap_user_auth_fallback_writeback'] = array();
 
   // Determine the default value for the given variable.
   $default = isset($defaults[$name]) ? $defaults[$name] : $default;
