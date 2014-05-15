@@ -237,17 +237,23 @@ function user_check_password($password, $account) {
 
   $fallback = simple_ldap_user_variable_get('simple_ldap_user_auth_fallback');
   $fallback_writeback = simple_ldap_user_variable_get('simple_ldap_user_auth_fallback_writeback');
+  $password_attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_pass');
 
   // Use LDAP authentication for everyone else.
   $ldap_user = SimpleLdapUser::singleton($account->name);
-  if ($ldap_user->exists && !empty($ldap_user->pass)) {
-    return $ldap_user->authenticate($password);
+  $password_attribute = $ldap_user->{$password_attribute_name};
+
+  if (!empty($password_attribute) && !empty($password_attribute) && ($password_attribute['count'] != 0)) {
+    $ldap_password = $password_attribute[0];
   }
 
+  if ($ldap_user->exists && (!empty($ldap_password))) {
+    return $ldap_user->authenticate($password);
+  }
   $valid_password = FALSE;
 
   // If the user is in LDAP, but has no password set AND we are set to fallback to Drupal, check Drupal.
-  if ($ldap_user->exists && empty($ldap_user->pass) && in_array('nopass', $fallback, TRUE)) {
+  if ($ldap_user->exists && empty($ldap_password) && in_array('nopass', $fallback, TRUE)) {
     $valid_password = simple_ldap_user_check_drupal_password($password, $account);
     if ($valid_password && in_array('nopass', $fallback_writeback, TRUE)) {
       $account->writeback_password = TRUE; 
@@ -351,7 +357,7 @@ function simple_ldap_user_form_simple_ldap_user_admin_alter(&$form, &$form_state
       'nopass' => t('fallback to Drupal if LDAP password is empty'),
       'norecord' => t('fallback to Drupal if no LDAP record exists'),
     ),
-    '#description' => t('Simple LDAP can fallback to using the password saved in the Drupal database.  Select when (if ever) this should be done.'),
+    '#description' => t('Simple LDAP can fallback to using the password saved in the Drupal database.  Select when (if ever) this should be done.  Requires a password attribute to be seelcted above.'),
     '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_auth_fallback'),
   );
 
