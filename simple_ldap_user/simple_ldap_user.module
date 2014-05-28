@@ -346,11 +346,21 @@ function simple_ldap_user_user_delete($account) {
     return;
   }
 
+  // Call hook_simple_ldap_user_delete so other modules can create customized delete behavior.
+  $ldap_user = SimpleLdapUser::singleton($account->name);
+  $user_altered = array_filter(module_invoke_all('simple_ldap_user_delete', $account, $ldap_user));
+  if (!empty($user_altered)) {
+    try {
+      $ldap_user->save();
+    } catch (SimpleLdapException $e) {
+      watchdog('Simple LDAP', 'Failed to save changes to @dn from hook_simple_ldap_user_delete().', array('@dn' => $ldap_user->dn, WATCHDOG_ERROR));
+    }
+  };
+
   if (!simple_ldap_user_variable_get('simple_ldap_user_delete_from_ldap')) {
     return;
   }
 
-  $ldap_user = SimpleLdapUser::singleton($account->name);
   try {
     $ldap_user->delete();
   } catch (SimpleLdapException $e) {

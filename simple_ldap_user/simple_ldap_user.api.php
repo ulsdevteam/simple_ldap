@@ -91,6 +91,19 @@ function hook_simple_ldap_user_to_drupal_alter($edit, $drupal_user, $ldap_user) 
 function hook_simple_ldap_user_to_ldap_alter($ldap_user, $drupal_user) {
 }
 
+/**
+ * SimpleLDAP will call this during user_load() after fetching the entry from 
+ * the LDAP server.  If any module returns TRUE, the user will be deleted and
+ * user_load() will ultimately return NULL. 
+ * 
+ * @param StdClass $drupal_user
+ *   The Drupal user object that matches the SimpleLdapUser object.
+ * @param SimpleLdapUser $ldap_user
+ *   The SimpleLdapUser object to be saved.
+ */
+function hook_simple_ldap_user_should_delete_user($account, $ldap_user) {
+  return ($ldap_user->status[0] == 'deleted');
+}
 
 /**
  * Gather extra LDAP attributes to load when fetching a user LDAP record.
@@ -102,6 +115,6 @@ function hook_simple_ldap_user_to_ldap_alter($ldap_user, $drupal_user) {
  *
  * @return An array of extra attributes to be laoded.
  */
- funciton hook_simple_ldap_user_extra_attributes($server) {
+ function hook_simple_ldap_user_extra_attributes($server) {
     return array('postalAddress');
  }
