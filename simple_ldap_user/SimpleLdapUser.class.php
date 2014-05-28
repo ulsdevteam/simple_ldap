@@ -43,15 +43,17 @@ class SimpleLdapUser {
       $attribute_mail => $attribute_mail
     );
     $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
-    foreach(array_keys($attribute_map) as $ldap) {
-      $attributes[$ldap] = $ldap;
-    }
 
-    $extra_attributes = simple_ldap_user_variable_get('simple_ldap_user_extra_attrs');
-    $attributes += array_combine($extra_attributes, $extra_attributes);
+    // Collect all the attributes to load
+    $attributes = array_keys($attribute_map);
+    $config_extra_attributes = array_values(simple_ldap_user_variable_get('simple_ldap_user_extra_attrs'));
+    $hook_extra_attributes = array_values(module_invoke_all('simple_ldap_user_extra_attributes', $this->server));
 
-    // ldap_search can't handle key'd arrays.
-    $attributes = array_values($attributes);
+    // Merge them into a single array.
+    $attributes = array_merge($attributes, $config_extra_attributes, $hook_extra_attributes);
+
+    // filter to keep ldap_search happy
+    $attributes = array_unique(array_map('strtolower', array_values($attributes)));
 
     // Include the userAccountControl attribute for Active Directory.
     try {

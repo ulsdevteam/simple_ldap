@@ -90,3 +90,18 @@ function hook_simple_ldap_user_to_drupal_alter($edit, $drupal_user, $ldap_user) 
  */
 function hook_simple_ldap_user_to_ldap_alter($ldap_user, $drupal_user) {
 }
+
+
+/**
+ * Gather extra LDAP attributes to load when fetching a user LDAP record.
+ *
+ * This hook is called when a user is being fetched from the LDAP server.
+ *
+ * @param SimpleLdapServer $server The server object about to be searched 
+ *   for the user record(s) resides.
+ *
+ * @return An array of extra attributes to be laoded.
+ */
+ funciton hook_simple_ldap_user_extra_attributes($server) {
+    return array('postalAddress');
+ }
