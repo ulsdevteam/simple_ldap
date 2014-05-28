@@ -377,6 +377,26 @@ function simple_ldap_user_profile_map_form($form, $form_state) {
     );
   }
 
+  $form['extra_attrs_fieldset'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Load Additional Attributes'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+  $form['extra_attrs_fieldset']['simple_ldap_user_extra_attrs'] = array(
+    '#type' => 'select',
+    '#title' => t('Extra Attributes'),
+    '#description' => t('Select additional unmapped attributes to load.'),
+    '#options' => $options,
+    '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_extra_attrs'),
+    '#multiple' => TRUE,
+    '#attached' => array( 
+      'css' => array(
+        drupal_get_path('module', 'simple_ldap_user') . '/simple_ldap_user_admin.css',
+      ),
+    ),
+  );
+
   $form = system_settings_form($form);
   $form['#submit'][] = 'simple_ldap_user_profile_map_form_submit';
 

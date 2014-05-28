@@ -47,6 +47,9 @@ class SimpleLdapUser {
       $attributes[$ldap] = $ldap;
     }
 
+    $extra_attributes = simple_ldap_user_variable_get('simple_ldap_user_extra_attrs');
+    $attributes += array_combine($extra_attributes, $extra_attributes);
+
     // ldap_search can't handle key'd arrays.
     $attributes = array_values($attributes);
 
