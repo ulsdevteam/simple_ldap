@@ -241,9 +241,11 @@ function user_check_password($password, $account) {
 
   // Use LDAP authentication for everyone else.
   $ldap_user = SimpleLdapUser::singleton($account->name);
-  $password_attribute = $ldap_user->{$password_attribute_name};
+  if (!empty($password_attribute_name)) {
+    $password_attribute = $ldap_user->{$password_attribute_name};
+  }
 
-  if (!empty($password_attribute) && !empty($password_attribute) && ($password_attribute['count'] != 0)) {
+  if (!empty($password_attribute) && ($password_attribute['count'] != 0)) {
     $ldap_password = $password_attribute[0];
   }
 
