@@ -189,6 +189,7 @@ function simple_ldap_user_user_login(&$edit, $account) {
   if (property_exists($account, 'uid') && ($account->uid == 1)) {
     return;
   }
+
   $sync = simple_ldap_user_variable_get('simple_ldap_user_sync');
   if ($sync == 'hook_user_login') {
     switch (simple_ldap_user_variable_get('simple_ldap_user_source')) {
@@ -250,7 +251,7 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
       // Get the remaining mapped attributes.
 
       // Process the LDAP user to generate the edit array that gets passed to user_save();
-      simple_ldap_user_generte_edit_ldap_to_drupal($edit, $ldap_user, $account);
+      simple_ldap_user_generate_edit_ldap_to_drupal($edit, $ldap_user, $account);
     }
   }
 
@@ -688,14 +689,18 @@ function simple_ldap_user_translate_ldap_attr_to_drupal(&$edit, $account, $ldap_
  *    The name of the field to be converted.
  */
 function simple_ldap_user_base_field_to_ldap(&$ldap_edit, $account, $drupal_field_name) {
+  $ldap_user = SimpleLdapUser::singleton($account->name);
+
   switch ($drupal_field_name) {
     case 'access':
     case 'login':
     case 'created':
-      $tz = date_default_timezone_get();
-      date_default_timezone_set('UTC');
-      $ldap_edit[] = date('YmdHis', $account->$drupal_field_name) . 'Z';
-      date_default_timezone_set($tz);
+      if (!empty($account->{$drupal_field_name})) {
+        $tz = date_default_timezone_get();
+        date_default_timezone_set('UTC');
+        $ldap_edit[] = date('YmdHis', $account->$drupal_field_name) . 'Z';
+        date_default_timezone_set($tz);
+      }
       break;
     case 'picture':
       if (is_object($account->picture)) {
@@ -730,7 +735,10 @@ function simple_ldap_user_base_field_to_drupal(&$edit, $drupal_user, $ldap_value
       $tz = date_default_timezone_get();
       $timestamp = strtotime($ldap_value);
       if (!property_exists($drupal_user, $drupal_field_name) || ($drupal_user->$drupal_field_name != $timestamp)) {
-        $edit[$drupal_field_name] = strtotime($ldap_value);
+        if ($drupal_user->{$drupal_field_name} > $timestamp) {
+          $edit['#ignored'][] = $drupal_field_name;
+        }
+        $edit[$drupal_field_name] = max($timestamp, $drupal_user->{$drupal_field_name});
       }
       date_default_timezone_set($tz);
       break;
@@ -886,7 +894,7 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
   $edit = array();
 
   // Process the LDAP user to generate the edit array that gets passed to user_save();
-  simple_ldap_user_generte_edit_ldap_to_drupal($edit, $ldap_user, $drupal_user);
+  simple_ldap_user_generate_edit_ldap_to_drupal($edit, $ldap_user, $drupal_user);
 
   // Save any changes.
   if (!empty($edit)) {
@@ -896,13 +904,22 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
     }
     $drupal_user->hook_sync_user_to_drupal = TRUE;
     $drupal_user = user_save($drupal_user, $edit);
+
+    // If any conversion added a #ignored tag, that means
+    // the Drupal values of some fields were not replaced 
+    // by values from the LDAP record and need to be written
+    // back to the LDAP server.  Used by the timestamps to
+    // ensure the latest values hold in both.
+    if (!empty($edit['#ignored'])) {
+      simple_ldap_user_sync_user_to_ldap($drupal_user);
+    }
   }
 
   // Synchronized user.
   return $drupal_user;
 }
 
-function simple_ldap_user_generte_edit_ldap_to_drupal(&$edit, $ldap_user, $account) {
+function simple_ldap_user_generate_edit_ldap_to_drupal(&$edit, $ldap_user, $account) {
   $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
   $user_fields = simple_ldap_user_user_fields();
 
