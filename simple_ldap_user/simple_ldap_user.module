@@ -281,7 +281,7 @@ function simple_ldap_user_user_update(&$edit, $account, $category) {
  * @throw SimpleLdapException
  */
 function simple_ldap_user_user_delete($account) {
-  if (empty(simple_ldap_user_variable_get('simple_ldap_user_delete_from_ldap'))) {
+  if (!simple_ldap_user_variable_get('simple_ldap_user_delete_from_ldap')) {
     return;
   }
 
@@ -314,7 +314,7 @@ function simple_ldap_user_user_load($users) {
 
 
 /**
- * Check the name and email both belong to the same LDAP account, or no 
+ * Check the name and email both belong to the same LDAP account, or no
  * account at all.
  */
 function simple_ldap_user_register_form_validate($form, &$form_state) {
