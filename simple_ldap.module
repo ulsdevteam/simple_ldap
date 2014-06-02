@@ -22,6 +22,21 @@ function simple_ldap_menu() {
   $items['admin/config/people/simple_ldap/server'] = array(
     'title' => 'Server',
     'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -1,
+  );
+
+  $items['admin/config/people/simple_ldap/server/settings'] = array(
+    'title' => 'Settings',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -1,
+  );
+
+  $items['admin/config/people/simple_ldap/server/debug'] = array(
+    'title' => 'Server Check',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'simple_ldap_server_check',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'simple_ldap.admin.inc',
   );
 
   return $items;
