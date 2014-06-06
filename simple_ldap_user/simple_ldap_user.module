@@ -803,8 +803,9 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
   $user_fields = simple_ldap_user_user_fields();
   $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
 
-  // Load the LDAP user.
-  $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
+  // Load the LDAP user.  If $drupal_user->orignal is set, this may be a move. Use the old name.
+  $search_name = (!empty($drupal_user->original)) ? $drupal_user->original->name : $drupal_user->name;
+  $ldap_user = SimpleLdapUser::singleton($search_name);
 
   // Synchronize the fields in the attribute map.
   foreach ($attribute_map as $ldap_attr_name => $drupal_fields) {
