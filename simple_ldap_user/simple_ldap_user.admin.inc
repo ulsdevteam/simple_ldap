@@ -170,7 +170,7 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#type' => 'select',
     '#title' => t('Password hashing algorithm') . $disabled_note,
     '#options' => SimpleLdap::hashes(),
-    '#description' => t('Which encryption algorithm should be used to encrypt passwords when writing to LDAP.') . ' ' . t('Note that mhash support is required for SMD5, SHA, and SSHA.'),
+    '#description' => t('Which encryption algorithm should be used to encrypt passwords when writing to LDAP.'),
     '#disabled' => $readonly || $server->readonly,
     '#default_value' => $password_hash_selected,
     '#empty_value' => 'none',
