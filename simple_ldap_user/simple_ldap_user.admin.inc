@@ -311,15 +311,23 @@ function simple_ldap_user_profile_map_form($form, $form_state) {
   // ToDo: Support user profile modules
   $user_fields = simple_ldap_user_user_fields();
 
+  $unmapped_required = array();
+
   // Build a list of available LDAP attributes, grouped by Object Class
   $options[''] = ' - None - ';
   foreach ($classes as $class) { 
     if ($class == 'top') {
       continue;
     }
+
     // Add a * to must attributes, to indiciate it must be set.
-    foreach($schema->must($class) as $attribute) {
+    $ldap_must_attrs = $schema->must($class);
+    foreach($ldap_must_attrs as $attribute) {
       $options[$class][strtolower($attribute)] = $attribute . '*';
+    }
+
+    if (!empty($ldap_must_attrs)) {
+      $unmapped_required += array_combine(array_map('strtolower', $ldap_must_attrs), $ldap_must_attrs); 
     }
 
     // Add the may attributes later.
@@ -341,13 +349,27 @@ function simple_ldap_user_profile_map_form($form, $form_state) {
   );
 
   foreach($user_fields as $key => $field) {
+    // Removed mapped fields from the list of MUST attributes.
+    $mapped_attribute = simple_ldap_user_variable_get('simple_ldap_user_attribute_' . $key);
+    unset($unmapped_required[$mapped_attribute]);
+    // Add a form field.
     $form['attributes']['simple_ldap_user_attribute_' . $key] = array(
       '#type' => 'select',
       '#title' => $field['label'],
       '#description' => $field['description'],
       '#options' => $options,
       '#required' => $field['required'],
-      '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_attribute_' . $key),
+      '#default_value' => $mapped_attribute,
+    );
+  }
+
+  // Give a warning about unmapped attributes.
+  if (!empty($unmapped_required)) {
+    drupal_set_message(t('The following attributes are required by the selected user object class(es), but are not mapped. They should be mapped here or given default values in !hook.  If they are not set, writes to LDAP may fail with an %violation. !list', array(
+        '!hook' => '<code>hook_simple_ldap_user_to_ldap_alter()</code>',
+        '!list' => theme('item_list', array('items' => $unmapped_required)),
+        '%violation' => t('object class violation'),
+      )), 'warning'
     );
   }
 
