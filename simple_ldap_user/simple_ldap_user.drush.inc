@@ -22,6 +22,10 @@ function simple_ldap_user_drush_command() {
     'description' => 'Check all users in Drupal are in LDAP',
     'callback' => 'simple_ldap_user_drush_check_all',
   );
+  $items['ldap-update-all-puids'] = array(
+    'description' => 'For all users in Drupal, update the authmap with the PUID from LDAP.',
+    'callback' => 'simple_ldap_user_drush_update_all_puids',
+  );
   return $items;
 }
 
@@ -33,9 +37,30 @@ function simple_ldap_user_drush_export_all() {
   return simple_ldap_user_drush_scan_all('_simple_ldap_user_drush_found', '_simple_ldap_user_drush_missing');
 }
 
+function simple_ldap_user_drush_update_all_puids() {
+  // Check there is something to map.
+  $puid_attr = strtolower(variable_get('simple_ldap_user_unique_attribute', ''));
+  if (!$puid_attr) {
+    drush_log(dt('No PUID attribute set.'), 'warning');
+    return;
+  }
+
+  // For each user, fetch the LDAP record and update the authmap
+  $result = db_query("SELECT uid,name FROM {users}");
+  while ($account = $result->fetchAssoc()) {
+    $ldap_user = SimpleLdapUser::singleton($account['name']);
+    if ($ldap_user->exists) {
+      db_merge('authmap')->key(array(
+        'uid' => $account['uid'],
+        'module' => 'simple_ldap',
+      ))->fields(array('authname' => $ldap_user->{$puid_attr}[0]))->execute();
+    }
+  }
+}
+
 function _simple_ldap_user_drush_found($authname, $user, $ldap_user) {
   if (empty($authname)) {
-    $puid_attr = variable_get('simple_ldap_user_unique_attribute');
+    $puid_attr = strtolower(variable_get('simple_ldap_user_unique_attribute', ''));
     $account = user_load($user['uid'], TRUE);
     $authname = ($puid_attr) ? $ldap_user->{$puid_attr}[0] : $ldap_user->dn;
     user_set_authmaps($account, array('authname_simple_ldap' => $authname));
