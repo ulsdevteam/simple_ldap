@@ -35,8 +35,16 @@ class SimpleLdapUser {
     $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
     $puid_attr = simple_ldap_user_variable_get('simple_ldap_user_unique_attribute');
     $safe_name = preg_replace(array('/\(/', '/\)/'), array('\\\(', '\\\)'), $name);
-    $puid_filter = $puid_attr ? '(' . $puid_attr . '=' . $safe_name . ')' : '';
-    $filter = '(&(|(' . $attribute_name . '=' . $safe_name . ')(' . $attribute_mail . '=' . $safe_name . ')' . $puid_filter . ')' . self::filter() . ')';
+
+    // Search first for the user by name, then by email and finally by PUID.
+    // Ensures that if someone has a username that is an email address, we find only 
+    // one record.
+    $filter_list = array();
+    $filter_list[] = '(&(' . $attribute_name . '=' . $safe_name . ')' . self::filter() . ')';
+    $filter_list[] = '(&(' . $attribute_mail . '=' . $safe_name . ')' . self::filter() . ')';
+    if ($puid_attr) {
+      $filter_list[] = '(&(' . $puid_attr . '=' . $safe_name . ')' . self::filter() . ')';
+    }
 
     // List of attributes to fetch from the LDAP server.
     // Using key => value autmatically dedups the list.
@@ -69,15 +77,20 @@ class SimpleLdapUser {
       }
     } catch (SimpleLdapException $e) {}
 
-    // Attempt to load the user from the LDAP server.
-    try {
-      $result = $this->server->search($base_dn, $filter, $scope, array_values($attributes), 0, 1);
-    } catch (SimpleLdapException $e) {
-      if ($e->getCode() == -1) {
-        $result = array('count' => 0);
+    foreach($filter_list as $filter) {
+      // Attempt to load the user from the LDAP server.
+      try {
+        $result = $this->server->search($base_dn, $filter, $scope, array_values($attributes), 0, 1);
+      } catch (SimpleLdapException $e) {
+        if ($e->getCode() == -1) {
+          $result = array('count' => 0);
+        }
+        else {
+          throw $e;
+        }
       }
-      else {
-        throw $e;
+      if ($result['count'] == 1) {
+        break;
       }
     }
 
