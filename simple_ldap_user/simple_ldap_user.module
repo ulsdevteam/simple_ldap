@@ -537,7 +537,7 @@ function simple_ldap_user_login_name_validate($form, &$form_state) {
   // Get the username from the form data.
   $name = trim($form_state['values']['name']);
 
-  if (!simple_ldap_user_load_or_create_by_name($name)) {
+  if (simple_ldap_user_load_or_create_by_name($name) === NULL) {
     form_set_error('name', t('An account ID conflict has been detected.  Please contact your site administrator.'));
   }
 }
