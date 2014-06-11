@@ -35,8 +35,10 @@ function simple_ldap_user_drush_export_all() {
 
 function _simple_ldap_user_drush_found($authname, $user, $ldap_user) {
   if (empty($authname)) {
+    $puid_attr = variable_get('simple_ldap_user_unique_attribute');
     $account = user_load($user['uid'], TRUE);
-    user_set_authmaps($account, array('authname_simple_ldap' => $ldap_user->dn));
+    $authname = ($puid_attr) ? $ldap_user->{$puid_attr}[0] : $ldap_user->dn;
+    user_set_authmaps($account, array('authname_simple_ldap' => $authname));
   }
 }
 

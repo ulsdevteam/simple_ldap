@@ -298,7 +298,13 @@ function simple_ldap_user_user_insert(&$edit, $account, $category) {
   $ldap_user = SimpleLdapUser::singleton($account->name);
   if (!$ldap_user->exists) {
     module_invoke_all('sync_user_to_ldap', $account);
+
+    // Write out the PUID or the DN to the authmap
+    $puid_attr = simple_ldap_user_variable_get('simple_ldap_user_unique_attribute');
+    $puid_attr = ($puid_attr) ? $puid_attr : 'dn';
+    user_set_authmap($account, array('authmap_simple_ldap' => $ldap_user->{$puid_attr}));
   }
+
 }
 
 /**
@@ -378,6 +384,8 @@ function simple_ldap_user_user_delete($account) {
  */
 function simple_ldap_user_user_load($users) {
   $sync = simple_ldap_user_variable_get('simple_ldap_user_sync');
+  $puid_attr = simple_ldap_user_variable_get('simple_ldap_user_unique_attribute');
+
   if ($sync == 'hook_user_load') {
     foreach ($users as $account) {
       if ($account->uid == 1) {
@@ -529,7 +537,9 @@ function simple_ldap_user_login_name_validate($form, &$form_state) {
   // Get the username from the form data.
   $name = trim($form_state['values']['name']);
 
-  simple_ldap_user_load_or_create_by_name($name);
+  if (!simple_ldap_user_load_or_create_by_name($name)) {
+    form_set_error('name', t('An account ID conflict has been detected.  Please contact your site administrator.'));
+  }
 }
 
 /**
@@ -539,15 +549,32 @@ function simple_ldap_user_login_name_validate($form, &$form_state) {
  *   The username or email address to load.
  *
  * @return mixed
- *   The Drupal user object, or FALSE if the process failed.
+ *   The Drupal user object, FALSE if the process failed, NULL if there was a conflict.
  */
 function simple_ldap_user_load_or_create_by_name($name) {
   // Load the LDAP user with the given username.
   $ldap_user = SimpleLdapUser::singleton($name);
+  $attribute_name = strtolower(simple_ldap_user_variable_get('simple_ldap_user_attribute_name'));
+  $attribute_mail = strtolower(simple_ldap_user_variable_get('simple_ldap_user_attribute_mail'));
+  $puid_attr = strtolower(simple_ldap_user_variable_get('simple_ldap_user_unique_attribute'));
 
   // If the user doesn't exist in LDAP, there is nothing for us to do.
   if (!$ldap_user->exists) {
     return FALSE;
+  }
+
+  // Pull the username
+  $user_name = $ldap_user->{$attribute_name}[0];
+  if ($puid_attr) {
+    $puid = $ldap_user->{$puid_attr}[0];
+    $puid_status = simple_ldap_user_update_username_for_puid($puid, $user_name);
+  
+    // Abort if there is a conflict.
+    if ($puid_status == FALSE) {
+      return NULL;
+    }
+
+    $name = $user_name;
   }
 
   // Attempt to load the drupal user.
@@ -558,17 +585,61 @@ function simple_ldap_user_load_or_create_by_name($name) {
 
   // If the user doesn't already exist in Drupal, create them.
   if (!$drupal_user) {
-    $attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
-    $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
     $edit = array(
-      'name' => $ldap_user->{strtolower($attribute_name)}[0],
-      'mail' => $ldap_user->{strtolower($attribute_mail)}[0],
+      'name' => $ldap_user->{$attribute_name}[0],
+      'mail' => $ldap_user->{$attribute_mail}[0],
       'status' => 1,
     );
     $drupal_user = user_save(NULL, $edit);
   }
 
   return $drupal_user;
+}
+
+/**
+ * Check the authmaps for the PUID.  Update the {users} table if the PUID is present but the username is different.
+ * 
+ * @param $puid The unique attribute for the user.
+ *
+ * @param $user_name The name of the user in LDAP
+ * 
+ * @return FALSE if a name conflict exists
+ *    NULL if no user has the PUID or no PUID Attr has been set
+ *    TRUE if the user exists.
+ */
+function simple_ldap_user_update_username_for_puid($puid, $user_name) {
+  $puid_attr = strtolower(simple_ldap_user_variable_get('simple_ldap_user_unique_attribute'));
+  if (!$puid_attr) {
+    return NULL;
+  }
+
+  // Look for the user in the authmaps.
+  $drupal_user_map = db_query("SELECT u.name, u.uid FROM {users} u INNER JOIN {authmap} a ON u.uid = a.uid WHERE a.module='simple_ldap' AND a.authname=:authname", array(':authname' => $puid))->fetchAssoc();
+
+  // No entry, return NULL
+  if (empty($drupal_user_map)) {
+    return NULL;
+  }
+
+  // If there is an authmap entry, make sure the username matches or is empty.
+  if ($drupal_user_map['name'] != $user_name) {
+
+    // Name has changed, make sure the new name isn't already in use.
+    $conflicting_user = db_query("SELECT u.uid FROM {users} u WHERE u.name=:name", array(':name' => $user_name))->fetchAssoc();
+
+    if ($conflicting_user) {
+      watchdog('Simple LDAP', 'User %username (UID @uid) used to have login %oldname was renamed, but another user already has that name.', 
+        array('%username' => $user_name, '@uid' => $conflicting_user['uid'], '%oldname' => $drupal_user_map['name']), WATCHDOG_ERROR);
+      return FALSE;
+    }
+
+    // Update the username record directly so user_load_by_name() will find it.
+    watchdog('Simple LDAP', 'User @uid was externally renamed from %oldname to %newname.', 
+      array('@uid' => $drupal_user_map['uid'], '%oldname' => $drupal_user_map['name'], '%newname' => $user_name), WATCHDOG_NOTICE);
+    db_query("UPDATE {users} SET name=:newname WHERE uid=:uid", array(':newname' => $user_name, ':uid' => $drupal_user_map['uid']));
+  }
+
+  return TRUE;
 }
 
 /**
@@ -1142,6 +1213,7 @@ function simple_ldap_user_variable_get($name, $default = NULL, $force_default = 
   $defaults['simple_ldap_user_auth_fallback'] = array();
   $defaults['simple_ldap_user_auth_fallback_writeback'] = array();
   $defaults['simple_ldap_user_extra_attrs'] = array();
+  $defaults['simple_ldap_user_unique_attribute'] = '';
 
   // Determine the default value for the given variable.
   $default = isset($defaults[$name]) ? $defaults[$name] : $default;

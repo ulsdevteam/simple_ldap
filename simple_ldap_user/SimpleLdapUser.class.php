@@ -33,8 +33,10 @@ class SimpleLdapUser {
     $scope = simple_ldap_user_variable_get('simple_ldap_user_scope');
     $attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
+    $puid_attr = simple_ldap_user_variable_get('simple_ldap_user_unique_attribute');
     $safe_name = preg_replace(array('/\(/', '/\)/'), array('\\\(', '\\\)'), $name);
-    $filter = '(&(|(' . $attribute_name . '=' . $safe_name . ')(' . $attribute_mail . '=' . $safe_name . '))' . self::filter() . ')';
+    $puid_filter = $puid_attr ? '(' . $puid_attr . '=' . $safe_name . ')' : '';
+    $filter = '(&(|(' . $attribute_name . '=' . $safe_name . ')(' . $attribute_mail . '=' . $safe_name . ')' . $puid_filter . ')' . self::filter() . ')';
 
     // List of attributes to fetch from the LDAP server.
     // Using key => value autmatically dedups the list.
@@ -51,6 +53,11 @@ class SimpleLdapUser {
 
     // Merge them into a single array.
     $attributes = array_merge($attributes, $config_extra_attributes, $hook_extra_attributes);
+
+    // Add the unique attribute, if it is set.
+    if ($puid_attr) {
+      $attributes[] = $puid_attr;
+    }
 
     // filter to keep ldap_search happy
     $attributes = array_unique(array_map('strtolower', array_values($attributes)));

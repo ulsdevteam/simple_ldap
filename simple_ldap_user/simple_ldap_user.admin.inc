@@ -269,6 +269,13 @@ function simple_ldap_user_admin($form, &$form_state) {
       '#description' => t('Any of the mapped attributes can be used as the RDN value when provisioning a new LDAP user entry.') . ' ' . t('If set to "None", the Username attribute specified above will be used.'),
       '#disabled' => $readonly,
     );
+
+    $form['advanced']['simple_ldap_user_unique_attribute'] = array(
+      '#type' => 'textfield',
+      '#title' => t('UUID Attribute (PUID)'),
+      '#description' => t('Enter the name of the attribute that remains persistant even thorugh name changes.  Active Directory uses "objectGUID".  OpenLDAP, Apache DS and most others use "entryUUID".'),
+      '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_unique_attribute'),
+    );
   }
 
   return system_settings_form($form);
