@@ -189,7 +189,6 @@ class SimpleLdapUser {
             // Save the old DN, so a move operation can be done during save().
             $this->move = $this->dn;
             $this->dn = $value;
-            $this->dirty['dn'] = $value;
           } catch (SimpleLdapException $e) {}
         }
         break;
@@ -262,14 +261,14 @@ class SimpleLdapUser {
    * @throw SimpleLdapException
    */
   public function save() {
-    // If there is nothing to save, return "success".
-    if (empty($this->dirty)) {
-      return TRUE;
-    }
-
     // Move(rename) the entry if the DN was changed.
     if ($this->move) {
       $this->server->move($this->move, $this->dn);
+    }
+
+    // If there is nothing to save, return "success".
+    if (empty($this->dirty)) {
+      return TRUE;
     }
 
     // Active Directory has some restrictions on what can be modified.
