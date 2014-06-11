@@ -54,7 +54,7 @@ function simple_ldap_user_drush_update_all_puids() {
   while ($account = $result->fetchAssoc()) {
     $ldap_user = SimpleLdapUser::singleton($account['name']);
     if (strcasecmp($ldap_user->{$attribute_name}[0], $account['name'])) {
-      drush_log(dt('User %username found, but not by name.  Skipping.', array('%username' => $account['name'])), 'warning');
+      drush_log(dt('User "@username" found, but not by name.  Skipping.', array('@username' => $account['name'])), 'warning');
       $warning_count++;
       continue;
     }
@@ -77,7 +77,7 @@ function simple_ldap_user_drush_update_all_puids() {
     drush_log(dt('Could not find @missing users in LDAP.', array('@missing' => format_plural($missing_count, '1 user', '@count users'))), 'notice');
   } 
   if ($warning_count) {
-    drush_log(dt('Detected @warning with anomalous entries.', array('@warning' => format_plural($found_count, '1 user', '@count users'))), 'warning');
+    drush_log(dt('Detected @warning with anomalous entries.', array('@warning' => format_plural($warning_count, '1 user', '@count users'))), 'warning');
   } 
 }
 
