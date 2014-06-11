@@ -40,6 +40,10 @@ function simple_ldap_user_drush_export_all() {
 function simple_ldap_user_drush_update_all_puids() {
   // Check there is something to map.
   $puid_attr = strtolower(variable_get('simple_ldap_user_unique_attribute', ''));
+  $attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
+
+  $found_count = $missing_count = $warning_count = 0;
+
   if (!$puid_attr) {
     drush_log(dt('No PUID attribute set.'), 'warning');
     return;
@@ -49,13 +53,32 @@ function simple_ldap_user_drush_update_all_puids() {
   $result = db_query("SELECT uid,name FROM {users}");
   while ($account = $result->fetchAssoc()) {
     $ldap_user = SimpleLdapUser::singleton($account['name']);
+    if ($ldap_user->{$attribute_name}[0] != $account['name']) {
+      drush_log(dt('User %username found, but not by name.  Skipping.', array('%username' => $account['name'])), 'warning');
+      $warning_count++;
+      continue;
+    }
     if ($ldap_user->exists) {
       db_merge('authmap')->key(array(
         'uid' => $account['uid'],
         'module' => 'simple_ldap',
       ))->fields(array('authname' => $ldap_user->{$puid_attr}[0]))->execute();
+      $found_count++;
+    }
+    else {
+      $missing_count++;
     }
   }
+
+  if ($found_count) {
+    drush_log(dt('Updated @found PUIDs from LDAP records.', array('@found' => format_plural($found_count, '1 user', '@count users'))), 'notice');
+  } 
+  if ($missing_count) {
+    drush_log(dt('Could not find @missing users in LDAP.', array('@missing' => format_plural($missing_count, '1 user', '@count users'))), 'notice');
+  } 
+  if ($warning_count) {
+    drush_log(dt('Detected @warning with anomolous entries.', array('@warning' => format_plural($found_count, '1 user', '@count users'))), 'warning');
+  } 
 }
 
 function _simple_ldap_user_drush_found($authname, $user, $ldap_user) {
