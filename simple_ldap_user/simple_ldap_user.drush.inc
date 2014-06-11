@@ -14,11 +14,11 @@ function _formatBytes($size, $precision = 2)
 function simple_ldap_user_drush_command() {
   $items = array();
   
-  $items['ldap_export_all'] = array(
+  $items['ldap-export-all'] = array(
     'description' => 'Export all users in Drupal that are not in LDAP',
     'callback' => 'simple_ldap_user_drush_export_all',
   );
-  $items['ldap_check_all'] = array(
+  $items['ldap-check-all'] = array(
     'description' => 'Check all users in Drupal are in LDAP',
     'callback' => 'simple_ldap_user_drush_check_all',
   );
