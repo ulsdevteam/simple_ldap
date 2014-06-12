@@ -273,7 +273,7 @@ function simple_ldap_user_admin($form, &$form_state) {
     $form['advanced']['simple_ldap_user_unique_attribute'] = array(
       '#type' => 'textfield',
       '#title' => t('UUID Attribute (PUID)'),
-      '#description' => t('Enter the name of the attribute that remains persistant even thorugh name changes.  Active Directory uses "objectGUID".  OpenLDAP, Apache DS and most others use "entryUUID".'),
+      '#description' => t('Enter the name of the attribute that remains persistant even through name changes.  Active Directory uses "objectGUID".  OpenLDAP, Apache DS and most others use "entryUUID".'),
       '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_unique_attribute'),
     );
   }
