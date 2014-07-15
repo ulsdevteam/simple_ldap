@@ -33,7 +33,7 @@ class SimpleLdapUser {
     $this->mapObject = SimpleLdapUserMap::singleton();
 
     // Get the LDAP configuration.
-    $this->readonly = variable_get('simple_ldap_readonly') ? TRUE : simple_ldap_user_variable_get('simple_ldap_user_readonly');
+    $this->readonly = SimpleLdapUser::readonly();
     $base_dn = simple_ldap_user_variable_get('simple_ldap_user_basedn');
     $scope = simple_ldap_user_variable_get('simple_ldap_user_scope');
     $attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
@@ -371,4 +371,14 @@ class SimpleLdapUser {
     self::$hash[$key] = $value;
   }
 
+
+  /**
+   * Return whether this module is read-only, as set by the module configuration.
+   *
+   * @return boolean
+   *   The read-only status of the module.
+   */
+  public static function readonly() {
+    return variable_get('simple_ldap_readonly') ? TRUE : simple_ldap_user_variable_get('simple_ldap_user_readonly');
+  }
 }

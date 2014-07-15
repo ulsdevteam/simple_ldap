@@ -177,7 +177,7 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#type' => 'checkbox',
     '#title' => t('Read-only'),
     '#default_value' => (variable_get('simple_ldap_readonly', FALSE) ? TRUE : variable_get('simple_ldap_user_readonly', FALSE)),
-    '#access' => !variable_get('simple_ldap_readonly', FALSE),
+    '#disabled' => variable_get('simple_ldap_readonly', FALSE),
     '#description' => t('Should the users in the LDAP server be read-only?'),
   );
 
