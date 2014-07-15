@@ -140,6 +140,14 @@ function simple_ldap_role_admin($form, &$form_state) {
     ),
   );
 
+  $form['role']['simple_ldap_role_readonly'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Read-only'),
+    '#default_value' => (variable_get('simple_ldap_readonly', FALSE) ? TRUE : variable_get('simple_ldap_role_readonly', FALSE)),
+    '#access' => !variable_get('simple_ldap_readonly', FALSE),
+    '#description' => t('Should the roles in the LDAP server be read-only?'),
+  );
+    
   // Set default value if it exists in the list of attributes. If a default
   // value is not set, the empty option is selected.
   if (array_key_exists($attribute_member_selected, $attributes)) {

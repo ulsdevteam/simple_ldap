@@ -12,6 +12,7 @@ class SimpleLdapUser {
   protected $exists = FALSE;
   protected $mapObject;
   protected $server;
+  protected $readonly;
 
   // Internal variables.
   protected $dirty = FALSE;
@@ -32,6 +33,7 @@ class SimpleLdapUser {
     $this->mapObject = SimpleLdapUserMap::singleton();
 
     // Get the LDAP configuration.
+    $this->readonly = variable_get('simple_ldap_readonly') ? TRUE : simple_ldap_user_variable_get('simple_ldap_user_readonly');
     $base_dn = simple_ldap_user_variable_get('simple_ldap_user_basedn');
     $scope = simple_ldap_user_variable_get('simple_ldap_user_scope');
     $attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
@@ -99,6 +101,8 @@ class SimpleLdapUser {
       case 'server':
       case 'mapObject':
         return $this->$name;
+      case 'readonly':
+        return ($this->server->readonly ? TRUE : $this->$name);
 
       default:
         if (isset($this->attributes[$name])) {
@@ -132,6 +136,7 @@ class SimpleLdapUser {
       // Read-only values.
       case 'attributes':
       case 'exists':
+      case 'readonly':
         break;
 
       case 'dn':

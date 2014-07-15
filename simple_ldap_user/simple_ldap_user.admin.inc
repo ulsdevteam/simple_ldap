@@ -173,6 +173,14 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#empty_value' => 'none',
   );
 
+  $form['user']['simple_ldap_user_readonly'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Read-only'),
+    '#default_value' => (variable_get('simple_ldap_readonly', FALSE) ? TRUE : variable_get('simple_ldap_user_readonly', FALSE)),
+    '#access' => !variable_get('simple_ldap_readonly', FALSE),
+    '#description' => t('Should the users in the LDAP server be read-only?'),
+  );
+
   // LDAP user admin advanced form.
   $form['advanced'] = array(
     '#type' => 'fieldset',
