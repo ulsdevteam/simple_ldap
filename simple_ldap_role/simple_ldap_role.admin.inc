@@ -165,7 +165,7 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#type' => 'textfield',
     '#title' => t('Search filter'),
     '#default_value' => simple_ldap_role_variable_get('simple_ldap_role_filter'),
-    '#description' => t('This filter will be combined with the normal search filter to find groups.') . ' ' . t('This can be used to require a certain attribute be present, for example.'),
+    '#description' => t('This filter will be combined with the normal search filter to find groups.') . ' ' . t('This can be used to require a certain attribute be present, for example.') . ' ' . t('Do not include the leading and trailing parentheses, e.g. "&(objectclass=group)(CN=Drupal*)".'),
   );
 
   $form['advanced']['simple_ldap_role_source'] = array(
