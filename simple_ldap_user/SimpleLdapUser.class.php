@@ -381,4 +381,14 @@ class SimpleLdapUser {
   public static function readonly() {
     return variable_get('simple_ldap_readonly') ? TRUE : simple_ldap_user_variable_get('simple_ldap_user_readonly');
   }
+  
+  /**
+   * Return whether this module allows orphaned users, as set by the module configuration.
+   *
+   * @return boolean
+   *   The read-only status of the module.
+   */
+  public static function allowOrphans() {
+    return simple_ldap_user_variable_get('simple_ldap_user_preserve_orphans');
+  }
 }

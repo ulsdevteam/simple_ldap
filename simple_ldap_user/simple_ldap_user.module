@@ -55,7 +55,7 @@ function simple_ldap_user_form_user_admin_account_alter(&$form, &$form_state, $f
       $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
 
       // Check whether the user exists in LDAP.
-      if (!$ldap_user->exists) {
+      if (!$ldap_user->exists && !SimpleLdapUser::allowOrphans()) {
         $form['accounts']['#options'][$uid]['status'] = 'blocked';
       }
 
@@ -216,7 +216,7 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
 
         $account->name = $account->original->name;
         $edit['name'] = $account->original->name;
-        drupal_set_message(t('The new username %name could not be changed because an LDAP entry already exists. Previous name have been keep and no LDAP modification have been done.', array('%name' => $new_username)), 'error');
+        drupal_set_message(t('The new username %name could not be changed because an LDAP entry already exists. Previous name has been kept and no LDAP modifications have been done.', array('%name' => $new_username)), 'error');
       }
     }
   }
