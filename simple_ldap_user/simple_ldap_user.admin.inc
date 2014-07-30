@@ -208,6 +208,13 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#description' => t('This determines the behavior of the data sync in the event of a conflict between LDAP and Drupal.'),
   );
 
+  $form['advanced']['simple_ldap_user_preserve_orphans'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Preserve users when not matched'),
+    '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_preserve_orphans'),
+    '#description' => t('This allows a local user to remain in the non-authoritative datasource if the user does not exist in the authoritative datasource.'),
+  );
+
   $form['advanced']['simple_ldap_user_sync'] = array(
     '#type' => 'radios',
     '#title' => t('Synchronization trigger'),
