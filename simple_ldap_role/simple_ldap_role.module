@@ -71,7 +71,7 @@ function simple_ldap_role_user_login(&$edit, $account) {
  * Implements hook_user_presave().
  */
 function simple_ldap_role_user_presave(&$edit, $account, $category) {
-  if (isset($edit['name']) && isset($edit['roles'])) {
+  if (isset($edit['name']) && isset($edit['roles']) && !SimpleLdapRole::readonly()) {
     foreach ($edit['roles'] as $rid => $value) {
       if ($value && $rid != DRUPAL_AUTHENTICATED_RID) {
         $role = user_role_load($rid);
@@ -87,7 +87,7 @@ function simple_ldap_role_user_presave(&$edit, $account, $category) {
  * Implements hook_user_role_presave().
  */
 function simple_ldap_role_user_role_presave($role) {
-  if (isset($role->op) && $role->op == 'Save role') {
+  if (isset($role->op) && $role->op == 'Save role' && !SimpleLdapRole::readonly()) {
     // Get the module configuration.
     $attribute_name = simple_ldap_role_variable_get('simple_ldap_role_attribute_name');
 
