@@ -230,8 +230,10 @@ function user_hash_password($password, $count_log2 = 0) {
  *   TRUE or FALSE.
  */
 function user_check_password($password, $account) {
-  // Use normal authentication for User1.
-  if ($account->uid == 1) {
+  $ldap_user = SimpleLdapUser::singleton($account->name);
+  
+  // Use normal authentication for User1, or for users for whom no LDAP account exists if orphans are allowed.
+  if ($account->uid == 1 || (!$ldap_user->exists && SimpleLdapUser::allowOrphans())) {
     if (substr($account->pass, 0, 2) == 'U$') {
       // This may be an updated password from user_update_7000(). Such hashes
       // have 'U' added as the first character and need an extra md5().
@@ -264,7 +266,6 @@ function user_check_password($password, $account) {
   }
 
   // Use LDAP authentication for everyone else.
-  $ldap_user = SimpleLdapUser::singleton($account->name);
   return $ldap_user->authenticate($password);
 }
 
