@@ -166,4 +166,28 @@ node default {
         unless  => '/usr/bin/test "localhost" == "$(drush vget --format=list simple_ldap_host)"',
         require => Exec['drush::enable::simple_ldap'],
     }
+
+    exec { 'drush::vset::simple_ldap_binddn':
+        command => 'drush -y vset simple_ldap_binddn cn=admin,dc=local',
+        cwd     => '/var/www/drupal/docroot',
+        user    => 'vagrant',
+        unless  => '/usr/bin/test "cn=admin,dc=local" == "$(drush vget --format=list simple_ldap_binddn)"',
+        require => Exec['drush::enable::simple_ldap'],
+    }
+
+    exec { 'drush::vset::simple_ldap_bindpw':
+        command => 'drush -y vset simple_ldap_bindpw admin',
+        cwd     => '/var/www/drupal/docroot',
+        user    => 'vagrant',
+        unless  => '/usr/bin/test "admin" == "$(drush vget --format=list simple_ldap_bindpw)"',
+        require => Exec['drush::enable::simple_ldap'],
+    }
+
+    exec { 'drush::vset::simple_ldap_basedn':
+        command => 'drush -y vset simple_ldap_basedn dc=local',
+        cwd     => '/var/www/drupal/docroot',
+        user    => 'vagrant',
+        unless  => '/usr/bin/test "dc=local" == "$(drush vget --format=list simple_ldap_basedn)"',
+        require => Exec['drush::enable::simple_ldap'],
+    }
 }
