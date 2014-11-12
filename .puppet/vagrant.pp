@@ -51,6 +51,22 @@ node default {
         https        => false,
     }
 
+    file { '/etc/apache2/conf-available/phpldapadmin.conf':
+        content => '
+            Alias /pma /usr/local/share/phpldapadmin/htdocs
+            <Directory /usr/local/share/phpldapadmin/htdocs>
+                DirectoryIndex index.php
+                Require all granted
+            </Directory>',
+        require => Package['apache2'],
+    }
+
+    exec { 'a2enconf phpldapadmin':
+        creates => '/etc/apache2/conf-enabled/phpldapadmin.conf',
+        require => File['/etc/apache2/conf-available/phpldapadmin.conf'],
+        notify  => Service['apache2'],
+    }
+
     # MySQL
     class { 'mysql::server': }
 
