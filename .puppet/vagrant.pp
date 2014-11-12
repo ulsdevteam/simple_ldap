@@ -86,6 +86,11 @@ node default {
     class { 'ldap::server': }
     class { 'ldap::phpldapadmin': }
 
+    exec { 'ldap::populate':
+        command => 'service slapd stop && rm -rf /var/lib/ldap/* && slapadd -l /vagrant/.puppet/openldap.ldif && chown -R openldap: /var/lib/ldap && service slapd start',
+        require => Service['slapd'],
+    }
+
     # Drupal
     class { 'drush': }
 
