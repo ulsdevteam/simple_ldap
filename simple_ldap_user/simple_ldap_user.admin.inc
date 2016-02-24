@@ -190,7 +190,7 @@ function simple_ldap_user_admin($form, &$form_state) {
   );
 
   $form['advanced']['simple_ldap_user_filter'] = array(
-    '#type' => 'textfield',
+    '#type' => 'textarea',
     '#title' => t('Search filter'),
     '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_filter'),
     '#description' => t('This filter will be combined with the normal search filter to find users.') . ' ' . t('This can be used to require a certain attribute be present, for example.'). ' ' . t('Do not include the leading and trailing parentheses, e.g. "&(objectclass=user)(department=internal)".'),
