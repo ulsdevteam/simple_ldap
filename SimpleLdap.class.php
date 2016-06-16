@@ -149,6 +149,7 @@ class SimpleLdap {
     $possible = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ./';
     $str = '';
 
+    mt_srand((double) microtime() * 1000000);
     while (strlen($str) < $length) {
       $str .= substr($possible, (rand() % strlen($possible)), 1);
     }
@@ -182,21 +183,23 @@ class SimpleLdap {
         break;
 
       case 'md5':
-        $hash = '{MD5}' . base64_encode(md5($string, TRUE));
+        $hash = '{MD5}' . base64_encode(pack('H*', md5($string)));
         break;
 
       case 'salted md5':
-        $salt = SimpleLdap::salt(8);
-        $hash = '{SMD5}' . base64_encode(md5($string . $salt, TRUE) . $salt);
+        mt_srand((double) microtime() * 1000000);
+        $salt = mhash_keygen_s2k(MHASH_MD5, $string, substr(pack('h*', md5(mt_rand())), 0, 8), 4);
+        $hash = '{SMD5}' . base64_encode(mhash(MHASH_MD5, $string . $salt) . $salt);
         break;
 
       case 'sha':
-        $hash = '{SHA}' . base64_encode(sha1($string, TRUE));
+        $hash = '{SHA}' . base64_encode(pack('H*', sha1($string)));
         break;
 
       case 'salted sha':
-        $salt = SimpleLdap::salt(8);
-        $hash = '{SSHA}' . base64_encode(sha1($string . $salt, TRUE) . $salt);
+        mt_srand((double) microtime() * 1000000);
+        $salt = mhash_keygen_s2k(MHASH_SHA1, $string, substr(pack('h*', md5(mt_rand())), 0, 8), 4);
+        $hash = '{SSHA}' . base64_encode(mhash(MHASH_SHA1, $string . $salt) . $salt);
         break;
 
       case 'unicode':
@@ -248,13 +251,17 @@ class SimpleLdap {
     $types['md5'] = t('MD5');
 
     // SMD5.
-    $types['salted md5'] = t('Salted MD5');
+    if (function_exists('mhash') && function_exists('mhash_keygen_s2k')) {
+      $types['salted md5'] = t('Salted MD5');
+    }
 
     // SHA.
     $types['sha'] = t('SHA');
 
     // SSHA.
-    $types['salted sha'] = t('Salted SHA');
+    if (function_exists('mhash') && function_exists('mhash_keygen_s2k')) {
+      $types['salted sha'] = t('Salted SHA');
+    }
 
     // Unicode (used by Active Directory).
     $types['unicode'] = t('Unicode');
