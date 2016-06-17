@@ -144,7 +144,7 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     variable_set('simple_ldap_user_delete_from_ldap', $delete_ldap_user);
 
     // Get the fully qualified attribute map.
-    $mapObject = SimpleLdapUserMap::singleton();
+    $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
 
     // Create a set of LDAP entries to use during testing.
     for ($i = 0; $i < 5; $i++) {
@@ -152,7 +152,7 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
       $name = $this->randomName();
       $this->ldapUser[$i] = new SimpleLdapUser($name);
       $this->ldapUser[$i]->$attribute_mail = $this->randomName() . '@example.com';
-      foreach ($mapObject->map as $attribute) {
+      foreach ($attribute_map as $attribute) {
         $attributetype = $server->schema->get('attributetypes', $attribute['ldap']);
         // A syntax type of 1.3.6.1.4.1.1466.115.121.1.27 is an integer.
         if (isset($attributetype['syntax']) && $attributetype['syntax'] == '1.3.6.1.4.1.1466.115.121.1.27') {
@@ -283,8 +283,7 @@ abstract class SimpleLdapUserTestCase extends SimpleLdapServerTestCase {
     $drupal_user = reset($drupal_user);
 
     // Check the mapped fields.
-    $mapObject = SimpleLdapUserMap::singleton();
-    $attribute_map = $mapObject->map;
+    $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
     array_unshift($attribute_map, array('drupal' => array('mail'), 'ldap' => $attribute_mail));
     foreach ($attribute_map as $attribute) {
 
@@ -526,6 +525,7 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserTestCase {
     // Load configuration variables.
     $attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
+    $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
 
     $server = SimpleLdapServer::singleton();
 
@@ -537,8 +537,7 @@ class SimpleLdapUserModifyProfileWebTestCase extends SimpleLdapUserTestCase {
     $edit['current_pass'] = $this->userPassword[0];
     $edit['mail'] = $this->ldapUser[0]->{$attribute_mail}[0] . $suffix;
 
-    $mapObject = SimpleLdapUserMap::singleton();
-    foreach ($mapObject->map as $attribute) {
+    foreach ($attribute_map as $attribute) {
 
       // Skip drupal-to-ldap many-to-one mappings.
       if (count($attribute['drupal']) > 1) {
@@ -640,8 +639,8 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserTestCase {
         }
       }
     }
-    $mapObject = SimpleLdapUserMap::singleton();
-    foreach ($mapObject->map as $attribute) {
+    $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
+    foreach ($attribute_map as $attribute) {
       if (in_array($attribute['ldap'], $must)) {
         if (count($attribute['drupal']) > 1) {
           continue;
@@ -780,7 +779,7 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserTestCase {
     $objectclass = simple_ldap_user_variable_get('simple_ldap_user_objectclass');
     $attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
-    $mapObject = SimpleLdapUserMap::singleton();
+    $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
 
     // Get a list of required LDAP attributes for the user objectclass.
     $server = SimpleLdapServer::singleton();
@@ -805,7 +804,7 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserTestCase {
 
     // Verify that the required mapped fields show up on the registration form.
     $this->drupalGet('user/register');
-    foreach ($mapObject->map as $field) {
+    foreach ($attribute_map as $field) {
       if (count($field['drupal']) > 1) {
         continue;
       }
@@ -842,7 +841,7 @@ class SimpleLdapUserRegistrationTestCase extends SimpleLdapUserTestCase {
     $this->assertEqual($new_user->mail, $mail, t('Drupal e-mail address matches.'));
     $this->assertEqual($ldap_user->{$attribute_mail}[0], $mail, t('LDAP e-mail address matches.'));
 
-    foreach ($mapObject->map as $field) {
+    foreach ($attribute_map as $field) {
       if (count($field['drupal']) > 1) {
         continue;
       }
@@ -889,8 +888,7 @@ class SimpleLdapUserSyncTestCase extends SimpleLdapUserTestCase {
     $ldap_user = new SimpleLdapUser($this->ldapUser[0]->{$attribute_name}[0]);
 
     // Modify the mapped attributes.
-    $mapObject = SimpleLdapUserMap::singleton();
-    $attribute_map = $mapObject->map;
+    $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
     array_unshift($attribute_map, array('drupal' => array('mail'), 'ldap' => $attribute_mail));
     foreach ($attribute_map as $attribute) {
       if (count($attribute['drupal']) == 1) {
@@ -1127,8 +1125,8 @@ class SimpleLdapUserDeleteUserTestCase extends SimpleLdapUserTestCase {
         }
       }
     }
-    $mapObject = SimpleLdapUserMap::singleton();
-    foreach ($mapObject->map as $attribute) {
+    $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
+    foreach ($attribute_map as $attribute) {
       if (in_array($attribute['ldap'], $must)) {
         if (count($attribute['drupal']) > 1) {
           continue;

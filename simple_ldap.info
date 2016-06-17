@@ -9,9 +9,3 @@ files[] = SimpleLdapSchema.class.php
 files[] = SimpleLdapServer.class.php
 files[] = simple_ldap.test
 
-; Information added by drupal.org packaging script on 2013-05-14
-version = "7.x-1.4"
-core = "7.x"
-project = "simple_ldap"
-datestamp = "1368556212"
-

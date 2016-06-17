@@ -49,3 +49,40 @@ Enable debugging using devel module by adding the following setting to
 settings.php
 
 $conf['simple_ldap_devel'] = TRUE;
+
+Vagrant
+=======
+
+There is a Vagrantfile included that will build a VM with a working LDAP
+directory and a fresh Drupal installation with simple_ldap installed. If OS X
+is the Vagrant host, then the vagrant box is available at simpleldap.local.
+For other operating systems, the IP address will need to be obtainted manually,
+and added to the local hosts file for best results.
+
+Drupal
+------
+
+The Drupal installation is set up with the following credentials:
+
+http://simpleldap.local/
+
+username: admin
+password: admin
+
+LDAP
+----
+
+The LDAP is pre-populated with some dummy data
+
+ldap://simpleldap.local
+
+DN: cn=admin,dc=local
+password: admin
+
+DN: cn=ldapuser,ou=people,dc=local
+password: ldapuser
+
+phpLDAPadmin
+------------
+
+phpLDAPadmin is available at http://simpleldap.local/pma

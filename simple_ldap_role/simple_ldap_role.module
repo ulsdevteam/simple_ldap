@@ -71,9 +71,14 @@ function simple_ldap_role_user_login(&$edit, $account) {
  * Implements hook_user_presave().
  */
 function simple_ldap_role_user_presave(&$edit, $account, $category) {
-  if (isset($edit['name']) && isset($edit['roles']) && !SimpleLdapRole::readonly()) {
+  // The Authenticated User role will be present on the edit form.
+  $exclude = array(DRUPAL_AUTHENTICATED_RID);
+  // Allow altering excluded roles.
+  drupal_alter('simple_ldap_role_exclude', $exclude);
+  // Loop through roles submitted on form.
+  if (isset($edit['name']) && isset($edit['roles'])) {
     foreach ($edit['roles'] as $rid => $value) {
-      if ($value && $rid != DRUPAL_AUTHENTICATED_RID) {
+      if ($value && !in_array($rid, $exclude)) {
         $role = user_role_load($rid);
         $ldap_role = SimpleLdapRole::singleton($role->name);
         $ldap_role->addUser($edit['name']);
@@ -87,7 +92,7 @@ function simple_ldap_role_user_presave(&$edit, $account, $category) {
  * Implements hook_user_role_presave().
  */
 function simple_ldap_role_user_role_presave($role) {
-  if (isset($role->op) && $role->op == 'Save role' && !SimpleLdapRole::readonly()) {
+  if (isset($role->op) && $role->op == 'Save role') {
     // Get the module configuration.
     $attribute_name = simple_ldap_role_variable_get('simple_ldap_role_attribute_name');
 
@@ -105,9 +110,6 @@ function simple_ldap_role_user_role_presave($role) {
  * Implements hook_user_role_insert().
  */
 function simple_ldap_role_user_role_insert($role) {
-  // If the role is read-only, do not perform any drupal-to-ldap sync.
-  if (SimpleLdapRole::readonly()) return true;
-
   $ldap_role = SimpleLdapRole::singleton($role->name);
   $ldap_role->save();
 }
@@ -116,9 +118,6 @@ function simple_ldap_role_user_role_insert($role) {
  * Implements hook_user_role_delete().
  */
 function simple_ldap_role_user_role_delete($role) {
-  // If the role is read-only, do not perform any drupal-to-ldap sync.
-  if (SimpleLdapRole::readonly()) return true;
-
   $ldap_role = SimpleLdapRole::singleton($role->name);
   $ldap_role->delete();
 }
@@ -169,8 +168,6 @@ function simple_ldap_role_sync_user_to_ldap($drupal_user) {
 
   // Get an LDAP server object.
   $server = SimpleLdapServer::singleton();
-  // If the role is read-only, do not perform any drupal-to-ldap sync.
-  if (SimpleLdapRole::readonly()) return true;
 
   // Determine the search string to use depending on the module configuration.
   if ($attribute_member_format == 'dn') {
@@ -192,7 +189,10 @@ function simple_ldap_role_sync_user_to_ldap($drupal_user) {
   $drupal_roles = array();
   foreach (array_keys($drupal_user->roles) as $rid) {
     // Skip "special" roles.
-    if ($rid == DRUPAL_AUTHENTICATED_RID || $rid == DRUPAL_ANONYMOUS_RID) {
+    $exclude = array(DRUPAL_AUTHENTICATED_RID, DRUPAL_ANONYMOUS_RID);
+    // Allow altering excluded roles.
+    drupal_alter('simple_ldap_role_exclude', $exclude);
+    if (in_array($rid, $exclude)) {
       continue;
     }
 
@@ -229,11 +229,6 @@ function simple_ldap_role_sync_user_to_ldap($drupal_user) {
     $name = $ldap_groups[$i][$attribute_name][0];
     $dn = $ldap_groups[$i]['dn'];
     if (!in_array($name, $drupal_roles)) {
-      // Shortcut the removal if the LDAP role does not exist in Drupal and the preserve orphans option is enabled
-      $drupal_role = user_role_load_by_name($name);
-      if ($drupal_role === FALSE && simple_ldap_role_variable_get('simple_ldap_role_preserve_orphans')) {
-        continue;
-      }
       $ldap_group = SimpleLdapRole::singleton($name);
       $ldap_group->deleteUser($drupal_user->name);
       $ldap_group->save();
@@ -301,13 +296,10 @@ function simple_ldap_role_sync_user_to_drupal($drupal_user) {
   $diff = array_diff($drupal_user->roles, $edit['roles']);
   foreach ($diff as $rid => $name) {
     // Account for special groups.
-    if ($rid == DRUPAL_AUTHENTICATED_RID || $rid == DRUPAL_ANONYMOUS_RID) {
-      $edit['roles'][$rid] = $drupal_user->roles[$rid];
-      continue;
-    }
-    // Roles which only appear in Drupal and "preserve orphans" is set
-    $role = SimpleLdapRole::singleton($name);
-    if (!$role->exists && simple_ldap_role_variable_get('simple_ldap_role_preserve_orphans')) {
+    $exclude = array(DRUPAL_AUTHENTICATED_RID, DRUPAL_ANONYMOUS_RID);
+    // Allow altering excluded roles.
+    drupal_alter('simple_ldap_role_exclude', $exclude);
+    if (in_array($rid, $exclude)) {
       $edit['roles'][$rid] = $drupal_user->roles[$rid];
       continue;
     }
