@@ -10,12 +10,10 @@ class SimpleLdapUser {
   protected $attributes = array();
   protected $dn = FALSE;
   protected $exists = FALSE;
-  protected $mapObject;
   protected $server;
-  protected $readonly;
 
   // Internal variables.
-  protected $dirty = FALSE;
+  protected $dirty = array();
   protected $move = FALSE;
 
   /**
@@ -29,42 +27,70 @@ class SimpleLdapUser {
   public function __construct($name) {
     // Load the LDAP server object.
     $this->server = SimpleLdapServer::singleton();
-    // Load up the map.
-    $this->mapObject = SimpleLdapUserMap::singleton();
 
     // Get the LDAP configuration.
-    $this->readonly = SimpleLdapUser::readonly();
     $base_dn = simple_ldap_user_variable_get('simple_ldap_user_basedn');
     $scope = simple_ldap_user_variable_get('simple_ldap_user_scope');
     $attribute_name = simple_ldap_user_variable_get('simple_ldap_user_attribute_name');
     $attribute_mail = simple_ldap_user_variable_get('simple_ldap_user_attribute_mail');
+    $puid_attr = simple_ldap_user_variable_get('simple_ldap_user_unique_attribute');
     $safe_name = preg_replace(array('/\(/', '/\)/'), array('\\\(', '\\\)'), $name);
-    $filter = '(&(|(' . $attribute_name . '=' . $safe_name . ')(' . $attribute_mail . '=' . $safe_name . '))' . self::filter() . ')';
+
+    // Search first for the user by name, then by email and finally by PUID.
+    // Ensures that if someone has a username that is an email address, we find only
+    // one record.
+    $filter_list = array();
+    $filter_list[] = '(&(' . $attribute_name . '=' . $safe_name . ')' . self::filter() . ')';
+    $filter_list[] = '(&(' . $attribute_mail . '=' . $safe_name . ')' . self::filter() . ')';
+    if ($puid_attr) {
+      $filter_list[] = '(&(' . $puid_attr . '=' . $safe_name . ')' . self::filter() . ')';
+    }
 
     // List of attributes to fetch from the LDAP server.
-    $attributes = array($attribute_name, $attribute_mail);
-    foreach ($this->mapObject->map as $attribute) {
-      if (isset($attribute['ldap'])) {
-        $attributes[] = $attribute['ldap'];
-      }
+    // Using key => value autmatically dedups the list.
+    $attributes = array(
+      $attribute_name => $attribute_name,
+      $attribute_mail => $attribute_mail
+    );
+    $attribute_map = simple_ldap_user_variable_get('simple_ldap_user_attribute_map');
+
+    // Collect all the attributes to load
+    $attributes = array_keys($attribute_map);
+    $config_extra_attributes = array_values(simple_ldap_user_variable_get('simple_ldap_user_extra_attrs'));
+    $hook_extra_attributes = array_values(module_invoke_all('simple_ldap_user_extra_attributes', $this->server));
+
+    // Merge them into a single array.
+    $attributes = array_merge($attributes, $config_extra_attributes, $hook_extra_attributes);
+
+    // Add the unique attribute, if it is set.
+    if ($puid_attr) {
+      $attributes[] = $puid_attr;
     }
+
+    // filter to keep ldap_search happy
+    $attributes = array_unique(array_map('strtolower', array_values($attributes)));
 
     // Include the userAccountControl attribute for Active Directory.
     try {
       if ($this->server->type == 'Active Directory') {
-        $attributes[] = 'useraccountcontrol';
+        $attributes['useraccountcontrol'] = 'useraccountcontrol';
       }
     } catch (SimpleLdapException $e) {}
 
-    // Attempt to load the user from the LDAP server.
-    try {
-      $result = $this->server->search($base_dn, $filter, $scope, $attributes, 0, 1);
-    } catch (SimpleLdapException $e) {
-      if ($e->getCode() == -1) {
-        $result = array('count' => 0);
+    foreach($filter_list as $filter) {
+      // Attempt to load the user from the LDAP server.
+      try {
+        $result = $this->server->search($base_dn, $filter, $scope, array_values($attributes), 0, 1);
+      } catch (SimpleLdapException $e) {
+        if ($e->getCode() == -1) {
+          $result = array('count' => 0);
+        }
+        else {
+          throw $e;
+        }
       }
-      else {
-        throw $e;
+      if ($result['count'] == 1) {
+        break;
       }
     }
 
@@ -73,8 +99,28 @@ class SimpleLdapUser {
       $this->dn = $result[0]['dn'];
       foreach ($attributes as $attribute) {
         $attribute = strtolower($attribute);
-        if (isset($result[0][$attribute])) {
-          $this->attributes[$attribute] = $result[0][$attribute];
+        // Search for the attribute in the LDAP schema.
+        $schema_attribute = $this->server->schema->get('attributeTypes', $attribute);
+        $schema_attribute_name = strtolower($schema_attribute['name']);
+        // Check whether the attribute or any of its aliases are present in the
+        // LDAP user.
+        $found = FALSE;
+        if (isset($result[0][$schema_attribute_name])) {
+          $found = $schema_attribute_name;
+        }
+        if (!$found) {
+          foreach($schema_attribute['aliases'] as $alias) {
+            $alias = strtolower($alias);
+            if (isset($result[0][$alias])) {
+              $found = $alias;
+              break;
+            }
+          }
+        }
+
+        // Assign the attribute value to the SimpleLdapUser object.
+        if ($found) {
+          $this->attributes[$attribute] = $result[0][$found];
         }
       }
       $this->exists = TRUE;
@@ -99,10 +145,10 @@ class SimpleLdapUser {
       case 'dn':
       case 'exists':
       case 'server':
-      case 'mapObject':
         return $this->$name;
-      case 'readonly':
-        return ($this->server->readonly ? TRUE : $this->$name);
+
+      case 'dirty':
+        return !empty($this->dirty);
 
       default:
         if (isset($this->attributes[$name])) {
@@ -136,7 +182,6 @@ class SimpleLdapUser {
       // Read-only values.
       case 'attributes':
       case 'exists':
-      case 'readonly':
         break;
 
       case 'dn':
@@ -147,7 +192,6 @@ class SimpleLdapUser {
             // Save the old DN, so a move operation can be done during save().
             $this->move = $this->dn;
             $this->dn = $value;
-            $this->dirty = TRUE;
           } catch (SimpleLdapException $e) {}
         }
         break;
@@ -155,9 +199,9 @@ class SimpleLdapUser {
       // Look up the raw password from the internal reverse hash map. This
       // intentionally falls through to default:.
       case $attribute_pass:
-        if (isset(self::$hash[$value])) {
-          $hash = simple_ldap_user_variable_get('simple_ldap_user_password_hash');
-          $value = SimpleLdap::hash(self::$hash[$value], $hash);
+        if (isset(self::$hash[$value[0]])) {
+          $algorithm = simple_ldap_user_variable_get('simple_ldap_user_password_hash');
+          $value = SimpleLdap::hash(self::$hash[$value[0]], $algorithm);
         }
         else {
           // A plain text copy of the password is not available. Do not
@@ -171,6 +215,10 @@ class SimpleLdapUser {
           $value = array($value);
         }
 
+        if (!array_key_exists('count', $value)) {
+          $value['count'] = count($value);
+        }
+
         // Make sure $this->attributes[$name] is an array.
         if (!isset($this->attributes[$name])) {
           $this->attributes[$name] = array();
@@ -180,10 +228,15 @@ class SimpleLdapUser {
         $diff1 = @array_diff($this->attributes[$name], $value);
         $diff2 = @array_diff($value, $this->attributes[$name]);
 
+        // Don't trigger a write if the only difference is the count field,
+        // which may be missing from the $value array.
+        unset($diff1['count']);
+        unset($diff2['count']);
+
         // If there are any differences, update the current value.
         if (!empty($diff1) || !empty($diff2)) {
           $this->attributes[$name] = $value;
-          $this->dirty = TRUE;
+          $this->dirty[$name] = $value;
         }
 
     }
@@ -201,6 +254,9 @@ class SimpleLdapUser {
    */
   public function authenticate($password) {
     if ($this->exists) {
+      if ($password[0] === chr(0)) {
+        $password[0] = chr(0x20);
+      }
       $auth = $this->server->bind($this->dn, $password);
       return $auth;
     }
@@ -216,14 +272,14 @@ class SimpleLdapUser {
    * @throw SimpleLdapException
    */
   public function save() {
-    // If there is nothing to save, return "success".
-    if (!$this->dirty) {
-      return TRUE;
-    }
-
     // Move(rename) the entry if the DN was changed.
     if ($this->move) {
       $this->server->move($this->move, $this->dn);
+    }
+
+    // If there is nothing to save, return "success".
+    if (empty($this->dirty)) {
+      return TRUE;
     }
 
     // Active Directory has some restrictions on what can be modified.
@@ -238,17 +294,18 @@ class SimpleLdapUser {
     }
 
     if ($this->exists) {
-      // Update existing entry.
-      $this->server->modify($this->dn, $this->attributes);
+      // Update existing entry, writing out only changed values
+      $this->server->modify($this->dn, $this->dirty);
     }
     else {
       // Create new entry.
       try {
-        $this->attributes['objectclass'] = array_values(simple_ldap_user_variable_get('simple_ldap_user_objectclass'));
+        $this->attributes['objectclass'] = simple_ldap_user_parent_objectclasses(simple_ldap_user_variable_get('simple_ldap_user_objectclass'));
         $this->server->add($this->dn, $this->attributes);
       } catch (SimpleLdapException $e) {
         if ($e->getCode() == 68) {
           // An "already exists" error was returned, try to do a modify instead.
+          // We don't know what is dirty, so write the whole record
           $this->server->modify($this->dn, $this->attributes);
         }
         else {
@@ -259,7 +316,8 @@ class SimpleLdapUser {
 
     // No exceptions were thrown, so the save was successful.
     $this->exists = TRUE;
-    $this->dirty = FALSE;
+    $this->attributes += $this->fetch_puid();
+    $this->dirty = array();
     $this->move = FALSE;
     return TRUE;
   }
@@ -286,7 +344,7 @@ class SimpleLdapUser {
 
     // There were no exceptions thrown, so the entry was successfully deleted.
     $this->exists = FALSE;
-    $this->dirty = FALSE;
+    $this->dirty = array();
     $this->move = FALSE;
     return TRUE;
   }
@@ -371,24 +429,32 @@ class SimpleLdapUser {
     self::$hash[$key] = $value;
   }
 
+  /**
+   * Special function to fetch the PUID of a record.
+   */
+  private function fetch_puid() {
+    // Configuration
+    $base_dn = simple_ldap_user_variable_get('simple_ldap_user_basedn');
+    $scope = simple_ldap_user_variable_get('simple_ldap_user_scope');
+    $puid_attr = strtolower(simple_ldap_user_variable_get('simple_ldap_user_unique_attribute'));
 
-  /**
-   * Return whether this module is read-only, as set by the module configuration.
-   *
-   * @return boolean
-   *   The read-only status of the module.
-   */
-  public static function readonly() {
-    return variable_get('simple_ldap_readonly') ? TRUE : simple_ldap_user_variable_get('simple_ldap_user_readonly');
+    // Should we bother?
+    if (!$puid_attr || !$this->exists) {
+      return array();
+    }
+
+    try {
+      $result = $this->server->search($this->dn, 'objectclass=*', 'sub', array($puid_attr), 0, 1);
+    } catch (SimpleLdapException $e) {
+      if ($e->getCode() == -1) {
+        $result = array('count' => 0);
+      }
+      else {
+        throw $e;
+      }
+    }
+
+    return ($result['count'] == 1) ? $result[0] : array();
   }
-  
-  /**
-   * Return whether this module allows orphaned users, as set by the module configuration.
-   *
-   * @return boolean
-   *   The read-only status of the module.
-   */
-  public static function allowOrphans() {
-    return simple_ldap_user_variable_get('simple_ldap_user_preserve_orphans');
-  }
+
 }

@@ -11,7 +11,6 @@ class SimpleLdapRole {
   protected $dn = FALSE;
   protected $exists = FALSE;
   protected $server;
-  protected $readonly;
 
   // Internal variables.
   protected $dirty = FALSE;
@@ -33,7 +32,6 @@ class SimpleLdapRole {
     $this->server = SimpleLdapServer::singleton();
 
     // Get the LDAP configuration.
-    $this->readonly = SimpleLdapRole::readonly();
     $basedn = simple_ldap_role_variable_get('simple_ldap_role_basedn');
     $scope = simple_ldap_role_variable_get('simple_ldap_role_scope');
     $attribute_name = simple_ldap_role_variable_get('simple_ldap_role_attribute_name');
@@ -82,8 +80,6 @@ class SimpleLdapRole {
       case 'exists':
       case 'server':
         return $this->$name;
-      case 'readonly':
-        return ($this->server->readonly ? TRUE : $this->$name);
 
       default:
         if (isset($this->attributes[$name])) {
@@ -114,7 +110,6 @@ class SimpleLdapRole {
     switch ($name) {
       case 'attributes':
       case 'exists':
-      case 'readonly':
         break;
 
       case 'dn':
@@ -393,13 +388,4 @@ class SimpleLdapRole {
     return self::$roles[$name];
   }
 
-  /**
-   * Return whether this module is read-only, as set by the module configuration.
-   *
-   * @return boolean
-   *   The read-only status of the module.
-   */
-  public static function readonly() {
-    return variable_get('simple_ldap_readonly') ? TRUE : simple_ldap_role_variable_get('simple_ldap_role_readonly');
-  }
 }

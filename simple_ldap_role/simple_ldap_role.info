@@ -7,3 +7,5 @@ dependencies[] = simple_ldap
 dependencies[] = simple_ldap_user
 files[] = simple_ldap_role.test
 files[] = SimpleLdapRole.class.php
+
+

@@ -5,3 +5,4 @@ core = 7.x
 configure = admin/config/people/simple_ldap/active_group
 dependencies[] = simple_ldap_user
 dependencies[] = simple_ldap_role
+

@@ -41,6 +41,16 @@ class SimpleLdapUserController extends UserController {
 
       // Try to load the user from LDAP.
       $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
+  
+      // Check to see if the user should be kept.
+      $result = array_filter(module_invoke_all('simple_ldap_user_should_delete_user', $drupal_user, $ldap_user));
+      foreach ($result as $res) {
+        if ($res === TRUE) {
+          $this->delete_single($drupal_user);
+          $users[$uid] = NULL;
+          continue;
+        }
+      }
 
       if (!$ldap_user->exists && !SimpleLdapUser::allowOrphans()) {
         // Block the user if it does not exist in LDAP.
@@ -67,5 +77,32 @@ class SimpleLdapUserController extends UserController {
     $account->simple_ldap_user_drupal_status = $account->status;
     $account->simple_ldap_user_ldap_status = 0;
     $account->status = 0;
+  }
+
+  /**
+   * Delete a user from the system. 
+   *
+   * This is a copy of user_delete() minus the user_load() call.
+   */
+  private function delete_single(stdClass $account) {
+    $uids = array($account->uid);
+
+    $transaction = db_transaction();
+    try {
+      module_invoke_all('user_delete', $account);
+      module_invoke_all('entity_delete', $account, 'user');
+      field_attach_delete('user', $account);
+      drupal_session_destroy_uid($account->uid);
+
+      db_delete('users')->condition('uid', $uids, 'IN')->execute();
+      db_delete('users_roles')->condition('uid', $uids, 'IN')->execute();
+      db_delete('authmap')->condition('uid', $uids, 'IN')->execute();
+    }
+    catch (Exception $e) {
+      $transaction->rollback();
+      watchdog_exception('user', $e);
+      throw $e;
+    }
+    $this->resetCache($uids);
   }
 }
