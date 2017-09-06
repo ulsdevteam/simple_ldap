@@ -173,6 +173,14 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#empty_value' => 'none',
   );
 
+  $form['user']['simple_ldap_user_readonly'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Read-only'),
+    '#default_value' => (variable_get('simple_ldap_readonly', FALSE) ? TRUE : variable_get('simple_ldap_user_readonly', FALSE)),
+    '#disabled' => variable_get('simple_ldap_readonly', FALSE),
+    '#description' => t('Should the users in the LDAP server be read-only?'),
+  );
+
   // LDAP user admin advanced form.
   $form['advanced'] = array(
     '#type' => 'fieldset',
@@ -198,6 +206,13 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_source'),
     '#disabled' => $server->readonly,
     '#description' => t('This determines the behavior of the data sync in the event of a conflict between LDAP and Drupal.'),
+  );
+
+  $form['advanced']['simple_ldap_user_preserve_orphans'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Preserve users when not matched'),
+    '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_preserve_orphans'),
+    '#description' => t('This allows a local user to remain in the non-authoritative datasource if the user does not exist in the authoritative datasource.'),
   );
 
   $form['advanced']['simple_ldap_user_sync'] = array(
