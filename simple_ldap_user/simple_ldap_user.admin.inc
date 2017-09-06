@@ -309,11 +309,18 @@ function simple_ldap_user_import($form, &$form_state) {
   }
   asort($users);
 
+  // Only selects new users
+  $drupal_users = entity_load('user');
+  $new_names = $users;
+  foreach ($drupal_users as $user) {
+      unset($new_names[strtoupper($user->name)]);
+  }
+
   $form['users'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Import these users') . ' (' . count($users) . ')',
     '#options' => $users,
-    '#default_value' => array_keys($users),
+    '#default_value' => $new_names,
     '#checkall' => TRUE,
   );
 
