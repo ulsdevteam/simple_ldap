@@ -480,11 +480,11 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
   // Load the LDAP user, force a cache reset.
   $ldap_user = SimpleLdapUser::singleton($drupal_user->name, TRUE);
 
-  // Nothing to sync. Check if user is an admin
+  // Nothing to sync.
   if(isset($drupal_user->uid) && $drupal_user->uid == 1) {
+    // Check if user is an admin.
     return;
-  } //For other users
-  elseif (!$ldap_user->exists) {
+  } elseif (!$ldap_user->exists) {	//For other users.
     $result = db_update('users')
               ->fields(array(
                   'status' => 0
