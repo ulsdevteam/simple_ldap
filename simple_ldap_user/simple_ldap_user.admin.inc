@@ -310,10 +310,17 @@ function simple_ldap_user_import($form, &$form_state) {
   asort($users);
 
   // Only selects new users
-  $drupal_users = entity_load('user');
+  
   $new_names = $users;
-  foreach ($drupal_users as $user) {
-      unset($new_names[strtoupper($user->name)]);
+  $sql = "select name from {users} where name= :name";
+  foreach ($new_names as $item) {
+    $result = db_query($sql, array(':name' => $item));
+    if ($result) {
+      // Filter users fetched from ldap database and mysql database
+      while ($row = $result->fetchAssoc()) {
+        unset($new_names[strtoupper($row['name'])]);
+        }
+     }
   }
 
   $form['users'] = array(
