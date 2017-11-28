@@ -479,25 +479,23 @@ function simple_ldap_user_sync_user_to_ldap($drupal_user) {
 function simple_ldap_user_sync_user_to_drupal($drupal_user) {
   // Load the LDAP user, force a cache reset.
   $ldap_user = SimpleLdapUser::singleton($drupal_user->name, TRUE);
-
   if(isset($drupal_user->uid) && $drupal_user->uid == 1) {
     // Check if user is an admin.
     // Nothing to sync.
     return;
-  } 
-  else {
-    if ($ldap_user->exists && $drupal_user->status == 1) {
-      //if user is active in ldap and drupal database then no need to update its status
-      return; 
-    }
-    $status = 1;	//to unblock users
-    if (!$ldap_user->exists) { 
-      $status = 0;	//to block users
-    }
+  } elseif (!$ldap_user->exists) {	//For other users.
     $result = db_update('users')
               ->fields(array(
-                  'status' => $status
-              ))
+                  'status' => 0
+              )) //Update status to 0 for blocked users
+              ->condition('uid',$drupal_user->uid,'=')
+              ->execute();
+    return;
+  } elseif ($ldap_user->exists) {      //For other users.
+    $result = db_update('users')
+              ->fields(array(
+                  'status' => 1
+              )) //Update status to 1 for unblocked users
               ->condition('uid',$drupal_user->uid,'=')
               ->execute();
     return;
