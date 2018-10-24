@@ -483,22 +483,18 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
     // Check if user is an admin.
     // Nothing to sync.
     return;
-  } elseif (!$ldap_user->exists) {	//For other users.
-    $result = db_update('users')
-              ->fields(array(
-                  'status' => 0
-              )) //Update status to 0 for blocked users
-              ->condition('uid',$drupal_user->uid,'=')
-              ->execute();
-    return;
-  } elseif ($ldap_user->exists) {      //For other users.
-    $result = db_update('users')
-              ->fields(array(
-                  'status' => 1
-              )) //Update status to 1 for unblocked users
-              ->condition('uid',$drupal_user->uid,'=')
-              ->execute();
-    return;
+  } else {
+      // Check the status between $drupal_user and $ldap_user before execute dp_update
+      $ldap_user_status = ($ldap_user->exists)? "1" : "0";
+      if ($drupal_user->status != $ldap_user_status) {
+        $result = db_update('users')
+                    ->fields(array(
+                        'status' => $ldap_user_status
+                    ))
+                    ->condition('uid',$drupal_user->uid,'=')
+                    ->execute();
+      }
+      return;
   }
 
   // Initialize array of attribute changes.
