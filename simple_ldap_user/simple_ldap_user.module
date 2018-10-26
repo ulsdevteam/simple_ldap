@@ -66,7 +66,6 @@ function simple_ldap_user_form_user_admin_account_alter(&$form, &$form_state, $f
           $form['accounts']['#options'][$uid]['status'] = 'blocked';
         }
       }
-
     }
   }
 }
@@ -483,9 +482,16 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
     // Check if user is an admin.
     // Nothing to sync.
     return;
-  } else {
-      // Check the status between $drupal_user and $ldap_user before execute dp_update
+  }
+  else {
       $ldap_user_status = ($ldap_user->exists)? "1" : "0";
+      // Force to update drupal user status based on $ldap_user->useraccountcontrol
+      if ($ldap_user->server->type == 'Active Directory') {
+          if (isset($ldap_user->useraccountcontrol[0]) && (int) $ldap_user->useraccountcontrol[0] & 2) {
+            $ldap_user_status = "0";
+          }
+      }
+      // Check the status between $drupal_user and $ldap_user before execute dp_update
       if ($drupal_user->status != $ldap_user_status) {
         $result = db_update('users')
                     ->fields(array(
