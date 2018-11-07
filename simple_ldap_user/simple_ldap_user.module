@@ -479,8 +479,7 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
     return;
   } else {
       // Sync up the status.
-      // Check the status between $drupal_user and $ldap_user before execute dp_update
-      $ldap_user_status = ($ldap_user->exists)? 1 : 0;
+      // Check the status between $drupal_user, $ldap_user, and user accountcontrol before execute dp_update
       $ldap_user_status = simple_ldap_useraccountcontrol_isblocked($ldap_user);
       if ($drupal_user->status != $ldap_user_status) {
         $result = db_update('users')
@@ -649,5 +648,5 @@ function simple_ldap_useraccountcontrol_isblocked ($ldap_user) {
       return 0; // blocked
     }
   }
-  return 1; // active
+  return ($ldap_user->exists)? 1 : 0; // active:blocked
 }
