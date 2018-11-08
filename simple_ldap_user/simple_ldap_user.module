@@ -658,7 +658,7 @@ function simple_ldap_user_status($ldap_user) {
       $ldap_user_status = 0;
     }
     if (simple_ldap_useraccountcontrol_isblocked($ldap_user) == 0) {
-        $ldap_user_status = 0;
+      $ldap_user_status = 0;
     }
     return $ldap_user_status;
 }
