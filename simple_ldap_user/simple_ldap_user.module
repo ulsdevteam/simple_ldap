@@ -53,14 +53,9 @@ function simple_ldap_user_form_user_admin_account_alter(&$form, &$form_state, $f
       // Load the user objects.
       $drupal_user = user_load($uid);
       $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
-
-      // Check whether the user exists in LDAP.
-      if (!$ldap_user->exists) {
+      // Check whether the user exists and user account permission in LDAP.
+      if (simple_ldap_user_status($ldap_user) == 0) {
         $form['accounts']['#options'][$uid]['status'] = 'blocked';
-      }
-
-      if (simple_ldap_useraccountcontrol_isblocked($ldap_user) == 0) {
-          $form['accounts']['#options'][$uid]['status'] = 'blocked';
       }
     }
   }
@@ -480,7 +475,7 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
   } else {
       // Sync up the status.
       // Check the status between $drupal_user, $ldap_user, and user accountcontrol before execute dp_update
-      $ldap_user_status = simple_ldap_useraccountcontrol_isblocked($ldap_user);
+      $ldap_user_status = simple_ldap_user_status($ldap_user);
       if ($drupal_user->status != $ldap_user_status) {
         $result = db_update('users')
                     ->fields(array(
@@ -648,5 +643,22 @@ function simple_ldap_useraccountcontrol_isblocked ($ldap_user) {
       return 0; // blocked
     }
   }
-  return ($ldap_user->exists)? 1 : 0; // active:blocked
+  return 1;
+}
+
+/**
+ * Return an user's account current status
+ *
+ * parameter: $ldap_user
+ *  */
+function simple_ldap_user_status($ldap_user) {
+    $ldap_user_status = 1;
+    // Check whether the user exists in LDAP.
+    if (!$ldap_user->exists) {
+      $ldap_user_status = 0;
+    }
+    if (simple_ldap_useraccountcontrol_isblocked($ldap_user) == 0) {
+        $ldap_user_status = 0;
+    }
+    return $ldap_user_status;
 }
