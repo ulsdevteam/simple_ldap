@@ -366,4 +366,23 @@ class SimpleLdapUser {
     self::$hash[$key] = $value;
   }
 
+  /**
+   * Return the user account control status under Active Directory in LDAP database
+   * Check whether the user is disabled (Active Directory only).
+   * http://support.microsoft.com/kb/305144
+   *
+   * @param array $ldap_user
+   *
+   * @return int
+   *  */
+  public function isLdapUserAccountControlActived() {
+    // Force to update drupal user status based on $this->useraccountcontrol
+    if ($this->server->type == 'Active Directory') {
+      if (isset($this->useraccountcontrol[0]) && (int) $this->useraccountcontrol[0] & 2) {
+       return 0; // blocked
+      }
+    }
+    return 1; // actived
+}
+
 }

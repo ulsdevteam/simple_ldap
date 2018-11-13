@@ -630,35 +630,19 @@ function simple_ldap_user_variable_get($name, $default = NULL, $force_default = 
 }
 
 /**
- * Return the user account control status under Active Directory in LDAP database
- * Check whether the user is disabled (Active Directory only).
- * http://support.microsoft.com/kb/305144
- *
- * parameter: $ldap_user
- *  */
-function simple_ldap_useraccountcontrol_isblocked ($ldap_user) {
-  // Force to update drupal user status based on $ldap_user->useraccountcontrol
-  if ($ldap_user->server->type == 'Active Directory') {
-    if (isset($ldap_user->useraccountcontrol[0]) && (int) $ldap_user->useraccountcontrol[0] & 2) {
-      return 0; // blocked
-    }
-  }
-  return 1;
-}
-
-/**
  * Return an user's account current status
  *
- * parameter: $ldap_user
- *  */
+ * @param array $ldap_user
+ *
+ * @return int $ldap_user_status 
+ */
 function simple_ldap_user_status($ldap_user) {
-    $ldap_user_status = 1;
     // Check whether the user exists in LDAP.
     if (!$ldap_user->exists) {
-      $ldap_user_status = 0;
+      return 0;
     }
-    if (simple_ldap_useraccountcontrol_isblocked($ldap_user) == 0) {
-      $ldap_user_status = 0;
+    if ($ldap_user->isLdapUserAccountControlActived() == 0) {
+      return 0;
     }
-    return $ldap_user_status;
+    return 1;
 }

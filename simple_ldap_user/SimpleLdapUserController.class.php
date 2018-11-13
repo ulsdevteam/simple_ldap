@@ -49,10 +49,8 @@ class SimpleLdapUserController extends UserController {
 
       // Active Directory uses a bitmask to specify certain flags on an account,
       // including whether it is enabled. http://support.microsoft.com/kb/305144
-      if ($ldap_user->server->type == 'Active Directory') {
-        if (isset($ldap_user->useraccountcontrol[0]) && (int) $ldap_user->useraccountcontrol[0] & 2) {
+      if (!$ldap_user->isLdapUserAccountControlActived()) {
           $this->blockUser($drupal_user);
-        }
       }
     }
 
