@@ -634,14 +634,14 @@ function simple_ldap_user_variable_get($name, $default = NULL, $force_default = 
  *
  * @param array $ldap_user
  *
- * @return int $ldap_user_status 
+ * @return int $ldap_user_status
  */
 function simple_ldap_user_status($ldap_user) {
     // Check whether the user exists in LDAP.
     if (!$ldap_user->exists) {
       return 0;
     }
-    if ($ldap_user->isLdapUserAccountControlActived() == 0) {
+    if ($ldap_user->isLdapUserEnabled() == 0) {
       return 0;
     }
     return 1;

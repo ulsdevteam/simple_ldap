@@ -375,7 +375,7 @@ class SimpleLdapUser {
    *
    * @return int
    *  */
-  public function isLdapUserAccountControlActived() {
+  public function isLdapUserEnabled() {
     // Force to update drupal user status based on $this->useraccountcontrol
     if ($this->server->type == 'Active Directory') {
       if (isset($this->useraccountcontrol[0]) && (int) $this->useraccountcontrol[0] & 2) {
