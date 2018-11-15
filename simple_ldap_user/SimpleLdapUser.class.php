@@ -371,8 +371,6 @@ class SimpleLdapUser {
    * Check whether the user is disabled (Active Directory only).
    * http://support.microsoft.com/kb/305144
    *
-   * @param array $ldap_user
-   *
    * @return int
    *  */
   public function isLdapUserEnabled() {
