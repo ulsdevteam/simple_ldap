@@ -53,6 +53,12 @@ function simple_ldap_user_form_user_admin_account_alter(&$form, &$form_state, $f
       // Load the user objects.
       $drupal_user = user_load($uid);
       $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
+
+      // Check whether the user exists in LDAP.
+      if (!$ldap_user->exists && !SimpleLdapUser::allowOrphans()) {
+        $form['accounts']['#options'][$uid]['status'] = 'blocked';
+      }
+
       // Check whether the user exists and user account permission in LDAP.
       if (simple_ldap_user_status($ldap_user) == 0) {
         $form['accounts']['#options'][$uid]['status'] = 'blocked';
@@ -81,8 +87,7 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
   switch ($form_id) {
     case 'user_login_block':
       // Remove the register and password reminder links.
-      $server = SimpleLdapServer::singleton();
-      if ($server->readonly) {
+      if (SimpleLdapUser::readonly()) {
         unset($form['links']);
       }
     case 'user_login':
@@ -103,7 +108,7 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
 
       // If the server is read/write, then break early to bypass disabling
       // of any properties or fields.
-      if ($server->readonly) {
+      if (SimpleLdapUser::readonly()) {
         $map_object->disableMappedFormFields($form);
       }
       break;
@@ -123,8 +128,7 @@ function simple_ldap_user_form_alter(&$form, &$form_state, $form_id) {
  * read-only.
  */
 function simple_ldap_user_menu_alter(&$items) {
-  $server = SimpleLdapServer::singleton();
-  if ($server->readonly) {
+  if (SimpleLdapUser::readonly()) {
     $items['user/register']['access callback'] = FALSE;
     $items['user/password']['access callback'] = FALSE;
   }
@@ -208,7 +212,7 @@ function simple_ldap_user_user_presave(&$edit, $account, $category) {
 
         $account->name = $account->original->name;
         $edit['name'] = $account->original->name;
-        drupal_set_message(t('The new username %name could not be changed because an LDAP entry already exists. Previous name have been keep and no LDAP modification have been done.', array('%name' => $new_username)), 'error');
+        drupal_set_message(t('The new username %name could not be changed because an LDAP entry already exists. Previous name has been kept and no LDAP modifications have been done.', array('%name' => $new_username)), 'error');
       }
     }
   }
@@ -395,8 +399,7 @@ function simple_ldap_user_sync_user($drupal_user) {
  */
 function simple_ldap_user_sync_user_to_ldap($drupal_user) {
   // Don't try to sync if the server is read-only.
-  $server = SimpleLdapServer::singleton();
-  if ($server->readonly) {
+  if (SimpleLdapUser::readonly()) {
     return;
   }
 
@@ -514,8 +517,7 @@ function simple_ldap_user_sync_user_to_drupal($drupal_user) {
  */
 function simple_ldap_user_user_operations() {
   $operations = array();
-  $server = SimpleLdapServer::singleton();
-  if (!$server->readonly) {
+  if (!SimpleLdapUser::readonly()) {
     $operations['simple_ldap_user_export'] = array(
       'label' => t('Export selected users to LDAP'),
       'callback' => 'simple_ldap_user_export',

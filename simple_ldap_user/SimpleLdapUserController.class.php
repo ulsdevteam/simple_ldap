@@ -42,7 +42,7 @@ class SimpleLdapUserController extends UserController {
       // Try to load the user from LDAP.
       $ldap_user = SimpleLdapUser::singleton($drupal_user->name);
 
-      if (!$ldap_user->exists) {
+      if (!$ldap_user->exists && !SimpleLdapUser::allowOrphans()) {
         // Block the user if it does not exist in LDAP.
         $this->blockUser($drupal_user);
       }

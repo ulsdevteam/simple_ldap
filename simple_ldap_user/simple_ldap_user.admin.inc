@@ -173,6 +173,14 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#empty_value' => 'none',
   );
 
+  $form['user']['simple_ldap_user_readonly'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Read-only'),
+    '#default_value' => (variable_get('simple_ldap_readonly', FALSE) ? TRUE : variable_get('simple_ldap_user_readonly', FALSE)),
+    '#disabled' => variable_get('simple_ldap_readonly', FALSE),
+    '#description' => t('Should the users in the LDAP server be read-only?'),
+  );
+
   // LDAP user admin advanced form.
   $form['advanced'] = array(
     '#type' => 'fieldset',
@@ -182,10 +190,10 @@ function simple_ldap_user_admin($form, &$form_state) {
   );
 
   $form['advanced']['simple_ldap_user_filter'] = array(
-    '#type' => 'textfield',
+    '#type' => 'textarea',
     '#title' => t('Search filter'),
     '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_filter'),
-    '#description' => t('This filter will be combined with the normal search filter to find users.') . ' ' . t('This can be used to require a certain attribute be present, for example.'),
+    '#description' => t('This filter will be combined with the normal search filter to find users.') . ' ' . t('This can be used to require a certain attribute be present, for example.'). ' ' . t('Do not include the leading and trailing parentheses, e.g. "&(objectclass=user)(department=internal)".'),
   );
 
   $form['advanced']['simple_ldap_user_source'] = array(
@@ -198,6 +206,13 @@ function simple_ldap_user_admin($form, &$form_state) {
     '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_source'),
     '#disabled' => $server->readonly,
     '#description' => t('This determines the behavior of the data sync in the event of a conflict between LDAP and Drupal.'),
+  );
+
+  $form['advanced']['simple_ldap_user_preserve_orphans'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Preserve users when not matched'),
+    '#default_value' => simple_ldap_user_variable_get('simple_ldap_user_preserve_orphans'),
+    '#description' => t('This allows a local user to remain in the non-authoritative datasource if the user does not exist in the authoritative datasource.'),
   );
 
   $form['advanced']['simple_ldap_user_sync'] = array(
@@ -294,11 +309,25 @@ function simple_ldap_user_import($form, &$form_state) {
   }
   asort($users);
 
+  // Only selects new users
+  
+  $new_names = $users;
+  $sql = "select name from {users} where name= :name";
+  foreach ($new_names as $item) {
+    $result = db_query($sql, array(':name' => $item));
+    if ($result) {
+      // Filter users fetched from ldap database and mysql database
+      while ($row = $result->fetchAssoc()) {
+        unset($new_names[strtoupper($row['name'])]);
+        }
+     }
+  }
+
   $form['users'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Import these users') . ' (' . count($users) . ')',
     '#options' => $users,
-    '#default_value' => array_keys($users),
+    '#default_value' => $new_names,
     '#checkall' => TRUE,
   );
 

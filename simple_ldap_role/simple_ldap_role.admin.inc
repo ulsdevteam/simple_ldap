@@ -140,6 +140,14 @@ function simple_ldap_role_admin($form, &$form_state) {
     ),
   );
 
+  $form['role']['simple_ldap_role_readonly'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Read-only'),
+    '#default_value' => (variable_get('simple_ldap_readonly', FALSE) ? TRUE : variable_get('simple_ldap_role_readonly', FALSE)),
+    '#disabled' => variable_get('simple_ldap_readonly', FALSE),
+    '#description' => t('Should the roles in the LDAP server be read-only?'),
+  );
+    
   // Set default value if it exists in the list of attributes. If a default
   // value is not set, the empty option is selected.
   if (array_key_exists($attribute_member_selected, $attributes)) {
@@ -154,10 +162,10 @@ function simple_ldap_role_admin($form, &$form_state) {
   );
 
   $form['advanced']['simple_ldap_role_filter'] = array(
-    '#type' => 'textfield',
+    '#type' => 'textarea',
     '#title' => t('Search filter'),
     '#default_value' => simple_ldap_role_variable_get('simple_ldap_role_filter'),
-    '#description' => t('This filter will be combined with the normal search filter to find groups.') . ' ' . t('This can be used to require a certain attribute be present, for example.'),
+    '#description' => t('This filter will be combined with the normal search filter to find groups.') . ' ' . t('This can be used to require a certain attribute be present, for example.') . ' ' . t('Do not include the leading and trailing parentheses, e.g. "&(objectclass=group)(CN=Drupal*)".'),
   );
 
   $form['advanced']['simple_ldap_role_source'] = array(
@@ -170,6 +178,13 @@ function simple_ldap_role_admin($form, &$form_state) {
     '#default_value' => simple_ldap_role_variable_get('simple_ldap_role_source'),
     '#disabled' => $server->readonly,
     '#description' => t('This determines the behavior of the data sync in the event of a conflict between LDAP and Drupal.'),
+  );
+
+  $form['advanced']['simple_ldap_role_preserve_orphans'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Preserve roles when not matched'),
+    '#default_value' => simple_ldap_role_variable_get('simple_ldap_role_preserve_orphans'),
+    '#description' => t('This allows a local role to remain in the non-authoritative datasource if the role does not exist in the authoritative datasource.'),
   );
 
   $form['advanced']['simple_ldap_role_sync'] = array(
