@@ -204,7 +204,7 @@ class SimpleLdap {
         $length = drupal_strlen($string);
         $hash = NULL;
         for ($i = 0; $i < $length; $i++) {
-          $hash .= "{$string{$i}}\000";
+          $hash .= "{".substr($string, $i, 1)."}\000";
         }
         break;
 
