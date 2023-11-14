@@ -21,6 +21,8 @@ class SimpleLdapUserMap {
   protected $settings = array();
   // The attribute schema.
   protected $schema = array();
+  // The server reference.
+  protected $server = null;
 
   public function __construct() {
     $this->server = SimpleLdapServer::singleton();
